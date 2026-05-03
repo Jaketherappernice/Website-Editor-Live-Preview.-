@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Canvas Builder</title>
+    <title>AI Canvas Builder - Mobile Fixed</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,9 +51,10 @@
         const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
         let currentHTML = `<!DOCTYPE html><html><head><style>
-            body { margin: 0; padding: 20px; font-family: sans-serif; min-height: 100vh; overflow: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-            .resizer-dot { width: 26px; height: 26px; background: #3b82f6; border: 3px solid white; border-radius: 50%; position: absolute; z-index: 99999; touch-action: none; }
-            .dragging { opacity: 0.5 !important; pointer-events: none !important; }
+            body { margin: 0; padding: 20px; font-family: sans-serif; min-height: 100vh; overflow: auto; }
+            .resizer-dot { width: 30px; height: 30px; background: #3b82f6; border: 3px solid white; border-radius: 50%; position: absolute; z-index: 99999; touch-action: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            .dragging { opacity: 0.7 !important; }
+            [data-selected="true"] { outline: 2px solid #3b82f6 !important; }
         </style></head><body></body></html>`;
 
         const preview = document.getElementById('livePreview');
@@ -69,93 +70,103 @@
         function setupInteractions(doc) {
             let selected = null, resizing = null, dragging = null;
             let startRect, startPos, handleType, offset = {x:0, y:0};
+            let longPressTimer;
 
             const getPos = (e) => {
-                const t = e.touches ? e.touches[0] : e;
+                const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
                 return { x: t.clientX, y: t.clientY };
             };
 
-            const clearDots = () => doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
+            const clearDots = () => {
+                doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
+                doc.querySelectorAll('[data-selected]').forEach(el => el.removeAttribute('data-selected'));
+            };
 
             const addDots = (el) => {
-                clearDots();
+                doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
                 if (!el) return;
+                el.setAttribute('data-selected', 'true');
                 const r = el.getBoundingClientRect();
                 const sx = doc.defaultView.scrollX;
                 const sy = doc.defaultView.scrollY;
-                const pos = ['tl', 'tr', 'bl', 'br'];
                 
-                pos.forEach(p => {
+                ['tl', 'tr', 'bl', 'br'].forEach(p => {
                     const dot = doc.createElement('div');
                     dot.className = `resizer-dot resizer-${p}`;
-                    dot.style.top = (sy + (p.includes('t') ? r.top : r.bottom) - 13) + 'px';
-                    dot.style.left = (sx + (p.includes('l') ? r.left : r.right) - 13) + 'px';
+                    dot.style.top = (sy + (p.includes('t') ? r.top : r.bottom) - 15) + 'px';
+                    dot.style.left = (sx + (p.includes('l') ? r.left : r.right) - 15) + 'px';
                     
-                    const onStart = (e) => {
-                        e.stopPropagation(); e.preventDefault();
+                    const startResizing = (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         resizing = el; handleType = p;
                         const pnt = getPos(e);
                         startPos = {x: pnt.x, y: pnt.y};
                         startRect = el.getBoundingClientRect();
-                        if(doc.defaultView.getComputedStyle(el).display === 'inline') el.style.display = 'inline-block';
                         el.style.position = 'absolute';
                     };
-                    dot.ontouchstart = onStart;
-                    dot.onmousedown = onStart;
+
+                    dot.addEventListener('mousedown', startResizing);
+                    dot.addEventListener('touchstart', startResizing, {passive: false});
                     doc.body.appendChild(dot);
                 });
             };
 
-            doc.ontouchstart = (e) => {
+            // Enhanced Selection and Dragging Logic
+            const handleStart = (e) => {
                 if (e.target.classList.contains('resizer-dot')) return;
+                
                 const t = e.target;
                 if (t === doc.body || t === doc.documentElement) {
-                    if(selected) selected.style.outline = '';
                     selected = null; clearDots(); return;
                 }
-                if (selected === t) {
-                    if(confirm('Delete?')) { t.remove(); selected = null; clearDots(); sync(); }
-                } else {
-                    if(selected) selected.style.outline = '';
-                    selected = t;
-                    selected.style.outline = '2px solid red';
-                    addDots(selected);
-                }
-            };
 
-            doc.oncontextmenu = (e) => {
-                if(e.target === doc.body) return;
-                e.preventDefault();
-                dragging = e.target;
+                // Prevent immediate delete; use Long Press for deletion logic
+                longPressTimer = setTimeout(() => {
+                    if (confirm('Delete this element?')) {
+                        t.remove(); selected = null; clearDots(); sync();
+                    }
+                }, 800);
+
+                selected = t;
+                addDots(selected);
+
+                // Initialize Dragging
+                dragging = t;
                 const p = getPos(e);
                 const r = dragging.getBoundingClientRect();
                 offset = { x: p.x - r.left, y: p.y - r.top };
                 dragging.style.position = 'absolute';
                 dragging.classList.add('dragging');
-                clearDots();
             };
 
-            const onMove = (e) => {
+            const handleMove = (e) => {
                 if (!resizing && !dragging) return;
+                clearTimeout(longPressTimer); // Movement cancels long-press delete
                 e.preventDefault();
                 const p = getPos(e);
+
                 if (resizing) {
                     const dx = p.x - startPos.x;
                     const dy = p.y - startPos.y;
-                    if (handleType.includes('r')) resizing.style.width = (startRect.width + dx) + 'px';
-                    if (handleType.includes('b')) resizing.style.height = (startRect.height + dy) + 'px';
-                    if (handleType.includes('l')) { resizing.style.width = (startRect.width - dx) + 'px'; resizing.style.left = (startRect.left + dx) + 'px'; }
-                    if (handleType.includes('t')) { resizing.style.height = (startRect.height - dy) + 'px'; resizing.style.top = (startRect.top + dy) + 'px'; }
+                    if (handleType.includes('r')) resizing.style.width = Math.max(20, startRect.width + dx) + 'px';
+                    if (handleType.includes('b')) resizing.style.height = Math.max(20, startRect.height + dy) + 'px';
+                    if (handleType.includes('l')) { 
+                        resizing.style.width = Math.max(20, startRect.width - dx) + 'px'; 
+                        resizing.style.left = (startRect.left + dx) + 'px'; 
+                    }
+                    if (handleType.includes('t')) { 
+                        resizing.style.height = Math.max(20, startRect.height - dy) + 'px'; 
+                        resizing.style.top = (startRect.top + dy) + 'px'; 
+                    }
                 } else if (dragging) {
                     dragging.style.left = (p.x - offset.x) + 'px';
                     dragging.style.top = (p.y - offset.y) + 'px';
                 }
             };
 
-            doc.ontouchmove = onMove;
-            doc.onmousemove = onMove;
-
-            const onEnd = () => {
+            const handleEnd = () => {
+                clearTimeout(longPressTimer);
                 if (resizing || dragging) {
                     const el = resizing || dragging;
                     el.classList.remove('dragging');
@@ -165,15 +176,21 @@
                 }
             };
 
-            doc.ontouchend = onEnd;
-            doc.onmouseup = onEnd;
+            // Event Listeners for Iframe Content
+            doc.addEventListener('mousedown', handleStart);
+            doc.addEventListener('touchstart', handleStart, {passive: false});
+            doc.addEventListener('mousemove', handleMove);
+            doc.addEventListener('touchmove', handleMove, {passive: false});
+            doc.addEventListener('mouseup', handleEnd);
+            doc.addEventListener('touchend', handleEnd);
         }
 
         function sync() {
             const doc = preview.contentDocument;
+            if (!doc) return;
             const clone = doc.documentElement.cloneNode(true);
             clone.querySelectorAll('.resizer-dot').forEach(d => d.remove());
-            clone.querySelectorAll('*').forEach(el => el.style.outline = '');
+            clone.querySelectorAll('[data-selected]').forEach(el => el.removeAttribute('data-selected'));
             currentHTML = clone.outerHTML;
         }
 
@@ -187,19 +204,23 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
                     body: JSON.stringify({
                         model: 'llama-3.3-70b-versatile',
-                        messages: [{role: 'system', content: 'Return ONLY raw HTML code.'}, {role: 'user', content: `Current HTML: ${currentHTML}\nTask: ${val}`}]
+                        messages: [{role: 'system', content: 'Return ONLY raw HTML code. Do not include markdown wrappers.'}, {role: 'user', content: `Current HTML: ${currentHTML}\nTask: ${val}`}]
                     })
                 });
                 const d = await r.json();
-                currentHTML = d.choices[0].message.content.replace(/```html|```/g, '').trim();
+                let code = d.choices[0].message.content;
+                currentHTML = code.replace(/```html|```/g, '').trim();
                 render();
+            } catch(e) {
+                console.error(e);
+                alert("Error calling AI.");
             } finally { loading.classList.remove('visible'); }
         }
 
         document.getElementById('sendBtn').onclick = send;
         chatInput.onkeydown = e => e.key === 'Enter' && send();
-        document.getElementById('copyBtn').onclick = () => { sync(); navigator.clipboard.writeText(currentHTML); alert('Copied!'); };
-        document.getElementById('clearBtn').onclick = () => { if(confirm('Clear?')) { location.reload(); } };
+        document.getElementById('copyBtn').onclick = () => { sync(); navigator.clipboard.writeText(currentHTML); alert('Code copied to clipboard!'); };
+        document.getElementById('clearBtn').onclick = () => { if(confirm('Reset canvas?')) { location.reload(); } };
 
         render();
     </script>
