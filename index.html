@@ -12,9 +12,6 @@
             padding: 0;
         }
 
-        /* KEY FIX: Use dvh (dynamic viewport height) with absolute fallback.
-           This accounts for browser chrome (address bar) that shrinks the real viewport.
-           NO position:fixed on body — that was the root cause on mobile/desktop. */
         html {
             height: 100%;
             height: 100dvh;
@@ -81,7 +78,7 @@
         /* ── CANVAS ── */
         #canvasWrapper {
             flex: 1 1 0;
-            min-height: 0; /* CRITICAL — without this flex child won't shrink */
+            min-height: 0; 
             position: relative;
             overflow: hidden;
             background: #e2e8f0;
@@ -95,7 +92,19 @@
             background: white;
         }
 
-        /* Pointer dot */
+        #pointerOverlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            pointer-events: none;
+            cursor: default;
+        }
+
+        #pointerOverlay.active {
+            pointer-events: all;
+            cursor: crosshair;
+        }
+
         #pointerDot {
             width: 14px;
             height: 14px;
@@ -117,7 +126,6 @@
             100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
         }
 
-        /* Loading overlay */
         #loadingOverlay {
             position: absolute;
             inset: 0;
@@ -170,17 +178,13 @@
             40%            { transform: scale(1);   opacity: 1; }
         }
 
-        /* ── FOOTER / BOTTOM BAR ──
-           KEY FIX: flex:0 0 auto ensures it never gets squeezed.
-           NO position:fixed — that breaks in many browser scenarios.
-           Use border-top + shadow instead of elevation tricks. */
+        /* ── FOOTER ── */
         #appFooter {
             flex: 0 0 auto;
             background: white;
             border-top: 1.5px solid #e2e8f0;
             box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
             z-index: 10;
-            /* Prevent iOS bottom safe area from hiding bar */
             padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
@@ -192,7 +196,6 @@
             flex-wrap: nowrap;
         }
 
-        /* Input area */
         #inputWrap {
             flex: 1 1 auto;
             min-width: 0;
@@ -241,10 +244,6 @@
             flex-shrink: 0;
         }
 
-        #sendBtn:hover   { background: #2563eb; }
-        #sendBtn:active  { transform: translateY(-50%) scale(0.92); }
-
-        /* Action buttons */
         .abtn {
             flex: 0 0 auto;
             height: 40px;
@@ -262,21 +261,16 @@
             white-space: nowrap;
         }
 
-        .abtn:hover  { filter: brightness(1.1); }
-        .abtn:active { transform: scale(0.95); }
-
         #copyBtn          { background: #10b981; }
         #pointerBtn        { background: #8b5cf6; }
         #pointerBtn.on     { background: #ef4444; }
         #clearBtn          { background: #64748b; }
 
-        /* Hide labels on narrow screens */
         @media (max-width: 480px) {
             .lbl { display: none; }
             .abtn { padding: 0 10px; }
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -284,7 +278,6 @@
 </head>
 <body>
 
-    <!-- HEADER -->
     <div id="appHeader">
         <div class="logo">
             <i class="fas fa-robot"></i>
@@ -296,9 +289,9 @@
         </div>
     </div>
 
-    <!-- CANVAS AREA -->
     <div id="canvasWrapper">
         <iframe id="livePreview" title="Live Preview"></iframe>
+        <div id="pointerOverlay"></div>
         <div id="pointerDot"></div>
         <div id="loadingOverlay">
             <div class="loader-card">
@@ -310,35 +303,17 @@
         </div>
     </div>
 
-    <!-- FOOTER / BOTTOM BAR -->
     <div id="appFooter">
         <div id="bottomBar">
             <div id="inputWrap">
-                <input
-                    id="chatInput"
-                    type="text"
-                    placeholder="Tell AI what to add or change…"
-                    autocomplete="off"
-                />
+                <input id="chatInput" type="text" placeholder="Tell AI what to add or change…" autocomplete="off" />
                 <button id="sendBtn" aria-label="Send">
                     <i class="fas fa-paper-plane" style="font-size:12px;"></i>
                 </button>
             </div>
-
-            <button id="copyBtn" class="abtn" title="Copy HTML">
-                <i class="fas fa-copy"></i>
-                <span class="lbl">Copy</span>
-            </button>
-
-            <button id="pointerBtn" class="abtn" title="Toggle pointer">
-                <i class="fas fa-crosshairs"></i>
-                <span class="lbl" id="pointerLbl">Pointer</span>
-            </button>
-
-            <button id="clearBtn" class="abtn" title="Clear canvas">
-                <i class="fas fa-trash-alt"></i>
-                <span class="lbl">Clear</span>
-            </button>
+            <button id="copyBtn" class="abtn"><i class="fas fa-copy"></i><span class="lbl">Copy</span></button>
+            <button id="pointerBtn" class="abtn"><i class="fas fa-crosshairs"></i><span class="lbl" id="pointerLbl">Pointer</span></button>
+            <button id="clearBtn" class="abtn"><i class="fas fa-trash-alt"></i><span class="lbl">Clear</span></button>
         </div>
     </div>
 
@@ -358,15 +333,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #fff; padding: 20px; min-height: 100vh; }
+  body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #fff; padding: 20px; min-height: 100vh; overflow: hidden; }
+  .drag-target { outline: 2px dashed #3b82f6 !important; opacity: 0.7; z-index: 9999; }
 </style>
 </head>
 <body>
-<!-- Canvas is empty — tell AI what to add! -->
 </body>
 </html>`;
 
-        // ── Elements ──
         const livePreview    = document.getElementById('livePreview');
         const chatInput      = document.getElementById('chatInput');
         const sendBtn        = document.getElementById('sendBtn');
@@ -375,12 +349,12 @@
         const pointerLbl     = document.getElementById('pointerLbl');
         const clearBtn       = document.getElementById('clearBtn');
         const pointerDot     = document.getElementById('pointerDot');
+        const pointerOverlay = document.getElementById('pointerOverlay');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const canvasWrapper  = document.getElementById('canvasWrapper');
         const statusDot      = document.getElementById('statusDot');
         const statusText     = document.getElementById('statusText');
 
-        // ── Init ──
         function init() {
             currentHTML = INITIAL_HTML;
             renderPreview(currentHTML);
@@ -393,29 +367,99 @@
             livePreview.onload = () => {
                 try {
                     const doc = livePreview.contentDocument || livePreview.contentWindow.document;
-                    attachDeleteBehavior(doc);
+                    setupInteractions(doc);
                 } catch(e) {}
             };
             livePreview.src = url;
         }
 
-        function attachDeleteBehavior(doc) {
-            let sel = null;
+        // ── Drag & Interaction Logic ──
+        function setupInteractions(doc) {
+            let draggedEl = null;
+            let longPressTimer = null;
+            let offset = { x: 0, y: 0 };
+            let selectedEl = null;
+
+            const getPos = (e) => {
+                const t = e.touches ? e.touches[0] : e;
+                return { x: t.clientX, y: t.clientY };
+            };
+
+            const startDrag = (el, x, y) => {
+                draggedEl = el;
+                const rect = el.getBoundingClientRect();
+                offset.x = x - rect.left;
+                offset.y = y - rect.top;
+                el.style.position = 'absolute';
+                el.classList.add('drag-target');
+            };
+
+            const endDrag = () => {
+                if (draggedEl) {
+                    draggedEl.classList.remove('drag-target');
+                    draggedEl = null;
+                    syncHTML();
+                }
+                clearTimeout(longPressTimer);
+            };
+
+            // LEFT CLICK -> SELECT/DELETE
             doc.addEventListener('click', e => {
                 const t = e.target;
                 if (t === doc.body || t === doc.documentElement) return;
-                if (sel && sel !== t) sel.style.outline = '';
-                if (t === sel) {
+                if (selectedEl && selectedEl !== t) selectedEl.style.outline = '';
+                if (t === selectedEl) {
                     if (confirm('Delete this element?')) {
                         t.remove();
-                        sel = null;
+                        selectedEl = null;
                         syncHTML();
                     }
                 } else {
                     t.style.outline = '2px solid #ef4444';
-                    sel = t;
+                    selectedEl = t;
                 }
             });
+
+            // RIGHT CLICK -> DRAG (PC)
+            doc.addEventListener('contextmenu', e => {
+                const t = e.target;
+                if (t === doc.body || t === doc.documentElement) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                startDrag(t, pos.x, pos.y);
+            });
+
+            // LONG PRESS -> DRAG (MOBILE)
+            doc.addEventListener('touchstart', e => {
+                const t = e.target;
+                if (t === doc.body || t === doc.documentElement) return;
+                const pos = getPos(e);
+                longPressTimer = setTimeout(() => {
+                    startDrag(t, pos.x, pos.y);
+                    if (navigator.vibrate) navigator.vibrate(40);
+                }, 600);
+            }, { passive: false });
+
+            doc.addEventListener('touchmove', e => {
+                if (draggedEl) {
+                    e.preventDefault();
+                    const pos = getPos(e);
+                    draggedEl.style.left = (pos.x - offset.x) + 'px';
+                    draggedEl.style.top = (pos.y - offset.y) + 'px';
+                } else {
+                    clearTimeout(longPressTimer);
+                }
+            }, { passive: false });
+
+            doc.addEventListener('mousemove', e => {
+                if (!draggedEl) return;
+                const pos = getPos(e);
+                draggedEl.style.left = (pos.x - offset.x) + 'px';
+                draggedEl.style.top = (pos.y - offset.y) + 'px';
+            });
+
+            doc.addEventListener('mouseup', endDrag);
+            doc.addEventListener('touchend', endDrag);
         }
 
         function syncHTML() {
@@ -425,7 +469,6 @@
             } catch(e) {}
         }
 
-        // ── Events ──
         function bindEvents() {
             sendBtn.addEventListener('click', sendMessage);
             chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
@@ -433,30 +476,32 @@
             pointerBtn.addEventListener('click', togglePointer);
             clearBtn.addEventListener('click', clearCanvas);
 
-            canvasWrapper.addEventListener('mousemove', e => {
-                if (!pointerActive) return;
+            function placePointerDot(clientX, clientY) {
                 const r = canvasWrapper.getBoundingClientRect();
-                pointerPos.x = e.clientX - r.left;
-                pointerPos.y = e.clientY - r.top;
+                pointerPos.x = clientX - r.left;
+                pointerPos.y = clientY - r.top;
                 pointerDot.style.left = pointerPos.x + 'px';
-                pointerDot.style.top  = pointerPos.y + 'px';
+                pointerDot.style.top = pointerPos.y + 'px';
                 pointerDot.style.display = 'block';
-            });
+            }
 
-            canvasWrapper.addEventListener('mouseleave', () => {
-                if (pointerActive) pointerDot.style.display = 'none';
-            });
+            pointerOverlay.addEventListener('click', e => placePointerDot(e.clientX, e.clientY));
+            pointerOverlay.addEventListener('mousemove', e => { if(pointerActive) placePointerDot(e.clientX, e.clientY); });
+            pointerOverlay.addEventListener('touchstart', e => {
+                e.preventDefault();
+                const t = e.touches[0];
+                placePointerDot(t.clientX, t.clientY);
+            }, { passive: false });
         }
 
         function togglePointer() {
             pointerActive = !pointerActive;
             pointerBtn.classList.toggle('on', pointerActive);
             pointerLbl.textContent = pointerActive ? 'ON' : 'Pointer';
-            canvasWrapper.style.cursor = pointerActive ? 'crosshair' : '';
+            pointerOverlay.classList.toggle('active', pointerActive);
             if (!pointerActive) pointerDot.style.display = 'none';
         }
 
-        // ── Send message ──
         async function sendMessage() {
             const msg = chatInput.value.trim();
             if (!msg) return;
@@ -465,10 +510,10 @@
             setLoading(true);
 
             const pointer = pointerActive
-                ? `\n\nThe user's pointer is at X:${Math.round(pointerPos.x)}px Y:${Math.round(pointerPos.y)}px — place the element near this position using absolute positioning.`
+                ? `\n\nUser pointer: X:${Math.round(pointerPos.x)}px Y:${Math.round(pointerPos.y)}px.`
                 : '';
 
-            const prompt = `Current HTML:\n${currentHTML}\n\nUser request: ${msg}${pointer}\n\nReturn ONLY the complete modified HTML. No markdown, no explanation.`;
+            const prompt = `Current HTML:\n${currentHTML}\n\nRequest: ${msg}${pointer}\n\nReturn ONLY raw HTML.`;
 
             try {
                 const html = await callGroq(prompt);
@@ -478,9 +523,7 @@
                     setStatus('Done', '#4ade80');
                 }
             } catch(err) {
-                console.error(err);
                 setStatus('Error', '#f87171');
-                alert('API error — check your key or network and try again.');
             } finally {
                 setLoading(false);
             }
@@ -496,20 +539,14 @@
                 body: JSON.stringify({
                     model: 'llama-3.3-70b-versatile',
                     messages: [
-                        { role: 'system', content: 'You modify HTML only. Return complete valid HTML with no markdown fences, no explanations — just the raw HTML document.' },
-                        { role: 'user',   content: prompt }
+                        { role: 'system', content: 'Return ONLY complete HTML. No markdown code blocks.' },
+                        { role: 'user', content: prompt }
                     ],
-                    temperature: 0.7,
-                    max_tokens: 4096
+                    temperature: 0.7
                 })
             });
-
-            if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
             const data = await res.json();
-            return data.choices[0].message.content
-                .replace(/```html\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
+            return data.choices[0].message.content.replace(/```html|```/g, '').trim();
         }
 
         async function copyHTML() {
@@ -518,29 +555,20 @@
                 await navigator.clipboard.writeText(currentHTML);
                 const orig = copyBtn.innerHTML;
                 copyBtn.innerHTML = '<i class="fas fa-check"></i><span class="lbl">Copied!</span>';
-                copyBtn.style.background = '#3b82f6';
-                setTimeout(() => { copyBtn.innerHTML = orig; copyBtn.style.background = ''; }, 1500);
-            } catch(e) { alert('Copy failed'); }
+                setTimeout(() => { copyBtn.innerHTML = orig; }, 1500);
+            } catch(e) {}
         }
 
         function clearCanvas() {
-            if (confirm('Reset the canvas?')) {
+            if (confirm('Reset?')) {
                 currentHTML = INITIAL_HTML;
                 renderPreview(currentHTML);
                 setStatus('Cleared', '#4ade80');
             }
         }
 
-        // ── UI helpers ──
-        function setLoading(on) {
-            loadingOverlay.classList.toggle('visible', on);
-            if (on) setStatus('Thinking…', '#fbbf24');
-        }
-
-        function setStatus(msg, color) {
-            statusText.textContent = msg;
-            statusDot.style.background = color;
-        }
+        function setLoading(on) { loadingOverlay.classList.toggle('visible', on); setStatus(on ? 'Thinking…' : 'Ready', on ? '#fbbf24' : '#4ade80'); }
+        function setStatus(msg, color) { statusText.textContent = msg; statusDot.style.background = color; }
 
         init();
     </script>
