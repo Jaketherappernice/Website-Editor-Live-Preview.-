@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Canvas Builder - Mobile Fixed</title>
+    <title>AI Canvas Builder - Puter Engine</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.puter.com/v2/"></script>
     <style>
@@ -48,8 +48,6 @@
     </div>
 
     <script>
-        // Puter.js handles authentication internally. No keys needed.
-
         let currentHTML = `<!DOCTYPE html><html><head><style>
             body { margin: 0; padding: 20px; font-family: sans-serif; min-height: 100vh; overflow: auto; }
             .resizer-dot { width: 30px; height: 30px; background: #3b82f6; border: 3px solid white; border-radius: 50%; position: absolute; z-index: 99999; touch-action: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -97,8 +95,7 @@
                     dot.style.left = (sx + (p.includes('l') ? r.left : r.right) - 15) + 'px';
                     
                     const startResizing = (e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
+                        e.stopPropagation(); e.preventDefault();
                         resizing = el; handleType = p;
                         const pnt = getPos(e);
                         startPos = {x: pnt.x, y: pnt.y};
@@ -116,44 +113,23 @@
                 if (e.target.classList.contains('resizer-dot')) return;
                 const t = e.target;
                 if (t === doc.body || t === doc.documentElement) return;
-
                 const now = Date.now();
-                const TRIPLE_TAP_TIMEOUT = 500;
-
-                if (!tapState.has(t)) {
-                    tapState.set(t, { count: 0, lastTime: 0 });
-                }
+                if (!tapState.has(t)) tapState.set(t, { count: 0, lastTime: 0 });
                 const state = tapState.get(t);
-
-                if (now - state.lastTime > TRIPLE_TAP_TIMEOUT) {
-                    state.count = 0;
-                }
-
-                state.count++;
-                state.lastTime = now;
-
+                if (now - state.lastTime > 500) state.count = 0;
+                state.count++; state.lastTime = now;
                 if (state.count >= 3) {
                     state.count = 0;
-                    if (confirm('Delete this element?')) {
-                        t.remove();
-                        selected = null;
-                        clearDots();
-                        sync();
-                    }
+                    if (confirm('Delete?')) { t.remove(); clearDots(); sync(); }
                 }
             };
 
             const handleStart = (e) => {
                 if (e.target.classList.contains('resizer-dot')) return;
                 const t = e.target;
-                if (t === doc.body || t === doc.documentElement) {
-                    selected = null; clearDots(); return;
-                }
-                selected = t;
-                addDots(selected);
-                dragging = t;
-                const p = getPos(e);
-                const r = dragging.getBoundingClientRect();
+                if (t === doc.body || t === doc.documentElement) { clearDots(); return; }
+                selected = t; addDots(selected); dragging = t;
+                const p = getPos(e); const r = dragging.getBoundingClientRect();
                 offset = { x: p.x - r.left, y: p.y - r.top };
                 dragging.style.position = 'absolute';
                 dragging.classList.add('dragging');
@@ -164,18 +140,11 @@
                 e.preventDefault();
                 const p = getPos(e);
                 if (resizing) {
-                    const dx = p.x - startPos.x;
-                    const dy = p.y - startPos.y;
+                    const dx = p.x - startPos.x; const dy = p.y - startPos.y;
                     if (handleType.includes('r')) resizing.style.width = Math.max(20, startRect.width + dx) + 'px';
                     if (handleType.includes('b')) resizing.style.height = Math.max(20, startRect.height + dy) + 'px';
-                    if (handleType.includes('l')) { 
-                        resizing.style.width = Math.max(20, startRect.width - dx) + 'px'; 
-                        resizing.style.left = (startRect.left + dx) + 'px'; 
-                    }
-                    if (handleType.includes('t')) { 
-                        resizing.style.height = Math.max(20, startRect.height - dy) + 'px'; 
-                        resizing.style.top = (startRect.top + dy) + 'px'; 
-                    }
+                    if (handleType.includes('l')) { resizing.style.width = Math.max(20, startRect.width - dx) + 'px'; resizing.style.left = (startRect.left + dx) + 'px'; }
+                    if (handleType.includes('t')) { resizing.style.height = Math.max(20, startRect.height - dy) + 'px'; resizing.style.top = (startRect.top + dy) + 'px'; }
                 } else if (dragging) {
                     dragging.style.left = (p.x - offset.x) + 'px';
                     dragging.style.top = (p.y - offset.y) + 'px';
@@ -186,9 +155,7 @@
                 if (resizing || dragging) {
                     const el = resizing || dragging;
                     el.classList.remove('dragging');
-                    addDots(el);
-                    resizing = dragging = null;
-                    sync();
+                    addDots(el); resizing = dragging = null; sync();
                 }
             };
 
@@ -213,31 +180,26 @@
         async function send() {
             const val = chatInput.value.trim(); 
             if(!val) return;
-            
             chatInput.value = ''; 
             sync();
             loading.classList.add('visible');
 
             try {
-                // Replacing Groq Fetch with Puter AI Chat
                 const response = await puter.ai.chat(
-                    `Modify the following HTML based on this request: "${val}". \n\nCurrent HTML:\n${currentHTML}`,
+                    `Task: ${val}\nExisting HTML: ${currentHTML}`,
                     { 
-                        system_prompt: "You are a specialized web builder AI. Return ONLY the raw HTML code starting with <!DOCTYPE html>. Do not include any markdown formatting, backticks, or explanations. Ensure the CSS for .resizer-dot and .dragging remains preserved.",
+                        system_prompt: "You are a code-only assistant. Your output must be ONLY valid HTML. Do not talk, do not explain, do not use markdown backticks. Just output the final code including the doctype. Keep existing CSS styles.",
                         model: 'gpt-4o' 
                     }
                 );
-
-                // Handle both object and string responses from Puter
-                let code = response.toString();
                 
-                // Final sanitization of backticks just in case
-                currentHTML = code.replace(/```html|```/g, '').trim();
-                
-                render();
+                let code = response.toString().replace(/```html|```/g, '').trim();
+                if (code.includes('<!DOCTYPE html>') || code.includes('<html')) {
+                    currentHTML = code;
+                    render();
+                }
             } catch(e) {
-                console.error("Puter Error:", e);
-                alert("Error communicating with Puter AI.");
+                console.error(e);
             } finally { 
                 loading.classList.remove('visible'); 
             }
@@ -245,8 +207,8 @@
 
         document.getElementById('sendBtn').onclick = send;
         chatInput.onkeydown = e => e.key === 'Enter' && send();
-        document.getElementById('copyBtn').onclick = () => { sync(); navigator.clipboard.writeText(currentHTML); alert('Code copied to clipboard!'); };
-        document.getElementById('clearBtn').onclick = () => { if(confirm('Reset canvas?')) { location.reload(); } };
+        document.getElementById('copyBtn').onclick = () => { sync(); navigator.clipboard.writeText(currentHTML); alert('Copied!'); };
+        document.getElementById('clearBtn').onclick = () => { if(confirm('Reset?')) { location.reload(); } };
 
         render();
     </script>
