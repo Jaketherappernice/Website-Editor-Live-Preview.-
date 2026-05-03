@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Canvas Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS FIXES FOR DESKTOP COMPATIBILITY */
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #header {
+            height: 60px; /* Fixed height for header */
+            flex-shrink: 0;
+        }
+
+        #canvasContainer {
+            flex: 1 1 auto; /* Grow and shrink as needed */
+            position: relative;
+            background: white;
+            overflow: hidden;
+        }
+
+        #bottomControlBar {
+            height: 90px; /* Fixed height for control bar */
+            flex-shrink: 0;
+            background: white;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #e5e7eb;
+            padding: 0 1.5rem;
+            z-index: 10;
+        }
+
+        /* Elements from original code kept intact */
+        .red-dot {
+            width: 16px;
+            height: 16px;
+            background-color: #ff0000;
+            border: 3px solid white;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(255,0,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+        }
+        
+        #livePreview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .deletable-element {
+            transition: outline 0.2s;
+        }
+        
+        .deletable-element:hover {
+            outline: 2px solid rgba(255,0,0,0.5) !important;
+            cursor: pointer;
+        }
+        
+        .deletable-element.selected-for-delete {
+            outline: 2px solid #ff0000 !important;
+            background-color: rgba(255,0,0,0.1) !important;
+        }
+        
+        #loadingIndicator {
+            display: none;
+        }
+        
+        .typing-dot {
+            animation: typingAnimation 1.4s infinite;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    
+    <div id="header" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 flex items-center justify-between shadow-lg">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-robot text-2xl"></i>
+            <h1 class="text-xl font-bold">AI Canvas Builder</h1>
+        </div>
+        <div id="statusIndicator" class="flex items-center gap-2 text-sm">
+            <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+            <span>Ready</span>
+        </div>
+    </div>
+
+    <div id="canvasContainer" class="border-b-2 border-gray-200 shadow-inner">
+        <iframe id="livePreview"></iframe>
+        <div id="pointerDot" class="red-dot hidden"></div>
+        <div id="loadingIndicator" class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+            <div class="bg-white rounded-xl p-6 shadow-2xl flex items-center gap-3">
+                <div class="flex gap-1">
+                    <div class="w-3 h-3 bg-blue-500 rounded-full typing-dot"></div>
+                    <div class="w-3 h-3 bg-blue-500 rounded-full typing-dot" style="animation-delay: 0.2s"></div>
+                    <div class="w-3 h-3 bg-blue-500 rounded-full typing-dot" style="animation-delay: 0.4s"></div>
+                </div>
+                <span class="text-gray-700 font-medium">AI is thinking...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottomControlBar">
+        <div class="flex items-center gap-3 w-full max-w-7xl mx-auto">
+            <div class="flex-grow relative">
+                <input 
+                    type="text" 
+                    id="chatInput" 
+                    placeholder="Tell AI what to add or modify..." 
+                    class="w-full px-5 py-3 border-2 border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                    autocomplete="off"
+                >
+                <button id="sendBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full transition duration-200 flex items-center justify-center">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+
+            <button id="copyBtn" class="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition duration-200 shadow font-medium whitespace-nowrap">
+                <i class="fas fa-copy"></i>
+                <span>Copy Code</span>
+            </button>
+
+            <button id="togglePointerBtn" class="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition duration-200 shadow font-medium whitespace-nowrap">
+                <i class="fas fa-crosshairs"></i>
+                <span>Pointer: OFF</span>
+            </button>
+            
+            <button id="clearBtn" class="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg transition duration-200 shadow font-medium whitespace-nowrap">
+                <i class="fas fa-trash-alt"></i>
+                <span>Clear</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const GROQ_API_KEY = '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';
+        const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+        
+        // --- State Management ---
+        let pointerActive = false;
+        let pointerPosition = { x: 0, y: 0 };
+        let currentHTML = '';
+        let conversationHistory = [];
+        
+        // Initialize basic HTML
+        const initialHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body { 
+                    margin: 0; 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    background: white;
+                    min-height: 100vh;
+                }
+                .element { position: relative; }
+            </style>
+        </head>
+        <body>
+            </body>
+        </html>`;
+        
+        // --- DOM Elements ---
+        const livePreview = document.getElementById('livePreview');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const togglePointerBtn = document.getElementById('togglePointerBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const pointerDot = document.getElementById('pointerDot');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        // --- Initialize ---
+        function init() {
+            currentHTML = initialHTML;
+            updateLivePreview(currentHTML);
+            setupEventListeners();
+        }
+        
+        function updateLivePreview(html) {
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            livePreview.onload = () => {
+                try {
+                    const iframeDoc = livePreview.contentDocument || livePreview.contentWindow.document;
+                    addDeleteListeners(iframeDoc);
+                } catch(e) {
+                    console.log('Cannot access iframe content');
+                }
+            };
+            
+            livePreview.src = url;
+        }
+        
+        function addDeleteListeners(doc) {
+            let selectedElement = null;
+            
+            doc.addEventListener('click', function(e) {
+                if (e.target === doc.body || e.target === doc.documentElement) return;
+                
+                if (selectedElement) {
+                    selectedElement.classList.remove('selected-for-delete');
+                }
+                
+                if (e.target !== selectedElement) {
+                    e.target.classList.add('selected-for-delete');
+                    selectedElement = e.target;
+                    
+                    if (confirm('Delete this element?')) {
+                        e.target.remove();
+                        selectedElement = null;
+                        updateStoredHTML();
+                    } else {
+                        e.target.classList.remove('selected-for-delete');
+                        selectedElement = null;
+                    }
+                }
+            });
+        }
+        
+        function updateStoredHTML() {
+            try {
+                const iframeDoc = livePreview.contentDocument || livePreview.contentWindow.document;
+                currentHTML = iframeDoc.documentElement.outerHTML;
+            } catch(e) {
+                console.log('Cannot access iframe content');
+            }
+        }
+        
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            sendBtn.addEventListener('click', handleSendMessage);
+            
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+            
+            copyBtn.addEventListener('click', handleCopy);
+            togglePointerBtn.addEventListener('click', togglePointer);
+            clearBtn.addEventListener('click', handleClear);
+            
+            canvasContainer.addEventListener('mousemove', (e) => {
+                if (pointerActive) {
+                    const rect = canvasContainer.getBoundingClientRect();
+                    pointerPosition.x = e.clientX - rect.left;
+                    pointerPosition.y = e.clientY - rect.top;
+                    
+                    pointerDot.style.left = pointerPosition.x + 'px';
+                    pointerDot.style.top = pointerPosition.y + 'px';
+                    pointerDot.classList.remove('hidden');
+                }
+            });
+            
+            canvasContainer.addEventListener('mouseleave', () => {
+                if (pointerActive) {
+                    pointerDot.classList.add('hidden');
+                }
+            });
+            
+            canvasContainer.addEventListener('mouseenter', () => {
+                if (pointerActive) {
+                    pointerDot.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function togglePointer() {
+            pointerActive = !pointerActive;
+            
+            if (pointerActive) {
+                togglePointerBtn.innerHTML = '<i class="fas fa-crosshairs"></i> Pointer: ON';
+                togglePointerBtn.classList.remove('bg-purple-500', 'hover:bg-purple-600');
+                togglePointerBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                canvasContainer.style.cursor = 'crosshair';
+                pointerDot.classList.remove('hidden');
+            } else {
+                togglePointerBtn.innerHTML = '<i class="fas fa-crosshairs"></i> Pointer: OFF';
+                togglePointerBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                togglePointerBtn.classList.add('bg-purple-500', 'hover:bg-purple-600');
+                canvasContainer.style.cursor = 'default';
+                pointerDot.classList.add('hidden');
+            }
+        }
+        
+        async function handleSendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            chatInput.value = '';
+            showLoading(true);
+            updateStoredHTML();
+            
+            let fullPrompt = '';
+            
+            if (pointerActive) {
+                fullPrompt = `Current HTML code:\n${currentHTML}\n\nUser request: ${message}\n\nIMPORTANT: The user has placed their pointer at position X: ${Math.round(pointerPosition.x)}px, Y: ${Math.round(pointerPosition.y)}px in the canvas. Add the requested element AT or NEAR this position. Only modify the specific parts requested, do not rewrite the entire code. Return ONLY the complete modified HTML code, nothing else.`;
+            } else {
+                fullPrompt = `Current HTML code:\n${currentHTML}\n\nUser request: ${message}\n\nIMPORTANT: Only modify the specific parts requested, do not rewrite the entire code unless necessary. Return ONLY the complete modified HTML code, nothing else.`;
+            }
+            
+            try {
+                const response = await callGroqAPI(fullPrompt);
+                if (response) {
+                    currentHTML = response;
+                    updateLivePreview(currentHTML);
+                    showLoading(false);
+                    updateStatus('Done', 'green');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showLoading(false);
+                updateStatus('Error occurred', 'red');
+                alert('Failed to get response from AI.');
+            }
+        }
+        
+        async function callGroqAPI(prompt) {
+            const response = await fetch(GROQ_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${GROQ_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a helpful AI that modifies HTML code. You ONLY return the complete modified HTML code, no explanations, no markdown formatting, just the pure HTML code.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 4096
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            let content = data.choices[0].message.content;
+            content = content.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+            return content;
+        }
+        
+        async function handleCopy() {
+            updateStoredHTML();
+            try {
+                await navigator.clipboard.writeText(currentHTML);
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                }, 1500);
+            } catch (err) {
+                alert('Failed to copy code');
+            }
+        }
+        
+        function handleClear() {
+            if (confirm('Clear all elements? This will reset the canvas.')) {
+                currentHTML = initialHTML;
+                updateLivePreview(currentHTML);
+                updateStatus('Canvas cleared', 'green');
+            }
+        }
+        
+        function showLoading(show) {
+            if (show) {
+                loadingIndicator.style.display = 'flex';
+                updateStatus('AI thinking...', 'yellow');
+            } else {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+        
+        function updateStatus(message, color) {
+            const dot = statusIndicator.querySelector('span:first-child');
+            const text = statusIndicator.querySelector('span:last-child');
+            dot.className = `w-2 h-2 bg-${color}-400 rounded-full`;
+            text.textContent = message;
+        }
+        
+        init();
+    </script>
+</body>
+</html>
