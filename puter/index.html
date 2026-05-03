@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Canvas Builder - Puter Engine</title>
+    <title>AI Canvas Builder - private AI for Jake</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://js.puter.com/v2/"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f1f5f9; }
@@ -184,24 +183,39 @@
             sync();
             loading.classList.add('visible');
 
+            const API_KEY = "48e6f732a24eb7113d9c4530eebfea188f5be40dfc58d3c352e4e83d5931e666";
+            const API_URL = "https://api.literouter.com/v1/chat/completions";
+
             try {
-                const response = await puter.ai.chat(
-                    `Task: ${val}\n\nExisting HTML:\n${currentHTML}`,
-                    { 
-                        system_prompt: "No other words, just the full HTML code. STRICT CODE ONLY MODE. Your response must ONLY contain the full HTML document. Absolutely NO conversational text, NO explanations, NO markdown backticks, and NO prefixes or suffixes. Start with <!DOCTYPE html> and end with </html>.",
-                        model: 'gpt-4o' 
-                    }
-                );
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "No other words, just the full HTML code. STRICT CODE ONLY MODE. Your response must ONLY contain the full HTML document. Absolutely NO conversational text, NO explanations, NO markdown backticks, and NO prefixes or suffixes. Start with <!DOCTYPE html> and end with </html>."
+                            },
+                            {
+                                role: "user",
+                                content: `Task: ${val}\n\nExisting HTML:\n${currentHTML}`
+                            }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                let code = data.choices[0].message.content.trim();
                 
-                let code = response.toString();
-                
-                // Aggressive extraction: Find ONLY the content between <!DOCTYPE html> and </html>
+                // Extraction Logic
                 const htmlMatch = code.match(/<!DOCTYPE html>[\s\S]*<\/html>/i);
-                
                 if (htmlMatch) {
                     code = htmlMatch[0];
                 } else {
-                    // Fallback cleanup if tags are missing or broken
                     code = code.replace(/```html|```/gi, '').trim();
                 }
 
@@ -210,7 +224,8 @@
                     render();
                 }
             } catch(e) {
-                console.error("AI Error:", e);
+                console.error("LiteRouter API Error:", e);
+                alert("Failed to connect to API.");
             } finally { 
                 loading.classList.remove('visible'); 
             }
