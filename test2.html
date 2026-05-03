@@ -449,12 +449,31 @@
                     syncHTML();
                 }
                 if (resizingEl) {
-                    addResizers(resizingEl);
+                    addResizers(resizingEl); // Re-render dots at new positions
                     resizingEl = null;
                     syncHTML();
                 }
                 clearTimeout(longPressTimer);
             };
+
+            function handleResizeMove(cx, cy) {
+                if (!resizingEl) return;
+                const dx = cx - startPos.x;
+                const dy = cy - startPos.y;
+                
+                if (currentHandle.includes('r')) resizingEl.style.width = (startRect.width + dx) + 'px';
+                if (currentHandle.includes('b')) resizingEl.style.height = (startRect.height + dy) + 'px';
+                if (currentHandle.includes('l')) {
+                    resizingEl.style.width = (startRect.width - dx) + 'px';
+                    resizingEl.style.left = (startRect.left + dx) + 'px';
+                }
+                if (currentHandle.includes('t')) {
+                    resizingEl.style.height = (startRect.height - dy) + 'px';
+                    resizingEl.style.top = (startRect.top + dy) + 'px';
+                }
+                // Refresh dot positions while resizing
+                addResizers(resizingEl); 
+            }
 
             // Interactions
             doc.addEventListener('click', e => {
@@ -527,23 +546,6 @@
                 }
             });
 
-            function handleResizeMove(cx, cy) {
-                const dx = cx - startPos.x;
-                const dy = cy - startPos.y;
-                
-                if (currentHandle.includes('r')) resizingEl.style.width = (startRect.width + dx) + 'px';
-                if (currentHandle.includes('b')) resizingEl.style.height = (startRect.height + dy) + 'px';
-                if (currentHandle.includes('l')) {
-                    resizingEl.style.width = (startRect.width - dx) + 'px';
-                    resizingEl.style.left = (startRect.left + dx) + 'px';
-                }
-                if (currentHandle.includes('t')) {
-                    resizingEl.style.height = (startRect.height - dy) + 'px';
-                    resizingEl.style.top = (startRect.top + dy) + 'px';
-                }
-                clearResizers(); // Hide handles while moving for performance/visuals
-            }
-
             doc.addEventListener('mouseup', endDrag);
             doc.addEventListener('touchend', endDrag);
         }
@@ -552,7 +554,6 @@
             try {
                 const doc = livePreview.contentDocument || livePreview.contentWindow.document;
                 if (doc && doc.documentElement) {
-                    // Clone to remove temporary UI dots before saving
                     const clone = doc.documentElement.cloneNode(true);
                     clone.querySelectorAll('.resizer-dot').forEach(d => d.remove());
                     currentHTML = clone.outerHTML;
