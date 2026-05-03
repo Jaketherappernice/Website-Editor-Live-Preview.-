@@ -318,11 +318,9 @@
     </div>
 
     <script>
-        // ── Config ──
         const GROQ_API_KEY  = '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';
         const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
-        // ── State ──
         let pointerActive = false;
         let pointerPos    = { x: 0, y: 0 };
         let currentHTML   = '';
@@ -377,14 +375,12 @@
             livePreview.src = url;
         }
 
-        // ── Drag, Interaction & Resize Logic ──
         function setupInteractions(doc) {
             let draggedEl = null;
             let longPressTimer = null;
             let offset = { x: 0, y: 0 };
             let selectedEl = null;
 
-            // Resize state
             let resizingEl = null;
             let currentHandle = null;
             let startRect = null;
@@ -401,19 +397,21 @@
 
             const addResizers = (el) => {
                 clearResizers();
+                if (!el) return;
                 const rect = el.getBoundingClientRect();
-                const positions = ['tl', 'tr', 'bl', 'br'];
+                const scrollX = doc.defaultView.pageXOffset;
+                const scrollY = doc.defaultView.pageYOffset;
                 
+                const positions = ['tl', 'tr', 'bl', 'br'];
                 positions.forEach(pos => {
                     const dot = doc.createElement('div');
                     dot.className = `resizer-dot resizer-${pos}`;
                     dot.dataset.handle = pos;
                     
-                    // Position logic
-                    if(pos.includes('t')) dot.style.top = (rect.top - 6) + 'px';
-                    if(pos.includes('b')) dot.style.top = (rect.bottom - 6) + 'px';
-                    if(pos.includes('l')) dot.style.left = (rect.left - 6) + 'px';
-                    if(pos.includes('r')) dot.style.left = (rect.right - 6) + 'px';
+                    if(pos.includes('t')) dot.style.top = (scrollY + rect.top - 6) + 'px';
+                    if(pos.includes('b')) dot.style.top = (scrollY + rect.bottom - 6) + 'px';
+                    if(pos.includes('l')) dot.style.left = (scrollX + rect.left - 6) + 'px';
+                    if(pos.includes('r')) dot.style.left = (scrollX + rect.right - 6) + 'px';
                     
                     dot.addEventListener('mousedown', startResize);
                     dot.addEventListener('touchstart', startResize, {passive: false});
@@ -429,6 +427,23 @@
                 const pos = getPos(e);
                 startPos = { x: pos.x, y: pos.y };
                 startRect = resizingEl.getBoundingClientRect();
+                resizingEl.style.position = 'absolute'; // Force absolute for resizing
+            };
+
+            const handleResizeMove = (cx, cy) => {
+                const dx = cx - startPos.x;
+                const dy = cy - startPos.y;
+                
+                if (currentHandle.includes('r')) resizingEl.style.width = Math.max(20, startRect.width + dx) + 'px';
+                if (currentHandle.includes('b')) resizingEl.style.height = Math.max(20, startRect.height + dy) + 'px';
+                if (currentHandle.includes('l')) {
+                    resizingEl.style.width = Math.max(20, startRect.width - dx) + 'px';
+                    resizingEl.style.left = (startRect.left + dx) + 'px';
+                }
+                if (currentHandle.includes('t')) {
+                    resizingEl.style.height = Math.max(20, startRect.height - dy) + 'px';
+                    resizingEl.style.top = (startRect.top + dy) + 'px';
+                }
             };
 
             const startDrag = (el, x, y) => {
@@ -441,7 +456,7 @@
                 clearResizers();
             };
 
-            const endDrag = () => {
+            const endAction = () => {
                 if (draggedEl) {
                     draggedEl.classList.remove('drag-target');
                     addResizers(draggedEl);
@@ -449,33 +464,13 @@
                     syncHTML();
                 }
                 if (resizingEl) {
-                    addResizers(resizingEl); // Re-render dots at new positions
+                    addResizers(resizingEl);
                     resizingEl = null;
                     syncHTML();
                 }
                 clearTimeout(longPressTimer);
             };
 
-            function handleResizeMove(cx, cy) {
-                if (!resizingEl) return;
-                const dx = cx - startPos.x;
-                const dy = cy - startPos.y;
-                
-                if (currentHandle.includes('r')) resizingEl.style.width = (startRect.width + dx) + 'px';
-                if (currentHandle.includes('b')) resizingEl.style.height = (startRect.height + dy) + 'px';
-                if (currentHandle.includes('l')) {
-                    resizingEl.style.width = (startRect.width - dx) + 'px';
-                    resizingEl.style.left = (startRect.left + dx) + 'px';
-                }
-                if (currentHandle.includes('t')) {
-                    resizingEl.style.height = (startRect.height - dy) + 'px';
-                    resizingEl.style.top = (startRect.top + dy) + 'px';
-                }
-                // Refresh dot positions while resizing
-                addResizers(resizingEl); 
-            }
-
-            // Interactions
             doc.addEventListener('click', e => {
                 const t = e.target;
                 if (t.classList.contains('resizer-dot')) return;
@@ -522,6 +517,16 @@
                 }, 600);
             }, { passive: false });
 
+            doc.addEventListener('mousemove', e => {
+                const pos = getPos(e);
+                if (draggedEl) {
+                    draggedEl.style.left = (pos.x - offset.x) + 'px';
+                    draggedEl.style.top = (pos.y - offset.y) + 'px';
+                } else if (resizingEl) {
+                    handleResizeMove(pos.x, pos.y);
+                }
+            });
+
             doc.addEventListener('touchmove', e => {
                 const pos = getPos(e);
                 if (draggedEl) {
@@ -536,18 +541,8 @@
                 }
             }, { passive: false });
 
-            doc.addEventListener('mousemove', e => {
-                const pos = getPos(e);
-                if (draggedEl) {
-                    draggedEl.style.left = (pos.x - offset.x) + 'px';
-                    draggedEl.style.top = (pos.y - offset.y) + 'px';
-                } else if (resizingEl) {
-                    handleResizeMove(pos.x, pos.y);
-                }
-            });
-
-            doc.addEventListener('mouseup', endDrag);
-            doc.addEventListener('touchend', endDrag);
+            doc.addEventListener('mouseup', endAction);
+            doc.addEventListener('touchend', endAction);
         }
 
         function syncHTML() {
