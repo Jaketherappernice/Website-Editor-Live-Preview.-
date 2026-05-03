@@ -95,22 +95,6 @@
             background: white;
         }
 
-        /* Transparent overlay that sits above the iframe.
-           INACTIVE by default (pointer-events:none) so the iframe works normally.
-           When pointer mode is ON it becomes pointer-events:all to capture every tap/click/touch. */
-        #pointerOverlay {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            pointer-events: none; /* off by default */
-            cursor: default;
-        }
-
-        #pointerOverlay.active {
-            pointer-events: all;
-            cursor: crosshair;
-        }
-
         /* Pointer dot */
         #pointerDot {
             width: 14px;
@@ -315,7 +299,6 @@
     <!-- CANVAS AREA -->
     <div id="canvasWrapper">
         <iframe id="livePreview" title="Live Preview"></iframe>
-        <div id="pointerOverlay"></div>
         <div id="pointerDot"></div>
         <div id="loadingOverlay">
             <div class="loader-card">
@@ -392,7 +375,6 @@
         const pointerLbl     = document.getElementById('pointerLbl');
         const clearBtn       = document.getElementById('clearBtn');
         const pointerDot     = document.getElementById('pointerDot');
-        const pointerOverlay = document.getElementById('pointerOverlay');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const canvasWrapper  = document.getElementById('canvasWrapper');
         const statusDot      = document.getElementById('statusDot');
@@ -451,59 +433,27 @@
             pointerBtn.addEventListener('click', togglePointer);
             clearBtn.addEventListener('click', clearCanvas);
 
-            // ── Pointer overlay — captures ALL input above the iframe ──
-            // The overlay is a transparent div covering the iframe.
-            // When pointer mode is ON it intercepts every tap/click/touch
-            // so the iframe never steals the event.
-
-            function placePointerDot(clientX, clientY) {
+            canvasWrapper.addEventListener('mousemove', e => {
+                if (!pointerActive) return;
                 const r = canvasWrapper.getBoundingClientRect();
-                pointerPos.x = clientX - r.left;
-                pointerPos.y = clientY - r.top;
-                pointerDot.style.left    = pointerPos.x + 'px';
-                pointerDot.style.top     = pointerPos.y + 'px';
+                pointerPos.x = e.clientX - r.left;
+                pointerPos.y = e.clientY - r.top;
+                pointerDot.style.left = pointerPos.x + 'px';
+                pointerDot.style.top  = pointerPos.y + 'px';
                 pointerDot.style.display = 'block';
-            }
-
-            // Mouse click on overlay → place dot
-            pointerOverlay.addEventListener('click', e => {
-                placePointerDot(e.clientX, e.clientY);
             });
 
-            // Mouse move on overlay → follow cursor in real time
-            pointerOverlay.addEventListener('mousemove', e => {
-                placePointerDot(e.clientX, e.clientY);
+            canvasWrapper.addEventListener('mouseleave', () => {
+                if (pointerActive) pointerDot.style.display = 'none';
             });
-
-            pointerOverlay.addEventListener('mouseleave', () => {
-                // keep dot at last clicked position; only hide if pointer mode turns off
-            });
-
-            // Touch tap/drag on overlay → place dot
-            pointerOverlay.addEventListener('touchstart', e => {
-                e.preventDefault(); // stop scroll & iframe passthrough
-                const t = e.touches[0];
-                placePointerDot(t.clientX, t.clientY);
-            }, { passive: false });
-
-            pointerOverlay.addEventListener('touchmove', e => {
-                e.preventDefault();
-                const t = e.touches[0];
-                placePointerDot(t.clientX, t.clientY);
-            }, { passive: false });
-
-            // touchend: dot stays at last position — intentional
         }
 
         function togglePointer() {
             pointerActive = !pointerActive;
             pointerBtn.classList.toggle('on', pointerActive);
             pointerLbl.textContent = pointerActive ? 'ON' : 'Pointer';
-            // Overlay active = intercepts all touch/click above iframe
-            pointerOverlay.classList.toggle('active', pointerActive);
-            if (!pointerActive) {
-                pointerDot.style.display = 'none';
-            }
+            canvasWrapper.style.cursor = pointerActive ? 'crosshair' : '';
+            if (!pointerActive) pointerDot.style.display = 'none';
         }
 
         // ── Send message ──
