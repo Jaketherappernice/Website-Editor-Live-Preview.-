@@ -186,32 +186,31 @@
 
             try {
                 const response = await puter.ai.chat(
-                    `Task: ${val}\nExisting HTML: ${currentHTML}`,
+                    `Task: ${val}\n\nExisting HTML:\n${currentHTML}`,
                     { 
-                        system_prompt: "STRICT CODE ONLY MODE. You are a code generation engine. Your response must ONLY contain the full HTML document. Absolutely NO conversational text, NO explanations, NO markdown backticks, and NO prefixes or suffixes. If you talk, the system will crash. Start with <!DOCTYPE html>.",
+                        system_prompt: "STRICT OUTPUT MODE: Return ONLY the full HTML code. No markdown, no backticks, no text before or after. Start immediately with <!DOCTYPE html> and end with </html>.",
                         model: 'gpt-4o' 
                     }
                 );
                 
                 let code = response.toString();
                 
-                // Logic to extract ONLY the HTML if the AI still insists on yapping
-                const htmlStart = code.toLowerCase().indexOf('<!doctype html>');
-                const htmlEnd = code.toLowerCase().lastIndexOf('</html>');
+                // Extraction Logic: Find the actual HTML block and ignore everything else
+                const htmlMatch = code.match(/<!DOCTYPE html>[\s\S]*<\/html>/i);
                 
-                if (htmlStart !== -1 && htmlEnd !== -1) {
-                    code = code.substring(htmlStart, htmlEnd + 7);
+                if (htmlMatch) {
+                    code = htmlMatch[0];
                 } else {
-                    // Fallback cleanup
-                    code = code.replace(/```html|```/g, '').trim();
+                    // Fallback: If doctype is missing, try to find <html> tags or at least strip backticks
+                    code = code.replace(/```html|```/gi, '').trim();
                 }
 
-                if (code.includes('<html')) {
+                if (code.toLowerCase().includes('<html')) {
                     currentHTML = code;
                     render();
                 }
             } catch(e) {
-                console.error(e);
+                console.error("AI Error:", e);
             } finally { 
                 loading.classList.remove('visible'); 
             }
