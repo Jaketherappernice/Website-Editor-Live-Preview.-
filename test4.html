@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Canvas Builder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f1f5f9; }
+
+        #appHeader { flex: 0 0 auto; background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.2); min-height: 48px; z-index: 10; }
+        #statusPill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 999px; font-size: 12px; }
+        #statusDot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+
+        #canvasWrapper { flex: 1 1 0; position: relative; overflow: hidden; background: #e2e8f0; }
+        #livePreview { width: 100%; height: 100%; border: none; display: block; background: white; }
+        #pointerOverlay { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+        #pointerOverlay.active { pointer-events: all; cursor: crosshair; }
+        #pointerDot { width: 14px; height: 14px; background: #ef4444; border: 2.5px solid white; border-radius: 50%; position: absolute; transform: translate(-50%, -50%); z-index: 100; display: none; pointer-events: none; }
+
+        #loadingOverlay { position: absolute; inset: 0; background: rgba(15,23,42,0.4); display: none; align-items: center; justify-content: center; z-index: 50; backdrop-filter: blur(2px); }
+        #loadingOverlay.visible { display: flex; }
+
+        #appFooter { flex: 0 0 auto; background: white; border-top: 1.5px solid #e2e8f0; padding: 10px; }
+        #bottomBar { display: flex; align-items: center; gap: 8px; max-width: 1200px; margin: 0 auto; }
+        #inputWrap { flex: 1; position: relative; }
+        #chatInput { width: 100%; height: 40px; padding: 0 44px 0 16px; border: 1.5px solid #cbd5e1; border-radius: 20px; outline: none; }
+        #sendBtn { position: absolute; right: 5px; top: 5px; width: 30px; height: 30px; background: #3b82f6; border: none; border-radius: 50%; color: white; cursor: pointer; }
+        .abtn { height: 40px; padding: 0 15px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; color: white; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        #copyBtn { background: #10b981; }
+        #pointerBtn { background: #8b5cf6; }
+        #pointerBtn.on { background: #ef4444; }
+        #clearBtn { background: #64748b; }
+        @media (max-width: 500px) { .lbl { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div id="appHeader">
+        <div style="font-weight:700">AI Canvas Builder</div>
+        <div id="statusPill"><div id="statusDot"></div><span id="statusText">Ready</span></div>
+    </div>
+
+    <div id="canvasWrapper">
+        <iframe id="livePreview"></iframe>
+        <div id="pointerOverlay"></div>
+        <div id="pointerDot"></div>
+        <div id="loadingOverlay"><div style="background:white; padding:15px 25px; border-radius:10px; font-weight:600">AI is thinking...</div></div>
+    </div>
+
+    <div id="appFooter">
+        <div id="bottomBar">
+            <div id="inputWrap">
+                <input id="chatInput" type="text" placeholder="Tell AI what to build..." />
+                <button id="sendBtn"><i class="fas fa-arrow-up"></i></button>
+            </div>
+            <button id="copyBtn" class="abtn"><i class="fas fa-copy"></i><span class="lbl">Copy</span></button>
+            <button id="pointerBtn" class="abtn"><i class="fas fa-crosshairs"></i><span class="lbl" id="pointerLbl">Pointer</span></button>
+            <button id="clearBtn" class="abtn"><i class="fas fa-trash"></i><span class="lbl">Clear</span></button>
+        </div>
+    </div>
+
+    <script>
+        const GROQ_API_KEY  = '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';
+        const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+
+        // UPDATED: Added user-select none to stop mobile highlighting
+        let currentHTML = `<!DOCTYPE html><html><head><style>
+            body { 
+                margin: 0; padding: 20px; font-family: sans-serif; min-height: 100vh; 
+                user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            }
+            .drag-target { outline: 2px dashed #3b82f6 !important; opacity: 0.8; }
+            .resizer-dot { 
+                width: 24px; height: 24px; background: #3b82f6; border: 3px solid #fff; 
+                border-radius: 50%; position: absolute; z-index: 10000; touch-action: none; 
+            }
+        </style></head><body></body></html>`;
+
+        const preview = document.getElementById('livePreview');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const pointerBtn = document.getElementById('pointerBtn');
+        const pointerOverlay = document.getElementById('pointerOverlay');
+        const pointerDot = document.getElementById('pointerDot');
+
+        function render() {
+            const blob = new Blob([currentHTML], { type: 'text/html' });
+            preview.src = URL.createObjectURL(blob);
+            preview.onload = () => setup(preview.contentDocument);
+        }
+
+        function setup(doc) {
+            let selected = null, resizing = null, dragging = null;
+            let startRect, startPos, handleType, offset = {x:0, y:0};
+
+            const getPos = (e) => {
+                const t = e.touches ? e.touches[0] : e;
+                return { x: t.clientX, y: t.clientY };
+            };
+
+            const clearDots = () => doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
+
+            const addDots = (el) => {
+                clearDots();
+                if (!el) return;
+                const r = el.getBoundingClientRect();
+                const pos = ['tl', 'tr', 'bl', 'br'];
+                pos.forEach(p => {
+                    const dot = doc.createElement('div');
+                    dot.className = `resizer-dot resizer-${p}`;
+                    dot.style.top = (doc.defaultView.scrollY + (p.includes('t') ? r.top : r.bottom) - 12) + 'px';
+                    dot.style.left = (doc.defaultView.scrollX + (p.includes('l') ? r.left : r.right) - 12) + 'px';
+                    
+                    const handleStart = (e) => {
+                        e.stopPropagation(); e.preventDefault();
+                        resizing = el; handleType = p;
+                        const pnt = getPos(e);
+                        startPos = {x: pnt.x, y: pnt.y};
+                        startRect = el.getBoundingClientRect();
+                        if(doc.defaultView.getComputedStyle(el).display === 'inline') el.style.display = 'inline-block';
+                        el.style.position = 'absolute';
+                    };
+                    dot.onmousedown = handleStart;
+                    dot.ontouchstart = handleStart;
+                    doc.body.appendChild(dot);
+                });
+            };
+
+            const handleSelection = (e) => {
+                if (e.target.classList.contains('resizer-dot')) return;
+                const t = e.target;
+                if (t === doc.body || t === doc.documentElement) {
+                    if(selected) selected.style.outline = '';
+                    selected = null; clearDots(); return;
+                }
+                
+                if (selected === t) {
+                    if (confirm('Delete this?')) { t.remove(); selected = null; clearDots(); sync(); }
+                } else {
+                    if (selected) selected.style.outline = '';
+                    selected = t;
+                    selected.style.outline = '2px solid #ef4444';
+                    addDots(selected);
+                }
+            };
+
+            doc.onclick = handleSelection;
+            doc.ontouchstart = (e) => { if (!resizing && !dragging) handleSelection(e); };
+
+            const moveAction = (e) => {
+                const pos = getPos(e);
+                if (resizing) {
+                    e.preventDefault();
+                    const dx = pos.x - startPos.x;
+                    const dy = pos.y - startPos.y;
+                    if (handleType.includes('r')) resizing.style.width = (startRect.width + dx) + 'px';
+                    if (handleType.includes('b')) resizing.style.height = (startRect.height + dy) + 'px';
+                    if (handleType.includes('l')) {
+                        resizing.style.width = (startRect.width - dx) + 'px';
+                        resizing.style.left = (startRect.left + dx) + 'px';
+                    }
+                    if (handleType.includes('t')) {
+                        resizing.style.height = (startRect.height - dy) + 'px';
+                        resizing.style.top = (startRect.top + dy) + 'px';
+                    }
+                } else if (dragging) {
+                    e.preventDefault();
+                    dragging.style.left = (pos.x - offset.x) + 'px';
+                    dragging.style.top = (pos.y - offset.y) + 'px';
+                }
+            };
+
+            doc.onmousemove = moveAction;
+            doc.ontouchmove = moveAction;
+
+            doc.oncontextmenu = (e) => {
+                if (e.target === doc.body) return;
+                e.preventDefault();
+                dragging = e.target;
+                const pos = getPos(e);
+                const r = dragging.getBoundingClientRect();
+                offset = { x: pos.x - r.left, y: pos.y - r.top };
+                dragging.style.position = 'absolute';
+                dragging.classList.add('drag-target');
+                clearDots();
+            };
+
+            const stopAction = () => {
+                if (resizing || dragging) {
+                    const el = resizing || dragging;
+                    el.classList.remove('drag-target');
+                    addDots(el);
+                    resizing = dragging = null;
+                    sync();
+                }
+            };
+
+            doc.onmouseup = stopAction;
+            doc.ontouchend = stopAction;
+        }
+
+        function sync() {
+            const doc = preview.contentDocument;
+            const clone = doc.documentElement.cloneNode(true);
+            clone.querySelectorAll('.resizer-dot').forEach(d => d.remove());
+            clone.querySelectorAll('*').forEach(el => el.style.outline = '');
+            currentHTML = clone.outerHTML;
+        }
+
+        async function sendMessage() {
+            const val = chatInput.value.trim(); if(!val) return;
+            chatInput.value = ''; sync();
+            document.getElementById('loadingOverlay').classList.add('visible');
+            try {
+                const res = await fetch(GROQ_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [{role: 'system', content: 'Return ONLY raw HTML code.'}, {role: 'user', content: `Current HTML: ${currentHTML}\nTask: ${val}`}]
+                    })
+                });
+                const data = await res.json();
+                currentHTML = data.choices[0].message.content.replace(/```html|```/g, '').trim();
+                render();
+            } finally { document.getElementById('loadingOverlay').classList.remove('visible'); }
+        }
+
+        sendBtn.onclick = sendMessage;
+        chatInput.onkeydown = e => e.key === 'Enter' && sendMessage();
+        pointerBtn.onclick = () => {
+            const act = pointerOverlay.classList.toggle('active');
+            pointerBtn.classList.toggle('on', act);
+            pointerDot.style.display = act ? 'block' : 'none';
+        };
+        pointerOverlay.onmousemove = e => {
+            const r = document.getElementById('canvasWrapper').getBoundingClientRect();
+            pointerDot.style.left = (e.clientX - r.left) + 'px';
+            pointerDot.style.top = (e.clientY - r.top) + 'px';
+        };
+        document.getElementById('copyBtn').onclick = () => { sync(); navigator.clipboard.writeText(currentHTML); };
+        document.getElementById('clearBtn').onclick = () => { if(confirm('Clear?')) { currentHTML = `<!DOCTYPE html><html><head><style>body { margin:0; padding:20px; font-family:sans-serif; min-height:100vh; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; } .drag-target { outline: 2px dashed #3b82f6 !important; } .resizer-dot { width: 24px; height: 24px; background: #3b82f6; border: 3px solid #fff; border-radius: 50%; position: absolute; z-index: 10000; touch-action: none; }</style></head><body></body></html>`; render(); } };
+
+        render();
+    </script>
+</body>
+</html>
