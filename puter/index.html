@@ -188,7 +188,7 @@
                 const response = await puter.ai.chat(
                     `Task: ${val}\nExisting HTML: ${currentHTML}`,
                     { 
-                        system_prompt: "You are a code-only assistant. Your output must be ONLY valid HTML. Do not talk, do not explain, do not use markdown backticks. Just output the final code including the doctype. Keep existing CSS styles.",
+                        system_prompt: "You are a code-only assistant. Your output must be ONLY valid HTML. Do not talk, do not explain, do not use markdown backticks. Just output the final code including the doctype. Keep existing CSS styles for .resizer-dot and .dragging.",
                         model: 'gpt-4o' 
                     }
                 );
