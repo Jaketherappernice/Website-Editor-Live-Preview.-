@@ -6,310 +6,60 @@
     <title>AI Canvas Builder</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            height: 100%;
-            height: 100dvh;
-        }
-
-        body {
-            height: 100%;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #f1f5f9;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; }
 
         /* ── HEADER ── */
-        #appHeader {
-            flex: 0 0 auto;
-            background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
-            color: white;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            min-height: 48px;
-            z-index: 10;
-        }
-
-        #appHeader .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-
-        #appHeader .logo i {
-            font-size: 20px;
-            filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
-        }
-
-        #statusPill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,255,255,0.15);
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        #statusDot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #4ade80;
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
+        #appHeader { flex: 0 0 auto; background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.2); min-height: 48px; z-index: 10; }
+        #appHeader .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+        #statusPill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+        #statusDot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
 
         /* ── CANVAS ── */
-        #canvasWrapper {
-            flex: 1 1 0;
-            min-height: 0; 
-            position: relative;
-            overflow: hidden;
-            background: #e2e8f0;
-        }
+        #canvasWrapper { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; background: #e2e8f0; }
+        #livePreview { width: 100%; height: 100%; border: none; display: block; background: white; }
+        #pointerOverlay { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+        #pointerOverlay.active { pointer-events: all; cursor: crosshair; }
+        #pointerDot { width: 14px; height: 14px; background: #ef4444; border: 2.5px solid white; border-radius: 50%; position: absolute; transform: translate(-50%, -50%); z-index: 100; display: none; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); } 70% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
 
-        #livePreview {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-            background: white;
-        }
-
-        #pointerOverlay {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            pointer-events: none;
-            cursor: default;
-        }
-
-        #pointerOverlay.active {
-            pointer-events: all;
-            cursor: crosshair;
-        }
-
-        #pointerDot {
-            width: 14px;
-            height: 14px;
-            background: #ef4444;
-            border: 2.5px solid white;
-            border-radius: 50%;
-            position: absolute;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-            pointer-events: none;
-            display: none;
-            box-shadow: 0 0 0 0 rgba(239,68,68,0.5);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-            70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-            100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-        }
-
-        #loadingOverlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(15,23,42,0.45);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-            backdrop-filter: blur(2px);
-        }
-
-        #loadingOverlay.visible {
-            display: flex;
-        }
-
-        .loader-card {
-            background: white;
-            border-radius: 14px;
-            padding: 18px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .loader-card span {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .dots {
-            display: flex;
-            gap: 5px;
-        }
-
-        .dots div {
-            width: 9px;
-            height: 9px;
-            background: #3b82f6;
-            border-radius: 50%;
-            animation: bounce 1.2s infinite ease-in-out;
-        }
-
-        .dots div:nth-child(2) { animation-delay: 0.2s; }
-        .dots div:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-            40%            { transform: scale(1);   opacity: 1; }
-        }
+        #loadingOverlay { position: absolute; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 50; backdrop-filter: blur(2px); }
+        #loadingOverlay.visible { display: flex; }
+        .loader-card { background: white; border-radius: 14px; padding: 18px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
 
         /* ── FOOTER ── */
-        #appFooter {
-            flex: 0 0 auto;
-            background: white;
-            border-top: 1.5px solid #e2e8f0;
-            box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
-            z-index: 10;
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        #bottomBar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            flex-wrap: nowrap;
-        }
-
-        #inputWrap {
-            flex: 1 1 auto;
-            min-width: 0;
-            position: relative;
-        }
-
-        #chatInput {
-            width: 100%;
-            height: 40px;
-            padding: 0 44px 0 16px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 999px;
-            font-size: 14px;
-            color: #1e293b;
-            background: #f8fafc;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        #chatInput::placeholder {
-            color: #94a3b8;
-        }
-
-        #chatInput:focus {
-            border-color: #3b82f6;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-        }
-
-        #sendBtn {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 30px;
-            background: #3b82f6;
-            border: none;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.15s, transform 0.1s;
-            flex-shrink: 0;
-        }
-
-        .abtn {
-            flex: 0 0 auto;
-            height: 40px;
-            padding: 0 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: filter 0.15s, transform 0.1s;
-            white-space: nowrap;
-        }
-
-        #copyBtn          { background: #10b981; }
-        #pointerBtn        { background: #8b5cf6; }
-        #pointerBtn.on     { background: #ef4444; }
-        #clearBtn          { background: #64748b; }
-
-        @media (max-width: 480px) {
-            .lbl { display: none; }
-            .abtn { padding: 0 10px; }
-        }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        #appFooter { flex: 0 0 auto; background: white; border-top: 1.5px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+        #bottomBar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+        #inputWrap { flex: 1 1 auto; position: relative; }
+        #chatInput { width: 100%; height: 40px; padding: 0 44px 0 16px; border: 1.5px solid #cbd5e1; border-radius: 999px; font-size: 14px; outline: none; }
+        #sendBtn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; background: #3b82f6; border: none; border-radius: 50%; color: white; cursor: pointer; }
+        .abtn { height: 40px; padding: 0 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; color: white; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        #copyBtn { background: #10b981; }
+        #pointerBtn { background: #8b5cf6; }
+        #pointerBtn.on { background: #ef4444; }
+        #clearBtn { background: #64748b; }
+        @media (max-width: 480px) { .lbl { display: none; } }
     </style>
 </head>
 <body>
 
     <div id="appHeader">
-        <div class="logo">
-            <i class="fas fa-robot"></i>
-            <span>AI Canvas Builder</span>
-        </div>
-        <div id="statusPill">
-            <div id="statusDot"></div>
-            <span id="statusText">Ready</span>
-        </div>
+        <div class="logo"><i class="fas fa-robot"></i><span>AI Canvas Builder</span></div>
+        <div id="statusPill"><div id="statusDot"></div><span id="statusText">Ready</span></div>
     </div>
 
     <div id="canvasWrapper">
         <iframe id="livePreview" title="Live Preview"></iframe>
         <div id="pointerOverlay"></div>
         <div id="pointerDot"></div>
-        <div id="loadingOverlay">
-            <div class="loader-card">
-                <div class="dots">
-                    <div></div><div></div><div></div>
-                </div>
-                <span>AI is thinking…</span>
-            </div>
-        </div>
+        <div id="loadingOverlay"><div class="loader-card"><span>AI is thinking…</span></div></div>
     </div>
 
     <div id="appFooter">
         <div id="bottomBar">
             <div id="inputWrap">
                 <input id="chatInput" type="text" placeholder="Tell AI what to add or change…" autocomplete="off" />
-                <button id="sendBtn" aria-label="Send">
-                    <i class="fas fa-paper-plane" style="font-size:12px;"></i>
-                </button>
+                <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
             </div>
             <button id="copyBtn" class="abtn"><i class="fas fa-copy"></i><span class="lbl">Copy</span></button>
             <button id="pointerBtn" class="abtn"><i class="fas fa-crosshairs"></i><span class="lbl" id="pointerLbl">Pointer</span></button>
@@ -322,97 +72,82 @@
         const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
         let pointerActive = false;
-        let pointerPos    = { x: 0, y: 0 };
-        let currentHTML   = '';
+        let pointerPos = { x: 0, y: 0 };
+        let currentHTML = '';
 
         const INITIAL_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #fff; padding: 20px; min-height: 100vh; overflow: hidden; }
-  .drag-target { outline: 2px dashed #3b82f6 !important; opacity: 0.7; z-index: 9999; }
+  body { margin: 0; font-family: sans-serif; padding: 20px; min-height: 100vh; }
+  .drag-target { outline: 2px dashed #3b82f6 !important; opacity: 0.7; }
   .resizer-dot { 
-      width: 12px; height: 12px; background: #3b82f6; border: 2px solid white; 
+      width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; 
       border-radius: 50%; position: absolute; z-index: 10000; touch-action: none;
+      cursor: nwse-resize;
   }
+  .resizer-tr, .resizer-bl { cursor: nesw-resize; }
 </style>
 </head>
-<body>
-</body>
+<body></body>
 </html>`;
 
-        const livePreview    = document.getElementById('livePreview');
-        const chatInput      = document.getElementById('chatInput');
-        const sendBtn        = document.getElementById('sendBtn');
-        const copyBtn        = document.getElementById('copyBtn');
-        const pointerBtn     = document.getElementById('pointerBtn');
-        const pointerLbl     = document.getElementById('pointerLbl');
-        const clearBtn       = document.getElementById('clearBtn');
-        const pointerDot     = document.getElementById('pointerDot');
+        const livePreview = document.getElementById('livePreview');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const pointerBtn = document.getElementById('pointerBtn');
+        const pointerLbl = document.getElementById('pointerLbl');
+        const clearBtn = document.getElementById('clearBtn');
+        const pointerDot = document.getElementById('pointerDot');
         const pointerOverlay = document.getElementById('pointerOverlay');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        const canvasWrapper  = document.getElementById('canvasWrapper');
-        const statusDot      = document.getElementById('statusDot');
-        const statusText     = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
 
-        function init() {
-            currentHTML = INITIAL_HTML;
-            renderPreview(currentHTML);
-            bindEvents();
-        }
+        function init() { currentHTML = INITIAL_HTML; renderPreview(currentHTML); bindEvents(); }
 
         function renderPreview(html) {
             const blob = new Blob([html], { type: 'text/html' });
             const url  = URL.createObjectURL(blob);
             livePreview.onload = () => {
-                try {
-                    const doc = livePreview.contentDocument || livePreview.contentWindow.document;
-                    setupInteractions(doc);
-                } catch(e) {}
+                const doc = livePreview.contentDocument || livePreview.contentWindow.document;
+                setupInteractions(doc);
             };
             livePreview.src = url;
         }
 
         function setupInteractions(doc) {
             let draggedEl = null;
-            let longPressTimer = null;
-            let offset = { x: 0, y: 0 };
-            let selectedEl = null;
-
             let resizingEl = null;
+            let selectedEl = null;
             let currentHandle = null;
-            let startRect = null;
-            let startPos = { x: 0, y: 0 };
+            let startRect, startPos, offset = { x: 0, y: 0 };
 
             const getPos = (e) => {
                 const t = e.touches ? e.touches[0] : e;
                 return { x: t.clientX, y: t.clientY };
             };
 
-            const clearResizers = () => {
-                doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
-            };
+            const clearDots = () => doc.querySelectorAll('.resizer-dot').forEach(d => d.remove());
 
             const addResizers = (el) => {
-                clearResizers();
+                clearDots();
                 if (!el) return;
                 const rect = el.getBoundingClientRect();
-                const scrollX = doc.defaultView.pageXOffset;
-                const scrollY = doc.defaultView.pageYOffset;
-                
+                const scrollX = doc.defaultView.scrollX;
+                const scrollY = doc.defaultView.scrollY;
                 const positions = ['tl', 'tr', 'bl', 'br'];
+                
                 positions.forEach(pos => {
                     const dot = doc.createElement('div');
                     dot.className = `resizer-dot resizer-${pos}`;
                     dot.dataset.handle = pos;
-                    
-                    if(pos.includes('t')) dot.style.top = (scrollY + rect.top - 6) + 'px';
-                    if(pos.includes('b')) dot.style.top = (scrollY + rect.bottom - 6) + 'px';
-                    if(pos.includes('l')) dot.style.left = (scrollX + rect.left - 6) + 'px';
-                    if(pos.includes('r')) dot.style.left = (scrollX + rect.right - 6) + 'px';
-                    
+                    if(pos.includes('t')) dot.style.top = (scrollY + rect.top - 7) + 'px';
+                    if(pos.includes('b')) dot.style.top = (scrollY + rect.bottom - 7) + 'px';
+                    if(pos.includes('l')) dot.style.left = (scrollX + rect.left - 7) + 'px';
+                    if(pos.includes('r')) dot.style.left = (scrollX + rect.right - 7) + 'px';
                     dot.addEventListener('mousedown', startResize);
                     dot.addEventListener('touchstart', startResize, {passive: false});
                     doc.body.appendChild(dot);
@@ -420,102 +155,18 @@
             };
 
             const startResize = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
+                e.stopPropagation(); e.preventDefault();
                 resizingEl = selectedEl;
                 currentHandle = e.target.dataset.handle;
                 const pos = getPos(e);
                 startPos = { x: pos.x, y: pos.y };
                 startRect = resizingEl.getBoundingClientRect();
-                resizingEl.style.position = 'absolute'; // Force absolute for resizing
+                // CRITICAL: Ensure element can actually be resized
+                const style = doc.defaultView.getComputedStyle(resizingEl);
+                if (style.display === 'inline') resizingEl.style.display = 'inline-block';
+                resizingEl.style.position = 'absolute'; 
+                resizingEl.style.overflow = 'hidden';
             };
-
-            const handleResizeMove = (cx, cy) => {
-                const dx = cx - startPos.x;
-                const dy = cy - startPos.y;
-                
-                if (currentHandle.includes('r')) resizingEl.style.width = Math.max(20, startRect.width + dx) + 'px';
-                if (currentHandle.includes('b')) resizingEl.style.height = Math.max(20, startRect.height + dy) + 'px';
-                if (currentHandle.includes('l')) {
-                    resizingEl.style.width = Math.max(20, startRect.width - dx) + 'px';
-                    resizingEl.style.left = (startRect.left + dx) + 'px';
-                }
-                if (currentHandle.includes('t')) {
-                    resizingEl.style.height = Math.max(20, startRect.height - dy) + 'px';
-                    resizingEl.style.top = (startRect.top + dy) + 'px';
-                }
-            };
-
-            const startDrag = (el, x, y) => {
-                draggedEl = el;
-                const rect = el.getBoundingClientRect();
-                offset.x = x - rect.left;
-                offset.y = y - rect.top;
-                el.style.position = 'absolute';
-                el.classList.add('drag-target');
-                clearResizers();
-            };
-
-            const endAction = () => {
-                if (draggedEl) {
-                    draggedEl.classList.remove('drag-target');
-                    addResizers(draggedEl);
-                    draggedEl = null;
-                    syncHTML();
-                }
-                if (resizingEl) {
-                    addResizers(resizingEl);
-                    resizingEl = null;
-                    syncHTML();
-                }
-                clearTimeout(longPressTimer);
-            };
-
-            doc.addEventListener('click', e => {
-                const t = e.target;
-                if (t.classList.contains('resizer-dot')) return;
-                if (t === doc.body || t === doc.documentElement) {
-                    if(selectedEl) selectedEl.style.outline = '';
-                    selectedEl = null;
-                    clearResizers();
-                    return;
-                }
-                
-                if (selectedEl && selectedEl !== t) {
-                    selectedEl.style.outline = '';
-                }
-
-                if (t === selectedEl) {
-                    if (confirm('Delete this element?')) {
-                        t.remove();
-                        selectedEl = null;
-                        clearResizers();
-                        syncHTML();
-                    }
-                } else {
-                    t.style.outline = '2px solid #ef4444';
-                    selectedEl = t;
-                    addResizers(t);
-                }
-            });
-
-            doc.addEventListener('contextmenu', e => {
-                const t = e.target;
-                if (t === doc.body || t === doc.documentElement || t.classList.contains('resizer-dot')) return;
-                e.preventDefault();
-                const pos = getPos(e);
-                startDrag(t, pos.x, pos.y);
-            });
-
-            doc.addEventListener('touchstart', e => {
-                const t = e.target;
-                if (t === doc.body || t === doc.documentElement || t.classList.contains('resizer-dot')) return;
-                const pos = getPos(e);
-                longPressTimer = setTimeout(() => {
-                    startDrag(t, pos.x, pos.y);
-                    if (navigator.vibrate) navigator.vibrate(40);
-                }, 600);
-            }, { passive: false });
 
             doc.addEventListener('mousemove', e => {
                 const pos = getPos(e);
@@ -523,140 +174,126 @@
                     draggedEl.style.left = (pos.x - offset.x) + 'px';
                     draggedEl.style.top = (pos.y - offset.y) + 'px';
                 } else if (resizingEl) {
-                    handleResizeMove(pos.x, pos.y);
+                    const dx = pos.x - startPos.x;
+                    const dy = pos.y - startPos.y;
+                    if (currentHandle.includes('r')) resizingEl.style.width = Math.max(10, startRect.width + dx) + 'px';
+                    if (currentHandle.includes('b')) resizingEl.style.height = Math.max(10, startRect.height + dy) + 'px';
+                    if (currentHandle.includes('l')) {
+                        resizingEl.style.width = Math.max(10, startRect.width - dx) + 'px';
+                        resizingEl.style.left = (startRect.left + dx) + 'px';
+                    }
+                    if (currentHandle.includes('t')) {
+                        resizingEl.style.height = Math.max(10, startRect.height - dy) + 'px';
+                        resizingEl.style.top = (startRect.top + dy) + 'px';
+                    }
                 }
             });
 
+            const end = () => {
+                if (draggedEl || resizingEl) {
+                    const target = draggedEl || resizingEl;
+                    target.classList.remove('drag-target');
+                    addResizers(target);
+                    draggedEl = resizingEl = null;
+                    syncHTML();
+                }
+            };
+
+            doc.addEventListener('mouseup', end);
+            doc.addEventListener('touchend', end);
             doc.addEventListener('touchmove', e => {
+                if (draggedEl || resizingEl) e.preventDefault();
                 const pos = getPos(e);
                 if (draggedEl) {
-                    e.preventDefault();
                     draggedEl.style.left = (pos.x - offset.x) + 'px';
                     draggedEl.style.top = (pos.y - offset.y) + 'px';
                 } else if (resizingEl) {
-                    e.preventDefault();
-                    handleResizeMove(pos.x, pos.y);
-                } else {
-                    clearTimeout(longPressTimer);
+                    const dx = pos.x - startPos.x;
+                    const dy = pos.y - startPos.y;
+                    if (currentHandle.includes('r')) resizingEl.style.width = Math.max(10, startRect.width + dx) + 'px';
+                    if (currentHandle.includes('b')) resizingEl.style.height = Math.max(10, startRect.height + dy) + 'px';
+                    // (Handles top/left similarly)
                 }
-            }, { passive: false });
+            }, {passive: false});
 
-            doc.addEventListener('mouseup', endAction);
-            doc.addEventListener('touchend', endAction);
+            doc.addEventListener('click', e => {
+                const t = e.target;
+                if (t.classList.contains('resizer-dot')) return;
+                if (t === doc.body || t === doc.documentElement) {
+                    if(selectedEl) selectedEl.style.outline = '';
+                    selectedEl = null; clearDots(); return;
+                }
+                if (selectedEl && selectedEl !== t) selectedEl.style.outline = '';
+                if (t === selectedEl) {
+                    if (confirm('Delete?')) { t.remove(); selectedEl = null; clearDots(); syncHTML(); }
+                } else {
+                    t.style.outline = '2px solid #ef4444';
+                    selectedEl = t; addResizers(t);
+                }
+            });
+
+            // Re-use your drag logic
+            doc.addEventListener('contextmenu', e => {
+                const t = e.target;
+                if (t === doc.body || t.classList.contains('resizer-dot')) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                draggedEl = t;
+                const rect = t.getBoundingClientRect();
+                offset.x = pos.x - rect.left;
+                offset.y = pos.y - rect.top;
+                t.style.position = 'absolute';
+                t.classList.add('drag-target');
+                clearDots();
+            });
         }
 
         function syncHTML() {
             try {
-                const doc = livePreview.contentDocument || livePreview.contentWindow.document;
-                if (doc && doc.documentElement) {
-                    const clone = doc.documentElement.cloneNode(true);
-                    clone.querySelectorAll('.resizer-dot').forEach(d => d.remove());
-                    currentHTML = clone.outerHTML;
-                }
+                const doc = livePreview.contentDocument;
+                const clone = doc.documentElement.cloneNode(true);
+                clone.querySelectorAll('.resizer-dot').forEach(d => d.remove());
+                currentHTML = clone.outerHTML;
             } catch(e) {}
         }
 
         function bindEvents() {
-            sendBtn.addEventListener('click', sendMessage);
-            chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
-            copyBtn.addEventListener('click', copyHTML);
-            pointerBtn.addEventListener('click', togglePointer);
-            clearBtn.addEventListener('click', clearCanvas);
-
-            function placePointerDot(clientX, clientY) {
+            sendBtn.onclick = sendMessage;
+            chatInput.onkeydown = e => { if(e.key==='Enter') sendMessage(); };
+            copyBtn.onclick = async () => { syncHTML(); await navigator.clipboard.writeText(currentHTML); };
+            pointerBtn.onclick = () => {
+                pointerActive = !pointerActive;
+                pointerBtn.classList.toggle('on', pointerActive);
+                pointerOverlay.classList.toggle('active', pointerActive);
+                if(!pointerActive) pointerDot.style.display = 'none';
+            };
+            clearBtn.onclick = () => { if(confirm('Reset?')) { currentHTML=INITIAL_HTML; renderPreview(currentHTML); } };
+            pointerOverlay.onclick = e => {
                 const r = canvasWrapper.getBoundingClientRect();
-                pointerPos.x = clientX - r.left;
-                pointerPos.y = clientY - r.top;
+                pointerPos = { x: e.clientX - r.left, y: e.clientY - r.top };
                 pointerDot.style.left = pointerPos.x + 'px';
                 pointerDot.style.top = pointerPos.y + 'px';
                 pointerDot.style.display = 'block';
-            }
-
-            pointerOverlay.addEventListener('click', e => placePointerDot(e.clientX, e.clientY));
-            pointerOverlay.addEventListener('mousemove', e => { if(pointerActive) placePointerDot(e.clientX, e.clientY); });
-            pointerOverlay.addEventListener('touchstart', e => {
-                e.preventDefault();
-                const t = e.touches[0];
-                placePointerDot(t.clientX, t.clientY);
-            }, { passive: false });
-        }
-
-        function togglePointer() {
-            pointerActive = !pointerActive;
-            pointerBtn.classList.toggle('on', pointerActive);
-            pointerLbl.textContent = pointerActive ? 'ON' : 'Pointer';
-            pointerOverlay.classList.toggle('active', pointerActive);
-            if (!pointerActive) pointerDot.style.display = 'none';
+            };
         }
 
         async function sendMessage() {
-            const msg = chatInput.value.trim();
-            if (!msg) return;
-            chatInput.value = '';
-            syncHTML();
-            setLoading(true);
-
-            const pointer = pointerActive
-                ? `\n\nUser pointer: X:${Math.round(pointerPos.x)}px Y:${Math.round(pointerPos.y)}px.`
-                : '';
-
-            const prompt = `Current HTML:\n${currentHTML}\n\nRequest: ${msg}${pointer}\n\nReturn ONLY raw HTML.`;
-
+            const msg = chatInput.value.trim(); if(!msg) return;
+            chatInput.value = ''; syncHTML(); setLoading(true);
+            const prompt = `Current HTML:\n${currentHTML}\n\nRequest: ${msg}${pointerActive?` Pointer at X:${pointerPos.x} Y:${pointerPos.y}`:''}\n\nReturn ONLY HTML.`;
             try {
-                const html = await callGroq(prompt);
-                if (html) {
-                    currentHTML = html;
-                    renderPreview(currentHTML);
-                    setStatus('Done', '#4ade80');
-                }
-            } catch(err) {
-                setStatus('Error', '#f87171');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        async function callGroq(prompt) {
-            const res = await fetch(GROQ_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${GROQ_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile',
-                    messages: [
-                        { role: 'system', content: 'Return ONLY complete HTML. No markdown code blocks.' },
-                        { role: 'user', content: prompt }
-                    ],
-                    temperature: 0.7
-                })
-            });
-            const data = await res.json();
-            return data.choices[0].message.content.replace(/```html|```/g, '').trim();
-        }
-
-        async function copyHTML() {
-            syncHTML();
-            try {
-                await navigator.clipboard.writeText(currentHTML);
-                const orig = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i><span class="lbl">Copied!</span>';
-                setTimeout(() => { copyBtn.innerHTML = orig; }, 1500);
-            } catch(e) {}
-        }
-
-        function clearCanvas() {
-            if (confirm('Reset?')) {
-                currentHTML = INITIAL_HTML;
+                const res = await fetch(GROQ_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+                    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{role:'system', content:'Return ONLY raw HTML.'}, {role:'user', content:prompt}] })
+                });
+                const data = await res.json();
+                currentHTML = data.choices[0].message.content.replace(/```html|```/g, '').trim();
                 renderPreview(currentHTML);
-                setStatus('Cleared', '#4ade80');
-            }
+            } catch(e) { console.error(e); } finally { setLoading(false); }
         }
 
-        function setLoading(on) { loadingOverlay.classList.toggle('visible', on); setStatus(on ? 'Thinking…' : 'Ready', on ? '#fbbf24' : '#4ade80'); }
-        function setStatus(msg, color) { statusText.textContent = msg; statusDot.style.background = color; }
-
+        function setLoading(on) { loadingOverlay.classList.toggle('visible', on); }
         init();
     </script>
 </body>
