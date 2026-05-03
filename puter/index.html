@@ -188,20 +188,20 @@
                 const response = await puter.ai.chat(
                     `Task: ${val}\n\nExisting HTML:\n${currentHTML}`,
                     { 
-                        system_prompt: "STRICT OUTPUT MODE: Return ONLY the full HTML code. No markdown, no backticks, no text before or after. Start immediately with <!DOCTYPE html> and end with </html>.",
+                        system_prompt: "No other words, just the full HTML code. STRICT CODE ONLY MODE. Your response must ONLY contain the full HTML document. Absolutely NO conversational text, NO explanations, NO markdown backticks, and NO prefixes or suffixes. Start with <!DOCTYPE html> and end with </html>.",
                         model: 'gpt-4o' 
                     }
                 );
                 
                 let code = response.toString();
                 
-                // Extraction Logic: Find the actual HTML block and ignore everything else
+                // Aggressive extraction: Find ONLY the content between <!DOCTYPE html> and </html>
                 const htmlMatch = code.match(/<!DOCTYPE html>[\s\S]*<\/html>/i);
                 
                 if (htmlMatch) {
                     code = htmlMatch[0];
                 } else {
-                    // Fallback: If doctype is missing, try to find <html> tags or at least strip backticks
+                    // Fallback cleanup if tags are missing or broken
                     code = code.replace(/```html|```/gi, '').trim();
                 }
 
