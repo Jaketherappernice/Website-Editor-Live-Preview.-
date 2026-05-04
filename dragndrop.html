@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Mobile Web Builder</title>
+    <style>
+        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; }
+        
+        #canvas { 
+            width: 100vw; height: 100vh; background-color: white; position: relative;
+            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 25px 25px; background-repeat: no-repeat; background-size: cover; background-position: center;
+        }
+
+        /* UI ELEMENTS */
+        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
+        #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
+        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
+        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* CANVAS ELEMENTS */
+        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
+        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
+        .selected { outline: 2px solid var(--primary); z-index: 50; }
+
+        /* RESIZERS */
+        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 60; }
+        .selected .resizer { display: block; }
+        .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
+
+        #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+    <button id="copy-btn">Copy Full Website</button>
+    <div id="canvas"></div>
+
+    <button id="add-btn" class="fab">+</button>
+    <button id="settings-btn" class="fab">⚙️</button>
+
+    <div id="panel" class="popup-panel">
+        <div class="item" data-type="Heading">Heading</div>
+        <div class="item" data-type="Paragraph">Paragraph</div>
+        <div class="item" data-type="Button">Button</div>
+        <div class="item" data-type="Image">Image</div>
+        <div class="item" data-type="Box">Container</div>
+    </div>
+
+    <div id="settings-panel" class="popup-panel">
+        <div class="item" onclick="triggerCanvasColor()">BG Color</div>
+        <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
+    </div>
+
+    <input type="color" id="colorPicker" style="display:none">
+    <input type="color" id="canvasColorPicker" style="display:none">
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const colorPicker = document.getElementById('colorPicker');
+        let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
+
+        // Toggle Panels
+        document.getElementById('add-btn').onclick = () => toggleP('panel');
+        document.getElementById('settings-btn').onclick = () => toggleP('settings-panel');
+        function toggleP(id) {
+            const p = document.getElementById(id);
+            const visible = p.style.display === 'flex';
+            document.querySelectorAll('.popup-panel').forEach(el => el.style.display = 'none');
+            p.style.display = visible ? 'none' : 'flex';
+        }
+
+        // Add Logic
+        document.querySelectorAll('.item[data-type]').forEach(i => {
+            i.onclick = () => { createNode(i.dataset.type, 50, 50); toggleP('panel'); };
+        });
+
+        function createNode(type, x, y) {
+            const el = document.createElement('div');
+            el.className = 'dropped-element';
+            el.dataset.type = type;
+            el.style.left = x + 'px'; el.style.top = y + 'px';
+            el.style.width = "150px"; el.style.height = "50px";
+
+            const html = {
+                'Heading': '<h2>Heading</h2>',
+                'Paragraph': '<p>Text...</p>',
+                'Button': '<button style="background:var(--primary);color:white;border:none;border-radius:5px;width:100%;height:100%;">Click</button>',
+                'Image': '<img src="https://via.placeholder.com/150">',
+                'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;"></div>'
+            };
+
+            el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+            canvas.appendChild(el);
+            setupEl(el);
+        }
+
+        function setupEl(el) {
+            let clicks = [];
+            const start = (e) => {
+                if (e.target.classList.contains('resizer')) return;
+                activeEl = el; isMoving = true;
+                document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+                el.classList.add('selected');
+                const t = e.touches ? e.touches[0] : e;
+                startX = t.clientX - el.offsetLeft; startY = t.clientY - el.offsetTop;
+            };
+
+            el.onmousedown = el.ontouchstart = start;
+
+            el.onclick = () => {
+                const now = Date.now();
+                clicks.push(now);
+                clicks = clicks.filter(t => now - t < 700);
+                if (clicks.length === 3) { el.remove(); clicks = []; }
+                else if (clicks.length === 2) { setTimeout(() => { if(clicks.length === 2) { edit(el); clicks = []; } }, 250); }
+            };
+
+            el.querySelectorAll('.resizer').forEach(r => {
+                r.onmousedown = r.ontouchstart = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    currentResizer = r; activeEl = el;
+                    const t = e.touches ? e.touches[0] : e;
+                    startX = t.clientX; startY = t.clientY;
+                    startW = el.offsetWidth; startH = el.offsetHeight;
+                    startL = el.offsetLeft; startT = el.offsetTop;
+                };
+            });
+        }
+
+        function edit(el) {
+            const inner = el.querySelector('h2, p, button, img, div');
+            if (el.dataset.type === 'Image') {
+                const s = prompt("Image URL:", inner.src); if(s) inner.src = s;
+            } else if (confirm("Edit Text? (Cancel for Color)")) {
+                const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
+            } else {
+                colorPicker.click();
+                colorPicker.oninput = () => {
+                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = colorPicker.value;
+                    else inner.style.color = colorPicker.value;
+                };
+            }
+        }
+
+        window.onmousemove = window.ontouchmove = (e) => {
+            if (!activeEl) return;
+            const t = e.touches ? e.touches[0] : e;
+            if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
+            if (currentResizer) {
+                const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
+                if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
+                if (c.contains('sw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
+                if (c.contains('ne')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+                if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+            }
+        };
+        window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
+
+        function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundImage = 'none'; canvas.style.backgroundColor = cp.value; }; }
+        function triggerCanvasImage() { const u = prompt("BG Image URL:"); if(u) { canvas.style.backgroundImage = `url('${u}')`; canvas.style.backgroundColor = 'transparent'; } }
+
+        document.getElementById('copy-btn').onclick = () => {
+            const canvasClone = canvas.cloneNode(true);
+            canvasClone.querySelectorAll('.resizer').forEach(r => r.remove());
+            canvasClone.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+            
+            const styles = `
+                body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow-x: hidden; }
+                #exported-canvas { 
+                    width: 100vw; height: 100vh; position: relative; 
+                    background-color: ${canvas.style.backgroundColor || 'white'};
+                    background-image: ${canvas.style.backgroundImage || 'none'};
+                    background-size: cover; background-position: center;
+                }
+                .dropped-element { position: absolute; display: flex; align-items: center; justify-content: center; }
+                .dropped-element > * { width: 100%; height: 100%; margin: 0; object-fit: cover; }
+            `;
+
+            const fullHTML = `<!DOCTYPE html><html><head><style>${styles}</style></head><body><div id="exported-canvas">${canvasClone.innerHTML}</div></body></html>`;
+            navigator.clipboard.writeText(fullHTML);
+            alert("Full Project Copied!");
+        };
+    </script>
+</body>
+</html>
