@@ -29,10 +29,19 @@
         /* CANVAS ELEMENTS */
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
-        .selected { outline: 2px solid var(--primary); z-index: 50; }
+        
+        /* UPDATED LAYER RULES */
+        .dropped-element[data-type="Box"] { z-index: 1 !important; }
+        /* Everything else (including Images) overlays Containers */
+        .dropped-element[data-type="Heading"], 
+        .dropped-element[data-type="Paragraph"] { z-index: 20 !important; } /* Text sits highest */
+        .dropped-element[data-type="Button"], 
+        .dropped-element[data-type="Image"] { z-index: 10 !important; } /* Buttons/Images sit between Box and Text */
+
+        .selected { outline: 2px solid var(--primary); z-index: 100 !important; }
 
         /* RESIZERS */
-        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 60; }
+        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 110; }
         .selected .resizer { display: block; }
         .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
@@ -98,15 +107,17 @@
             const el = document.createElement('div');
             el.className = 'dropped-element';
             el.dataset.type = type;
-            el.style.left = x + 'px'; el.style.top = y + 'px';
-            el.style.width = "200px"; el.style.height = "60px";
+            el.style.left = x + 'px'; 
+            el.style.top = y + 'px';
+            el.style.width = (type === 'Box' || type === 'Image') ? "200px" : "200px"; 
+            el.style.height = (type === 'Box' || type === 'Image') ? "200px" : "60px";
 
             const html = {
-                'Heading': '<h2 style="font-size:24px;">Heading</h2>',
-                'Paragraph': '<p style="font-size:16px;">Text...</p>',
-                'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:5px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
-                'Image': '<img src="https://via.placeholder.com/150">',
-                'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;"></div>'
+                'Heading': '<h2 style="font-size:24px; color:#000;">Heading</h2>',
+                'Paragraph': '<p style="font-size:16px; color:#000;">Text...</p>',
+                'Button': `<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>`,
+                'Image': `<img src="https://via.placeholder.com/150" style="border-radius:12px; width:100%; height:100%;">`,
+                'Box': `<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>`
             };
 
             el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
@@ -151,7 +162,7 @@
             const inner = el.querySelector('h2, p, button, img, div');
             
             if (['Heading', 'Paragraph'].includes(el.dataset.type)) {
-                const action = prompt("1: Edit Text | 2: Edit Size | 3: Color");
+                const action = prompt("1: Text | 2: Size | 3: Color");
                 if (action === '1') {
                     const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
                 } else if (action === '2') {
@@ -161,7 +172,7 @@
                     colorPicker.oninput = () => { inner.style.color = colorPicker.value; };
                 }
             } else if (el.dataset.type === 'Button') {
-                const action = prompt("1: Edit Text | 2: Edit Link | 3: Color");
+                const action = prompt("1: Text | 2: Link | 3: Color");
                 if (action === '1') {
                     const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
                 } else if (action === '2') {
@@ -222,9 +233,10 @@
                 d.classList.remove('selected');
                 const inner = d.querySelector('h2, p, button, img, div');
                 
-                // Set explicit font size in clone based on real-time style
-                const originalInner = document.querySelector(`.dropped-element[style*="${d.style.left}"][style*="${d.style.top}"] > *:not(.resizer)`);
-                if(originalInner) inner.style.fontSize = window.getComputedStyle(originalInner).fontSize;
+                // EXPORT LAYER LOGIC
+                if(d.dataset.type === 'Box') d.style.zIndex = "1";
+                else if(d.dataset.type === 'Heading' || d.dataset.type === 'Paragraph') d.style.zIndex = "20";
+                else d.style.zIndex = "10";
 
                 if(d.dataset.type === 'Button' && d.dataset.link) {
                     const link = document.createElement('a');
@@ -251,13 +263,14 @@
                 .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; pointer-events: none; }
                 .dropped-element > * { width:100%; height:100%; margin:0; display:block; pointer-events: auto !important; }
                 h2, p { margin:0; padding:0; line-height: 1.2; }
-                button { border:none; cursor:pointer; font-family:inherit; }
+                button { border:none; cursor:pointer; font-family:inherit; border-radius: 12px; }
+                div[style*="border-radius"], img { border-radius: 12px !important; }
                 img { object-fit: cover; }
             `;
 
             const fullHTML = `<!DOCTYPE html><html><head><style>${styles}</style></head><body><div id="exported-canvas">${canvasClone.innerHTML}</div></body></html>`;
             navigator.clipboard.writeText(fullHTML);
-            alert("Website Copied! Font sizes and layouts are now matched 1:1.");
+            alert("Exported! Images now overlay containers, and all corners are rounded.");
         };
     </script>
 </body>
