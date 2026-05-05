@@ -21,9 +21,13 @@
         .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
         .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
+        /* SIZE CONTROL UI */
+        #size-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
+        #size-control input[type="range"] { width: 100%; margin: 15px 0; }
+        #size-control input[type="number"] { width: 60px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
+
         /* CANVAS ELEMENTS */
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
-        /* pointer-events: none is only for the EDITOR so we can drag the parent */
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         .selected { outline: 2px solid var(--primary); z-index: 50; }
 
@@ -56,16 +60,29 @@
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
     </div>
 
+    <div id="size-control">
+        <strong>Font Size</strong><br>
+        <input type="range" id="size-slider" min="8" max="200" value="24">
+        <input type="number" id="size-num" value="24"> px
+        <br><br>
+        <button onclick="closeSizeControl()" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+    </div>
+
     <input type="color" id="colorPicker" style="display:none">
     <input type="color" id="canvasColorPicker" style="display:none">
 
     <script>
         const canvas = document.getElementById('canvas');
         const colorPicker = document.getElementById('colorPicker');
+        const sizeControl = document.getElementById('size-control');
+        const sizeSlider = document.getElementById('size-slider');
+        const sizeNum = document.getElementById('size-num');
+        
         let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
         document.getElementById('add-btn').onclick = () => toggleP('panel');
         document.getElementById('settings-btn').onclick = () => toggleP('settings-panel');
+        
         function toggleP(id) {
             const p = document.getElementById(id);
             const visible = p.style.display === 'flex';
@@ -82,11 +99,11 @@
             el.className = 'dropped-element';
             el.dataset.type = type;
             el.style.left = x + 'px'; el.style.top = y + 'px';
-            el.style.width = "150px"; el.style.height = "50px";
+            el.style.width = "200px"; el.style.height = "60px";
 
             const html = {
-                'Heading': '<h2>Heading</h2>',
-                'Paragraph': '<p>Text...</p>',
+                'Heading': '<h2 style="font-size:24px;">Heading</h2>',
+                'Paragraph': '<p style="font-size:16px;">Text...</p>',
                 'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:5px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
                 'Image': '<img src="https://via.placeholder.com/150">',
                 'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;"></div>'
@@ -132,8 +149,17 @@
 
         function edit(el) {
             const inner = el.querySelector('h2, p, button, img, div');
-            if (el.dataset.type === 'Image') {
-                const s = prompt("Image URL:", inner.src); if(s) inner.src = s;
+            
+            if (['Heading', 'Paragraph'].includes(el.dataset.type)) {
+                const action = prompt("1: Edit Text | 2: Edit Size | 3: Color");
+                if (action === '1') {
+                    const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
+                } else if (action === '2') {
+                    openSizeControl(inner);
+                } else if (action === '3') {
+                    colorPicker.click();
+                    colorPicker.oninput = () => { inner.style.color = colorPicker.value; };
+                }
             } else if (el.dataset.type === 'Button') {
                 const action = prompt("1: Edit Text | 2: Edit Link | 3: Color");
                 if (action === '1') {
@@ -145,19 +171,33 @@
                     colorPicker.click();
                     colorPicker.oninput = () => { inner.style.backgroundColor = colorPicker.value; };
                 }
-            } else if (confirm("Edit Text? (Cancel for Color)")) {
-                const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
+            } else if (el.dataset.type === 'Image') {
+                const s = prompt("Image URL:", inner.src); if(s) inner.src = s;
             } else {
                 colorPicker.click();
-                colorPicker.oninput = () => {
-                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = colorPicker.value;
-                    else inner.style.color = colorPicker.value;
-                };
+                colorPicker.oninput = () => { inner.style.backgroundColor = colorPicker.value; };
             }
         }
 
+        function openSizeControl(target) {
+            sizeControl.style.display = 'block';
+            const currentSize = parseInt(window.getComputedStyle(target).fontSize);
+            sizeSlider.value = sizeNum.value = currentSize;
+            
+            const updateSize = (val) => {
+                target.style.fontSize = val + 'px';
+                sizeNum.value = val;
+                sizeSlider.value = val;
+            };
+
+            sizeSlider.oninput = (e) => updateSize(e.target.value);
+            sizeNum.oninput = (e) => updateSize(e.target.value);
+        }
+
+        function closeSizeControl() { sizeControl.style.display = 'none'; }
+
         window.onmousemove = window.ontouchmove = (e) => {
-            if (!activeEl || !isMoving && !currentResizer) return;
+            if (!activeEl || (!isMoving && !currentResizer)) return;
             const t = e.touches ? e.touches[0] : e;
             if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
             if (currentResizer) {
@@ -168,6 +208,7 @@
                 if (c.contains('nw')) { activeEl.style.width = Math.max(20, startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = Math.max(20, startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
             }
         };
+        
         window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
 
         function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundImage = 'none'; canvas.style.backgroundColor = cp.value; }; }
@@ -177,12 +218,14 @@
             const canvasClone = canvas.cloneNode(true);
             canvasClone.querySelectorAll('.resizer').forEach(r => r.remove());
             
-            // Clean up elements and apply link logic
             canvasClone.querySelectorAll('.dropped-element').forEach(d => {
                 d.classList.remove('selected');
-                d.style.border = "none"; // Remove any editor-only outlines
-                
                 const inner = d.querySelector('h2, p, button, img, div');
+                
+                // Set explicit font size in clone based on real-time style
+                const originalInner = document.querySelector(`.dropped-element[style*="${d.style.left}"][style*="${d.style.top}"] > *:not(.resizer)`);
+                if(originalInner) inner.style.fontSize = window.getComputedStyle(originalInner).fontSize;
+
                 if(d.dataset.type === 'Button' && d.dataset.link) {
                     const link = document.createElement('a');
                     link.href = d.dataset.link;
@@ -193,7 +236,7 @@
                     link.appendChild(btn);
                     inner.replaceWith(link);
                 } else if (inner) {
-                    inner.style.pointerEvents = "auto"; // Re-enable clicks for non-linked buttons/items
+                    inner.style.pointerEvents = "auto";
                 }
             });
 
@@ -206,16 +249,15 @@
                     background-size: cover; background-position: center;
                 }
                 .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; pointer-events: none; }
-                /* FORCE VISIBILITY AND CLICKS */
                 .dropped-element > * { width:100%; height:100%; margin:0; display:block; pointer-events: auto !important; }
-                h2, p { margin:0; padding:0; }
+                h2, p { margin:0; padding:0; line-height: 1.2; }
                 button { border:none; cursor:pointer; font-family:inherit; }
                 img { object-fit: cover; }
             `;
 
             const fullHTML = `<!DOCTYPE html><html><head><style>${styles}</style></head><body><div id="exported-canvas">${canvasClone.innerHTML}</div></body></html>`;
             navigator.clipboard.writeText(fullHTML);
-            alert("Exported! The button is now fixed and will look exactly like it does here.");
+            alert("Website Copied! Font sizes and layouts are now matched 1:1.");
         };
     </script>
 </body>
