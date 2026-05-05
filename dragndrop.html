@@ -94,7 +94,7 @@
     <input type="color" id="canvasColorPicker" style="display:none">
 
     <script>
-            const canvas = document.getElementById('canvas');
+    const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
     const modeToggle = document.getElementById('mode-toggle');
     const heightSlider = document.getElementById('height-slider');
@@ -133,7 +133,7 @@
         const state = {
             w: el.style.width, h: el.style.height,
             l: el.style.left, t: el.style.top,
-            fs: inner ? inner.style.fontSize : null
+            fs: inner ? inner.style.fontSize : (el.dataset.type === 'Heading' ? '24px' : '16px')
         };
         el.dataset[currentMode] = JSON.stringify(state);
     }
@@ -235,7 +235,7 @@
             if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
             else if (el.dataset.type === 'Button') {
                 inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                el.dataset.link = prompt("Link:", el.dataset.link || "");
+                el.dataset.link = prompt("URL Link (e.g. https://google.com):", el.dataset.link || "");
             } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
         } else if (action === '2' && ['Heading', 'Paragraph'].includes(el.dataset.type)) {
             document.getElementById('size-control').style.display = 'block';
@@ -256,9 +256,8 @@
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    // FIXED EXPORT LOGIC
     document.getElementById('copy-btn').onclick = () => {
-        // Force sync current mode state
+        // FORCE SYNC: Ensure the mode you are CURRENTLY in is saved right now
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
 
         let desktopStyles = "", mobileStyles = "";
@@ -266,17 +265,33 @@
         const bgColor = canvas.style.backgroundColor || "white";
         const bgImg = canvas.style.backgroundImage || "none";
         
+        // Clone for export so we can modify buttons without breaking the builder
+        const exportCanvas = canvas.cloneNode(true);
+        exportCanvas.querySelectorAll('.resizer').forEach(r => r.remove());
+
         document.querySelectorAll('.dropped-element').forEach((el, index) => {
             const id = `el-${index}`;
             const d = JSON.parse(el.dataset.desktop || '{}');
             const m = JSON.parse(el.dataset.mobile || '{}');
-            el.setAttribute('id', id);
             
-            // Desktop Styles (Min-width 601px)
-            desktopStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; }\n`;
+            // Apply IDs to the exported version
+            const exportEl = exportCanvas.children[index];
+            exportEl.setAttribute('id', id);
+            exportEl.classList.remove('selected');
+
+            // Make buttons functional
+            if (el.dataset.type === 'Button') {
+                const btn = exportEl.querySelector('button');
+                if (el.dataset.link) {
+                    btn.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
+                }
+            }
+
+            // Desktop CSS
+            desktopStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; z-index:${el.style.zIndex || 1}; }\n`;
             if(d.fs) desktopStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
             
-            // Mobile Styles (Max-width 600px) - Falls back to desktop if mobile not set
+            // Mobile CSS (Fall back to desktop if mobile wasn't explicitly moved)
             const ml = m.l || d.l, mt = m.t || d.t, mw = m.w || d.w, mh = m.h || d.h, mfs = m.fs || d.fs;
             mobileStyles += `#${id} { left:${ml} !important; top:${mt} !important; width:${mw} !important; height:${mh} !important; }\n`;
             if(mfs) mobileStyles += `#${id} > * { font-size:${mfs} !important; }\n`;
@@ -288,23 +303,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; }
+        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
         #site-canvas { position:relative; width:100%; height:${finalHeight}; background-color:${bgColor}; background-image:${bgImg}; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
         .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
-        @media (min-width: 601px) { ${desktopStyles} }
+        button { cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.8; }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } ${desktopStyles} }
         @media (max-width: 600px) { #site-canvas { width: 100vw; } ${mobileStyles} }
     </style>
 </head>
 <body>
-    <div id="site-canvas">${canvas.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}</div>
+    <div id="site-canvas">${exportCanvas.innerHTML}</div>
 </body>
 </html>`;
         
         navigator.clipboard.writeText(finalHTML);
-        alert("Success! Your responsive site is copied.");
+        alert("Responsive Website Copied! Buttons and Layouts are now fully fixed.");
     };
-
-    </script>
+</script>
 </body>
 </html>
