@@ -93,8 +93,7 @@
     <input type="color" id="colorPicker" style="display:none">
     <input type="color" id="canvasColorPicker" style="display:none">
 
-    <script>
-    const canvas = document.getElementById('canvas');
+    <script>         const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
     const modeToggle = document.getElementById('mode-toggle');
     const heightSlider = document.getElementById('height-slider');
@@ -103,24 +102,16 @@
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-    // --- UI CONTROLS (FIXED) ---
+    // --- PANEL FIXES ---
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
-        // Close all other panels first
         document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-        // Toggle the target panel
         p.style.display = isVisible ? 'none' : 'flex';
     }
 
-    // Re-attaching the click events properly
     document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
     document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
-
-    // Close panels when clicking the canvas
-    canvas.onclick = () => {
-        document.querySelectorAll('.popup-panel').forEach(p => p.style.display = 'none');
-    };
 
     heightSlider.oninput = heightNum.oninput = (e) => {
         const val = e.target.value;
@@ -128,7 +119,7 @@
         canvas.style.height = val + 'px';
     };
 
-    // --- VIEW LOGIC ---
+    // --- VIEWPORT & DATA ---
     function toggleViewMode() {
         currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
         viewport.className = currentMode === 'mobile' ? 'mobile' : '';
@@ -158,12 +149,12 @@
         el.dataset[currentMode] = JSON.stringify(state);
     }
 
-    // --- ELEMENT CREATION ---
+    // --- ELEMENT LOGIC ---
     document.querySelectorAll('.item[data-type]').forEach(i => {
         i.onclick = () => { 
             const scrollPos = viewport.scrollTop;
             createNode(i.dataset.type, 50, scrollPos + 50); 
-            document.getElementById('panel').style.display = 'none'; 
+            toggleP('panel'); 
         };
     });
 
@@ -199,7 +190,6 @@
             startX = t.clientX - el.offsetLeft; 
             startY = t.clientY - el.offsetTop;
         };
-
         el.querySelectorAll('.resizer').forEach(r => {
             r.onmousedown = r.ontouchstart = (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -210,17 +200,12 @@
                 startL = el.offsetLeft; startT = el.offsetTop;
             };
         });
-        
         let clicks = 0;
         el.onclick = (e) => {
             e.stopPropagation();
             clicks++;
-            if (clicks === 2) {
-                setTimeout(() => { if(clicks === 2) edit(el); }, 250);
-            } else if (clicks === 3) {
-                if(confirm("Delete this element?")) el.remove();
-                clicks = 0;
-            }
+            if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
+            else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
             setTimeout(() => clicks = 0, 500);
         };
     }
@@ -228,10 +213,7 @@
     window.onmousemove = window.ontouchmove = (e) => {
         if (!activeEl) return;
         const t = e.touches ? e.touches[0] : e;
-        if (isMoving) { 
-            activeEl.style.left = (t.clientX - startX) + 'px'; 
-            activeEl.style.top = (t.clientY - startY) + 'px'; 
-        }
+        if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
         if (currentResizer) {
             const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
             if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
@@ -243,15 +225,15 @@
 
     function edit(el) {
         const inner = el.querySelector('h2, p, button, img, div');
-        const action = prompt("1: Content/Link | 2: Size (Text) | 3: Color");
+        const action = prompt("1: Content/Link | 2: Size | 3: Color");
         if (action === '1') {
             if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
             else if (el.dataset.type === 'Button') {
-                inner.innerText = prompt("Button Text:", inner.innerText) || inner.innerText;
-                let rawLink = prompt("Destination Link (e.g. roblox.com):", el.dataset.link || "");
-                if (rawLink && !rawLink.startsWith('http')) rawLink = 'https://' + rawLink;
-                el.dataset.link = rawLink;
-            } else inner.innerText = prompt("Text Content:", inner.innerText) || inner.innerText;
+                inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+                let link = prompt("Link (e.g. google.com):", el.dataset.link || "");
+                if (link && !link.startsWith('http')) link = 'https://' + link;
+                el.dataset.link = link;
+            } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
         } else if (action === '2' && ['Heading', 'Paragraph'].includes(el.dataset.type)) {
             document.getElementById('size-control').style.display = 'block';
             const s = document.getElementById('size-slider');
@@ -260,10 +242,7 @@
             s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
         } else if (action === '3') {
             const cp = document.getElementById('colorPicker'); cp.click();
-            cp.oninput = () => { 
-                if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value;
-                else inner.style.color = cp.value;
-            };
+            cp.oninput = () => { if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value; else inner.style.color = cp.value; };
         }
         saveCurrentState(el);
     }
@@ -271,26 +250,30 @@
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    // --- EXPORT LOGIC ---
+    // --- THE FIX: EXPORT ENGINE ---
     document.getElementById('copy-btn').onclick = () => {
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
         let dStyles = "", mStyles = "";
         const fHeight = canvas.style.height || "1000px";
-        const exCanvas = canvas.cloneNode(true);
-        exCanvas.querySelectorAll('.resizer').forEach(r => r.remove());
-
+        const bgC = canvas.style.backgroundColor || "white";
+        const bgI = canvas.style.backgroundImage || "none";
+        
+        let elementsHTML = "";
         document.querySelectorAll('.dropped-element').forEach((el, index) => {
             const id = `el-${index}`;
+            const type = el.dataset.type;
             const d = JSON.parse(el.dataset.desktop || '{}');
             const m = JSON.parse(el.dataset.mobile || '{}');
-            const exEl = exCanvas.children[index];
-            exEl.setAttribute('id', id);
-            exEl.classList.remove('selected');
-
-            if (el.dataset.type === 'Button' && el.dataset.link) {
-                const btn = exEl.querySelector('button');
-                btn.setAttribute('onclick', `window.open('${el.dataset.link}', '_blank')`);
+            const inner = el.querySelector('h2, p, button, img, div').cloneNode(true);
+            
+            // Critical Fix for Buttons
+            if (type === 'Button' && el.dataset.link) {
+                const link = el.dataset.link;
+                // We wrap the button inside a functional onclick that forces a top-level redirect
+                inner.setAttribute('onclick', `window.location.href='${link}'`);
             }
+
+            elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
 
             dStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; z-index: 10; }\n`;
             if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
@@ -307,22 +290,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; height:${fHeight}; background-color:${canvas.style.backgroundColor || 'white'}; background-image:${canvas.style.backgroundImage || 'none'}; background-size:cover; background-position:center; margin:0 auto; }
+        #site-canvas { position:relative; width:100%; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
-        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
         button { cursor: pointer; transition: transform 0.1s; }
-        button:active { transform: scale(0.95); }
-        @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} }
+        button:active { transform: scale(0.98); }
+        @media (min-width: 601px) { ${dStyles} }
         @media (max-width: 600px) { #site-canvas { width: 100vw; } ${mStyles} }
     </style>
 </head>
 <body>
-    <div id="site-canvas">${exCanvas.innerHTML}</div>
+    <div id="site-canvas">${elementsHTML}</div>
 </body>
 </html>`;
         navigator.clipboard.writeText(finalHTML);
-        alert("Full System Fixed: UI Buttons Active | Links Fixed | Layouts Separated");
+        alert("Website Copied! External links are now forced to work.");
     };
-</script>
+</script> 
 </body>
 </html>
