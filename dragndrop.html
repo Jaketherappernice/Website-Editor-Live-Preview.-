@@ -306,6 +306,49 @@
         navigator.clipboard.writeText(finalHTML);
         alert("Website Copied! External links are now forced to work.");
     };
+
+// --- UPDATED STACKING & EXPORT PATCHER ---
+(function() {
+    const applyLeaderboard = () => {
+        document.querySelectorAll('.dropped-element').forEach(el => {
+            const type = el.dataset.type;
+            switch(type) {
+                case 'Heading':
+                case 'Paragraph':
+                    el.style.zIndex = "40"; // Rank 1: Top
+                    break;
+                case 'Button':
+                    el.style.zIndex = "30"; // Rank 2
+                    break;
+                case 'Image':
+                    el.style.zIndex = "20"; // Rank 3
+                    break;
+                case 'Box':
+                    el.style.zIndex = "10"; // Rank 4: Bottom
+                    break;
+            }
+        });
+    };
+
+    // Apply to current elements
+    applyLeaderboard();
+
+    // Ensure new elements follow the leaderboard
+    const originalCreateNode = window.createNode;
+    window.createNode = function(type, x, y) {
+        originalCreateNode(type, x, y);
+        applyLeaderboard();
+    };
+
+    // Force leaderboard during export
+    const copyBtn = document.getElementById('copy-btn');
+    const originalCopyClick = copyBtn.onclick;
+    copyBtn.onclick = function(e) {
+        applyLeaderboard();
+        originalCopyClick(e);
+    };
+})();
+
 </script> 
 </body>
 </html>
