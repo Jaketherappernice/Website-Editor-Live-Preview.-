@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spray Paint Web Editor</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+        
+        /* Layout */
+        #setup-screen { position: fixed; inset: 0; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        textarea { width: 80%; height: 200px; margin: 20px 0; background: #333; color: #fff; border: 1px solid #555; padding: 10px; border-radius: 8px; }
+        
+        #preview-container { width: 100vw; height: 100vh; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Controls */
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: none; color: white; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 2000; }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 2000; font-weight: bold; }
+
+        /* The Overlay Brush Layer */
+        #brush-canvas { position: absolute; pointer-events: none; z-index: 1500; cursor: crosshair; }
+        .highlight { outline: 3px solid #ff0000 !important; cursor: pointer !important; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <h1>Paste Website HTML</h1>
+        <textarea id="code-input" placeholder="<html>...</html>"></textarea>
+        <button onclick="startEditing()" style="padding: 10px 30px; cursor: pointer;">Launch Editor</button>
+    </div>
+
+    <div id="preview-container">
+        <button class="export-btn" onclick="exportCode()">Export to Clipboard</button>
+        <button class="fab" onclick="changeBrushColor()">🎨</button>
+        <iframe id="viewer"></iframe>
+        <canvas id="brush-canvas"></canvas>
+    </div>
+
+    <script>
+        const viewer = document.getElementById('viewer');
+        const canvas = document.getElementById('brush-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let brushColor = '#ff0000';
+        let selectedElement = null;
+        let isPainting = false;
+
+        function startEditing() {
+            const code = document.getElementById('code-input').value;
+            if(!code) return alert("Please paste some code first!");
+            
+            viewer.srcdoc = code;
+            document.getElementById('setup-screen').style.display = 'none';
+            
+            viewer.onload = () => {
+                setupInteractions();
+            };
+        }
+
+        function changeBrushColor() {
+            const newColor = prompt("Enter Hex Color (e.g. #00ff00):", brushColor);
+            if(newColor) brushColor = newColor;
+        }
+
+        function setupInteractions() {
+            const doc = viewer.contentDocument;
+
+            // Handle Element Selection
+            doc.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Clear old highlight
+                if(selectedElement) selectedElement.classList.remove('highlight');
+
+                selectedElement = e.target;
+                selectedElement.classList.add('highlight');
+
+                // Sync Canvas position to element
+                const rect = selectedElement.getBoundingClientRect();
+                canvas.style.top = rect.top + 'px';
+                canvas.style.left = rect.left + 'px';
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                canvas.style.pointerEvents = 'auto'; // Enable painting
+                
+                // Clear canvas for new painting session
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        }
+
+        // Spray Paint Logic
+        canvas.onmousedown = () => isPainting = true;
+        window.onmouseup = () => isPainting = false;
+
+        canvas.onmousemove = (e) => {
+            if (!isPainting || !selectedElement) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Create Gradient "Spray" Effect
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 20);
+            gradient.addColorStop(0, brushColor);
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.globalAlpha = 0.2; // Soft transparency
+            ctx.fillRect(x - 20, y - 20, 40, 40);
+        };
+
+        function exportCode() {
+            if(selectedElement) {
+                // Apply the canvas drawing as a background image to the element
+                const dataURL = canvas.toDataURL();
+                selectedElement.style.backgroundImage = `url(${dataURL})`;
+                selectedElement.style.backgroundSize = 'cover';
+                selectedElement.classList.remove('highlight');
+            }
+
+            const finalCode = viewer.contentDocument.documentElement.outerHTML;
+            navigator.clipboard.writeText(finalCode).then(() => {
+                alert("Website code copied to clipboard with your brush edits!");
+            });
+        }
+    </script>
+</body>
+</html>
