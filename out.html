@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; height:1000px; background-color:white; background-image:none; background-size:cover; background-position:center; margin:0 auto; }
+        #site-canvas { position:relative; width:100%; height:1500px; background-color:rgb(0, 0, 0); background-image:none; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
-        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
         button { cursor: pointer; transition: transform 0.1s; }
-        button:active { transform: scale(0.95); }
-        @media (min-width: 601px) { #site-canvas { width: 100%; } #el-0 { left:60.3178px !important; top:153.327px !important; width:180px !important; height:50px !important; z-index: 10; }
-#el-1 { left:58.161px !important; top:56.1226px !important; width:171.839px !important; height:43.8774px !important; z-index: 10; }
-#el-1 > * { font-size:48px !important; }
+        button:active { transform: scale(0.98); }
+        @media (min-width: 601px) { #el-0 { left:219.341px !important; top:367.015px !important; width:180px !important; height:50px !important; z-index: 10; }
+#el-0 > * { font-size:16px !important; }
+#el-1 { left:418.476px !important; top:605.68px !important; width:180px !important; height:50px !important; z-index: 10; }
  }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:87.8834px !important; top:382.938px !important; width:180px !important; height:50px !important; z-index: 10; }
-#el-1 { left:88.6038px !important; top:302.265px !important; width:171.839px !important; height:43.8774px !important; z-index: 10; }
-#el-1 > * { font-size:48px !important; }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:219.341px !important; top:367.015px !important; width:180px !important; height:50px !important; z-index: 10; }
+#el-0 > * { font-size:16px !important; }
+#el-1 { left:11.1062px !important; top:92.7418px !important; width:180px !important; height:50px !important; z-index: 10; }
  }
     </style>
 </head>
 <body>
-    <div id="site-canvas"><div class="dropped-element" data-type="Button" data-desktop="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;60.3178px&quot;,&quot;t&quot;:&quot;153.327px&quot;,&quot;fs&quot;:&quot;&quot;}" style="left: 87.8834px; top: 382.938px; width: 180px; height: 50px;" data-link="null" data-mobile="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;87.8834px&quot;,&quot;t&quot;:&quot;382.938px&quot;,&quot;fs&quot;:&quot;&quot;}" id="el-0"><button style="background: rgb(255, 255, 0); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer;" onclick="window.open('null', '_blank')">Click</button></div><div class="dropped-element" data-type="Heading" data-desktop="{&quot;w&quot;:&quot;171.839px&quot;,&quot;h&quot;:&quot;43.8774px&quot;,&quot;l&quot;:&quot;58.161px&quot;,&quot;t&quot;:&quot;56.1226px&quot;,&quot;fs&quot;:&quot;48px&quot;}" style="left: 88.6038px; top: 302.265px; width: 171.839px; height: 43.8774px;" data-mobile="{&quot;w&quot;:&quot;171.839px&quot;,&quot;h&quot;:&quot;43.8774px&quot;,&quot;l&quot;:&quot;88.6038px&quot;,&quot;t&quot;:&quot;302.265px&quot;,&quot;fs&quot;:&quot;48px&quot;}" id="el-1"><h2 style="font-size: 48px; color: rgb(0, 255, 255);">Heading</h2></div></div>
+    <div id="site-canvas"><div id="el-0" class="dropped-element"><p style="font-size:16px;color:#000;">Text...</p></div><div id="el-1" class="dropped-element"><button style="background: rgb(0, 255, 255); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer;" onclick="window.location.href='https://deltaexploits.gg'">Click</button></div></div>
 </body>
 </html>
