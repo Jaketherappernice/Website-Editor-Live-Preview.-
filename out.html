@@ -8,15 +8,19 @@
         #site-canvas { position:relative; width:100%; height:1000px; background-color:white; background-image:none; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
         .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
-        button { cursor: pointer; transition: opacity 0.2s; }
-        button:hover { opacity: 0.8; }
-        @media (min-width: 601px) { #site-canvas { width: 100%; } #el-0 { left:130.93px !important; top:460.895px !important; width:180px !important; height:50px !important; z-index:1; }
+        button { cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } #el-0 { left:60.3178px !important; top:153.327px !important; width:180px !important; height:50px !important; z-index: 10; }
+#el-1 { left:58.161px !important; top:56.1226px !important; width:171.839px !important; height:43.8774px !important; z-index: 10; }
+#el-1 > * { font-size:48px !important; }
  }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:33.748px !important; top:56.9079px !important; width:180px !important; height:50px !important; }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:87.8834px !important; top:382.938px !important; width:180px !important; height:50px !important; z-index: 10; }
+#el-1 { left:88.6038px !important; top:302.265px !important; width:171.839px !important; height:43.8774px !important; z-index: 10; }
+#el-1 > * { font-size:48px !important; }
  }
     </style>
 </head>
 <body>
-    <div id="site-canvas"><div class="dropped-element" data-type="Button" data-desktop="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;130.93px&quot;,&quot;t&quot;:&quot;460.895px&quot;,&quot;fs&quot;:&quot;&quot;}" style="left: 33.748px; top: 56.9079px; width: 180px; height: 50px;" data-link="roblox.com" data-mobile="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;33.748px&quot;,&quot;t&quot;:&quot;56.9079px&quot;,&quot;fs&quot;:&quot;&quot;}" id="el-0"><button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;" onclick="window.location.href='roblox.com'">Click</button></div></div>
+    <div id="site-canvas"><div class="dropped-element" data-type="Button" data-desktop="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;60.3178px&quot;,&quot;t&quot;:&quot;153.327px&quot;,&quot;fs&quot;:&quot;&quot;}" style="left: 87.8834px; top: 382.938px; width: 180px; height: 50px;" data-link="null" data-mobile="{&quot;w&quot;:&quot;180px&quot;,&quot;h&quot;:&quot;50px&quot;,&quot;l&quot;:&quot;87.8834px&quot;,&quot;t&quot;:&quot;382.938px&quot;,&quot;fs&quot;:&quot;&quot;}" id="el-0"><button style="background: rgb(255, 255, 0); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer;" onclick="window.open('null', '_blank')">Click</button></div><div class="dropped-element" data-type="Heading" data-desktop="{&quot;w&quot;:&quot;171.839px&quot;,&quot;h&quot;:&quot;43.8774px&quot;,&quot;l&quot;:&quot;58.161px&quot;,&quot;t&quot;:&quot;56.1226px&quot;,&quot;fs&quot;:&quot;48px&quot;}" style="left: 88.6038px; top: 302.265px; width: 171.839px; height: 43.8774px;" data-mobile="{&quot;w&quot;:&quot;171.839px&quot;,&quot;h&quot;:&quot;43.8774px&quot;,&quot;l&quot;:&quot;88.6038px&quot;,&quot;t&quot;:&quot;302.265px&quot;,&quot;fs&quot;:&quot;48px&quot;}" id="el-1"><h2 style="font-size: 48px; color: rgb(0, 255, 255);">Heading</h2></div></div>
 </body>
 </html>
