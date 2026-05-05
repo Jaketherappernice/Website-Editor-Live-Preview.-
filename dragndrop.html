@@ -94,262 +94,177 @@
     <input type="color" id="canvasColorPicker" style="display:none">
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const viewport = document.getElementById('viewport');
-        const modeToggle = document.getElementById('mode-toggle');
-        const heightSlider = document.getElementById('height-slider');
-        const heightNum = document.getElementById('height-num');
-        
-        let currentMode = 'desktop'; 
-        let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
-
-        heightSlider.oninput = heightNum.oninput = (e) => {
-            const val = e.target.value;
-            heightSlider.value = heightNum.value = val;
-            canvas.style.height = val + 'px';
-        };
-
-        function toggleViewMode() {
-            currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
-            viewport.className = currentMode === 'mobile' ? 'mobile' : '';
-            modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
-            modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
-            
-            document.querySelectorAll('.dropped-element').forEach(el => {
-                const data = JSON.parse(el.dataset[currentMode] || '{}');
-                if (data.w) {
-                    el.style.width = data.w; el.style.height = data.h;
-                    el.style.left = data.l; el.style.top = data.t;
-                    const inner = el.querySelector('h2, p, button, img, div');
-                    if (data.fs && (el.dataset.type === 'Heading' || el.dataset.type === 'Paragraph')) {
-                        inner.style.fontSize = data.fs;
-                    }
-                }
-            });
-        }
-
-        function saveCurrentState(el) {
-            const inner = el.querySelector('h2, p, button, img, div');
-            const state = {
-                w: el.style.width, h: el.style.height,
-                l: el.style.left, t: el.style.top,
-                fs: inner ? inner.style.fontSize : null
-            };
-            el.dataset[currentMode] = JSON.stringify(state);
-        }
-
-        document.getElementById('add-btn').onclick = () => toggleP('panel');
-        document.getElementById('settings-btn').onclick = () => toggleP('settings-panel');
-        function toggleP(id) {
-            const p = document.getElementById(id);
-            const visible = p.style.display === 'flex';
-            document.querySelectorAll('.popup-panel').forEach(el => el.style.display = 'none');
-            p.style.display = visible ? 'none' : 'flex';
-        }
-
-        document.querySelectorAll('.item[data-type]').forEach(i => {
-            i.onclick = () => { 
-                const scrollPos = viewport.scrollTop;
-                createNode(i.dataset.type, 50, scrollPos + 50); 
-                toggleP('panel'); 
-            };
-        });
-
-        function createNode(type, x, y) {
-            const el = document.createElement('div');
-            el.className = 'dropped-element';
-            el.dataset.type = type;
-            el.style.left = x + 'px'; el.style.top = y + 'px';
-            el.style.width = (type === 'Box' || type === 'Image') ? "150px" : "180px";
-            el.style.height = (type === 'Box' || type === 'Image') ? "150px" : "50px";
-
-            const html = {
-                'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
-                'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
-                'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;">Click</button>',
-                'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
-                'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
-            };
-
-            el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
-            canvas.appendChild(el);
-            saveCurrentState(el);
-            setupEl(el);
-        }
-
-        function setupEl(el) {
-            el.onmousedown = el.ontouchstart = (e) => {
-                if (e.target.classList.contains('resizer')) return;
-                activeEl = el; isMoving = true;
-                document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
-                el.classList.add('selected');
-                const t = e.touches ? e.touches[0] : e;
-                startX = t.clientX - el.offsetLeft; 
-                startY = t.clientY - el.offsetTop;
-            };
-
-            el.querySelectorAll('.resizer').forEach(r => {
-                r.onmousedown = r.ontouchstart = (e) => {
-                    e.preventDefault(); e.stopPropagation();
-                    currentResizer = r; activeEl = el;
-                    const t = e.touches ? e.touches[0] : e;
-                    startX = t.clientX; startY = t.clientY;
-                    startW = el.offsetWidth; startH = el.offsetHeight;
-                    startL = el.offsetLeft; startT = el.offsetTop;
-                };
-            });
-            
-            // Interaction logic: 2 clicks to edit, 3 clicks to delete
-            let clicks = 0;
-            el.onclick = () => {
-                clicks++;
-                if (clicks === 2) {
-                    setTimeout(() => { if(clicks === 2) edit(el); }, 250);
-                } else if (clicks === 3) {
-                    if(confirm("Delete this element?")) el.remove();
-                    clicks = 0;
-                }
-                setTimeout(() => clicks = 0, 500);
-            };
-        }
-
-        window.onmousemove = window.ontouchmove = (e) => {
-            if (!activeEl) return;
-            const t = e.touches ? e.touches[0] : e;
-            if (isMoving) { 
-                activeEl.style.left = (t.clientX - startX) + 'px'; 
-                activeEl.style.top = (t.clientY - startY) + 'px'; 
-            }
-            if (currentResizer) {
-                const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
-                if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-                if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
-            }
-            if (isMoving || currentResizer) saveCurrentState(activeEl);
-        };
-        window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
-
-        function edit(el) {
-            const inner = el.querySelector('h2, p, button, img, div');
-            const action = prompt("1: Content/Link | 2: Size (Text) | 3: Color");
-            if (action === '1') {
-                if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
-                else if (el.dataset.type === 'Button') {
-                    inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                    el.dataset.link = prompt("Link:", el.dataset.link || "");
-                } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-            } else if (action === '2' && ['Heading', 'Paragraph'].includes(el.dataset.type)) {
-                document.getElementById('size-control').style.display = 'block';
-                const s = document.getElementById('size-slider');
-                const n = document.getElementById('size-num');
-                s.value = n.value = parseInt(inner.style.fontSize);
-                s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
-            } else if (action === '3') {
-                const cp = document.getElementById('colorPicker'); cp.click();
-                cp.oninput = () => { 
-                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value;
-                    else inner.style.color = cp.value;
-                };
-            }
-            saveCurrentState(el);
-        }
-
-        function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
-        function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
-
-        document.getElementById('copy-btn').onclick = () => {
-            let desktopStyles = "", mobileStyles = "";
-            const finalHeight = canvas.style.height || "1000px";
-            
-            document.querySelectorAll('.dropped-element').forEach((el, index) => {
-                const id = `el-${index}`;
-                const d = JSON.parse(el.dataset.desktop || '{}');
-                const m = JSON.parse(el.dataset.mobile || '{}');
-                el.setAttribute('id', id);
-                
-                desktopStyles += `#${id} { left:${d.l}; top:${d.t}; width:${d.w}; height:${d.h}; z-index:${el.style.zIndex}; }\n`;
-                if(d.fs) desktopStyles += `#${id} > * { font-size:${d.fs}; }\n`;
-                
-                mobileStyles += `#${id} { left:${m.l || d.l}; top:${m.t || d.t}; width:${m.w || d.w}; height:${m.h || d.h}; }\n`;
-                if(m.fs) mobileStyles += `#${id} > * { font-size:${m.fs}; }\n`;
-            });
-
-            const finalHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-    body, html { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; }
-    #site-canvas { 
-        width:100vw; height:${finalHeight}; position:relative; 
-        background-color:${canvas.style.backgroundColor};
-        background-image:${canvas.style.backgroundImage};
-        background-size:cover;
-    }
-    .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
-    .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; }
-    button { border:none; cursor:pointer; }
-    ${desktopStyles}
-    @media (max-width: 600px) {
-        ${mobileStyles}
-    }
-</style>
-</head>
-<body>
-    <div id="site-canvas">${canvas.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}</div>
-</body>
-</html>`;
-            navigator.clipboard.writeText(finalHTML);
-            alert("Responsive Website Copied!");
-        };
-        
-        // Fix for Responsive Export Bug
-const originalCopyBtn = document.getElementById('copy-btn').onclick;
-
-document.getElementById('copy-btn').onclick = () => {
-    // Force save state for all elements before exporting
-    document.querySelectorAll('.dropped-element').forEach(el => {
-        saveCurrentState(el);
-    });
+            const canvas = document.getElementById('canvas');
+    const viewport = document.getElementById('viewport');
+    const modeToggle = document.getElementById('mode-toggle');
+    const heightSlider = document.getElementById('height-slider');
+    const heightNum = document.getElementById('height-num');
     
-    // Call the original export function
-    originalCopyBtn();
-};
+    let currentMode = 'desktop'; 
+    let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-// Injection to ensure z-index and overflow are handled
-const styleFix = document.createElement('style');
-styleFix.innerHTML = `
-    @media (max-width: 600px) {
-        #site-canvas { width: 100% !important; overflow-x: hidden; }
-        .dropped-element { transition: all 0.2s ease; }
-    }
-`;
-document.head.appendChild(styleFix);
+    heightSlider.oninput = heightNum.oninput = (e) => {
+        const val = e.target.value;
+        heightSlider.value = heightNum.value = val;
+        canvas.style.height = val + 'px';
+    };
 
-
-
-(function patchExport() {
-    const copyBtn = document.getElementById('copy-btn');
-    if (!copyBtn) return;
-
-    copyBtn.onclick = () => {
-        // 1. CRITICAL: Force a final save for the mode you are currently looking at
+    function toggleViewMode() {
+        currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
+        viewport.className = currentMode === 'mobile' ? 'mobile' : '';
+        modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
+        modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
+        
         document.querySelectorAll('.dropped-element').forEach(el => {
-            const inner = el.querySelector('h2, p, button, img, div');
-            const state = {
-                w: el.style.width, h: el.style.height,
-                l: el.style.left, t: el.style.top,
-                fs: inner ? inner.style.fontSize : null
-            };
-            el.dataset[currentMode] = JSON.stringify(state);
+            const data = JSON.parse(el.dataset[currentMode] || '{}');
+            if (data.w) {
+                el.style.width = data.w; el.style.height = data.h;
+                el.style.left = data.l; el.style.top = data.t;
+                const inner = el.querySelector('h2, p, button, img, div');
+                if (data.fs && (el.dataset.type === 'Heading' || el.dataset.type === 'Paragraph')) {
+                    inner.style.fontSize = data.fs;
+                }
+            }
         });
+    }
+
+    function saveCurrentState(el) {
+        const inner = el.querySelector('h2, p, button, img, div');
+        const state = {
+            w: el.style.width, h: el.style.height,
+            l: el.style.left, t: el.style.top,
+            fs: inner ? inner.style.fontSize : null
+        };
+        el.dataset[currentMode] = JSON.stringify(state);
+    }
+
+    document.getElementById('add-btn').onclick = () => toggleP('panel');
+    document.getElementById('settings-btn').onclick = () => toggleP('settings-panel');
+    function toggleP(id) {
+        const p = document.getElementById(id);
+        const visible = p.style.display === 'flex';
+        document.querySelectorAll('.popup-panel').forEach(el => el.style.display = 'none');
+        p.style.display = visible ? 'none' : 'flex';
+    }
+
+    document.querySelectorAll('.item[data-type]').forEach(i => {
+        i.onclick = () => { 
+            const scrollPos = viewport.scrollTop;
+            createNode(i.dataset.type, 50, scrollPos + 50); 
+            toggleP('panel'); 
+        };
+    });
+
+    function createNode(type, x, y) {
+        const el = document.createElement('div');
+        el.className = 'dropped-element';
+        el.dataset.type = type;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        el.style.width = (type === 'Box' || type === 'Image') ? "150px" : "180px";
+        el.style.height = (type === 'Box' || type === 'Image') ? "150px" : "50px";
+
+        const html = {
+            'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
+            'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
+            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;">Click</button>',
+            'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
+            'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
+        };
+
+        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+        canvas.appendChild(el);
+        saveCurrentState(el);
+        setupEl(el);
+    }
+
+    function setupEl(el) {
+        el.onmousedown = el.ontouchstart = (e) => {
+            if (e.target.classList.contains('resizer')) return;
+            activeEl = el; isMoving = true;
+            document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+            el.classList.add('selected');
+            const t = e.touches ? e.touches[0] : e;
+            startX = t.clientX - el.offsetLeft; 
+            startY = t.clientY - el.offsetTop;
+        };
+
+        el.querySelectorAll('.resizer').forEach(r => {
+            r.onmousedown = r.ontouchstart = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                currentResizer = r; activeEl = el;
+                const t = e.touches ? e.touches[0] : e;
+                startX = t.clientX; startY = t.clientY;
+                startW = el.offsetWidth; startH = el.offsetHeight;
+                startL = el.offsetLeft; startT = el.offsetTop;
+            };
+        });
+        
+        let clicks = 0;
+        el.onclick = () => {
+            clicks++;
+            if (clicks === 2) {
+                setTimeout(() => { if(clicks === 2) edit(el); }, 250);
+            } else if (clicks === 3) {
+                if(confirm("Delete this element?")) el.remove();
+                clicks = 0;
+            }
+            setTimeout(() => clicks = 0, 500);
+        };
+    }
+
+    window.onmousemove = window.ontouchmove = (e) => {
+        if (!activeEl) return;
+        const t = e.touches ? e.touches[0] : e;
+        if (isMoving) { 
+            activeEl.style.left = (t.clientX - startX) + 'px'; 
+            activeEl.style.top = (t.clientY - startY) + 'px'; 
+        }
+        if (currentResizer) {
+            const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
+            if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
+            if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+        }
+        if (isMoving || currentResizer) saveCurrentState(activeEl);
+    };
+    window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
+
+    function edit(el) {
+        const inner = el.querySelector('h2, p, button, img, div');
+        const action = prompt("1: Content/Link | 2: Size (Text) | 3: Color");
+        if (action === '1') {
+            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
+            else if (el.dataset.type === 'Button') {
+                inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+                el.dataset.link = prompt("Link:", el.dataset.link || "");
+            } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+        } else if (action === '2' && ['Heading', 'Paragraph'].includes(el.dataset.type)) {
+            document.getElementById('size-control').style.display = 'block';
+            const s = document.getElementById('size-slider');
+            const n = document.getElementById('size-num');
+            s.value = n.value = parseInt(inner.style.fontSize) || 24;
+            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
+        } else if (action === '3') {
+            const cp = document.getElementById('colorPicker'); cp.click();
+            cp.oninput = () => { 
+                if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value;
+                else inner.style.color = cp.value;
+            };
+        }
+        saveCurrentState(el);
+    }
+
+    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
+    function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
+
+    // FIXED EXPORT LOGIC
+    document.getElementById('copy-btn').onclick = () => {
+        // Force sync current mode state
+        document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
 
         let desktopStyles = "", mobileStyles = "";
-        const canvasEl = document.getElementById('canvas');
-        const finalHeight = canvasEl.style.height || "1000px";
-        const bgColor = canvasEl.style.backgroundColor || "white";
-        const bgImg = canvasEl.style.backgroundImage || "none";
+        const finalHeight = canvas.style.height || "1000px";
+        const bgColor = canvas.style.backgroundColor || "white";
+        const bgImg = canvas.style.backgroundImage || "none";
         
         document.querySelectorAll('.dropped-element').forEach((el, index) => {
             const id = `el-${index}`;
@@ -357,57 +272,38 @@ document.head.appendChild(styleFix);
             const m = JSON.parse(el.dataset.mobile || '{}');
             el.setAttribute('id', id);
             
-            // 2. DESKTOP-ONLY ZONE (Applied only when screen > 600px)
-            if (d.l) {
-                desktopStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; }\n`;
-                if(d.fs) desktopStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
-            }
+            // Desktop Styles (Min-width 601px)
+            desktopStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; }\n`;
+            if(d.fs) desktopStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
             
-            // 3. MOBILE-ONLY ZONE (Applied only when screen <= 600px)
-            // If m.l doesn't exist, it uses the desktop position as a fallback
-            const finalML = m.l || d.l;
-            const finalMT = m.t || d.t;
-            const finalMW = m.w || d.w;
-            const finalMH = m.h || d.h;
-            const finalMFS = m.fs || d.fs;
-
-            mobileStyles += `#${id} { left:${finalML} !important; top:${finalMT} !important; width:${finalMW} !important; height:${finalMH} !important; }\n`;
-            if(finalMFS) mobileStyles += `#${id} > * { font-size:${finalMFS} !important; }\n`;
+            // Mobile Styles (Max-width 600px) - Falls back to desktop if mobile not set
+            const ml = m.l || d.l, mt = m.t || d.t, mw = m.w || d.w, mh = m.h || d.h, mfs = m.fs || d.fs;
+            mobileStyles += `#${id} { left:${ml} !important; top:${mt} !important; width:${mw} !important; height:${mh} !important; }\n`;
+            if(mfs) mobileStyles += `#${id} > * { font-size:${mfs} !important; }\n`;
         });
 
         const finalHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; }
-        #site-canvas { 
-            position:relative; width:100%; height:${finalHeight}; 
-            background-color:${bgColor}; background-image:${bgImg}; 
-            background-size:cover; background-position:center; margin:0 auto;
-        }
+        #site-canvas { position:relative; width:100%; height:${finalHeight}; background-color:${bgColor}; background-image:${bgImg}; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
         .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
-        
-        /* THE BRAINS: Separation of views */
-        @media (min-width: 601px) {
-            ${desktopStyles}
-        }
-        @media (max-width: 600px) {
-            ${mobileStyles}
-        }
+        @media (min-width: 601px) { ${desktopStyles} }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } ${mobileStyles} }
     </style>
 </head>
 <body>
-    <div id="site-canvas">${canvasEl.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}</div>
+    <div id="site-canvas">${canvas.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}</div>
 </body>
 </html>`;
         
         navigator.clipboard.writeText(finalHTML);
-        alert("Success! Layouts are now fully independent.");
+        alert("Success! Your responsive site is copied.");
     };
-})();
 
     </script>
 </body>
