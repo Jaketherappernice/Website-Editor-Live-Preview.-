@@ -7,7 +7,6 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        /* Prevents layout stretching and ensures smooth interaction */
         html { touch-action: pan-x pan-y; }
 
         #setup-overlay {
@@ -21,7 +20,6 @@
             width: 70%; height: 350px; padding: 20px;
             border-radius: 15px; border: 2px solid #ddd;
             font-family: 'Courier New', Courier, monospace; 
-            /* Set to 16px to prevent mobile browsers from auto-zooming on click */
             font-size: 16px; 
             box-shadow: 0 20px 40px rgba(0,0,0,0.1); outline: none;
         }
@@ -36,6 +34,14 @@
 
         #render-canvas { width: 100%; min-height: 100vh; display: none; padding: 20px; box-sizing: border-box; }
 
+        /* CRITICAL: This disables button/link functionality inside the preview */
+        #render-canvas button, 
+        #render-canvas a, 
+        #render-canvas input[type="submit"] {
+            pointer-events: auto; /* Keep this auto so the canvas listener can still hear the click */
+            cursor: crosshair;
+        }
+
         .editing-now { outline: 4px solid #00ff88 !important; outline-offset: 4px; border-radius: 2px; }
 
         #export-btn {
@@ -45,8 +51,6 @@
             font-size: 35px; cursor: pointer; display: none;
             box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4); z-index: 10000;
         }
-
-        #injected-styles { display: none; }
     </style>
 </head>
 <body>
@@ -78,10 +82,20 @@
             document.getElementById('setup-overlay').style.display = 'none';
             canvas.style.display = 'block';
             exportBtn.style.display = 'block';
+
+            // Disable all functional elements in the injected HTML
+            const links = canvas.querySelectorAll('a, button, input[type="submit"]');
+            links.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault(); // Stop links from navigating or buttons from submitting
+                    e.stopPropagation(); // Stop events from bubbling up weirdly
+                });
+            });
         };
 
         // 2. Interaction Logic
         canvas.addEventListener('click', (e) => {
+            // This still works because we didn't disable the canvas itself
             if(e.target === canvas) return;
             e.preventDefault();
             e.stopPropagation();
@@ -131,34 +145,23 @@
 </html>`;
 
             navigator.clipboard.writeText(finalDoc).then(() => {
-                alert("Exported! HTML and Keyframes are in your clipboard.");
+                alert("Exported! The HTML is clean and ready for use.");
             });
         };
 
-        // --- SELECTIVE ANTI-ZOOM (Blocks Zoom In, Allows Zoom Out) ---
-        
-        // Prevents Keyboard Zoom In
+        // --- ANTI-ZOOM PROTECTION ---
         window.addEventListener('keydown', function (e) {
-            if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
-                e.preventDefault();
-            }
+            if (e.ctrlKey && (e.key === '=' || e.key === '+')) e.preventDefault();
         }, { passive: false });
 
-        // Prevents Mouse/Trackpad Zoom In
         window.addEventListener('wheel', function (e) {
-            if (e.ctrlKey && e.deltaY < 0) {
-                e.preventDefault();
-            }
+            if (e.ctrlKey && e.deltaY < 0) e.preventDefault();
         }, { passive: false });
 
-        // Prevents Pinch-to-Zoom (Mobile/Trackpad)
         document.addEventListener('touchstart', function (e) {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
+            if (e.touches.length > 1) e.preventDefault();
         }, { passive: false });
 
-        // Force reset zoom scale if browser tries to jitter
         document.addEventListener('gesturestart', function(e) {
             e.preventDefault();
         });
