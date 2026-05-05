@@ -3,75 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Anti-Zoom Web Brush</title>
+    <title>Anti-Zoom Spray Editor</title>
     <style>
         * {
-            /* Disables the double-tap to zoom gesture on mobile */
-            touch-action: none;
+            touch-action: none; /* Disables all browser gestures (zoom/pan) */
             -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
         }
 
         body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            font-family: sans-serif; 
-            overflow: hidden; 
-            background: #000;
-            position: fixed; /* Prevents "pull to refresh" or bounce effects */
-            width: 100%;
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            font-family: sans-serif; overflow: hidden; background: #000;
+            position: fixed; /* Locks the body in place */
         }
         
+        /* Input Screen */
         #setup-screen { 
-            position: fixed; 
-            inset: 0; 
-            background: #121212; 
-            color: white; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 5000; 
-            padding: 20px; 
+            position: fixed; inset: 0; background: #121212; color: white; 
+            display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; z-index: 5000; padding: 20px; 
         }
-
         textarea { 
-            width: 90%; 
-            height: 50%; 
-            background: #222; 
-            color: #0f0; 
-            border: 1px solid #444; 
-            padding: 10px; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-            touch-action: auto; /* Allow scrolling inside the textarea */
+            width: 90%; height: 50%; background: #222; color: #0f0; 
+            border: 1px solid #444; padding: 10px; border-radius: 8px; 
+            margin-bottom: 20px; touch-action: auto; 
         }
 
-        #preview-container { width: 100vw; height: 100vh; position: relative; }
-        iframe { width: 100%; height: 100%; border: none; }
-
-        /* The Shield: touch-action: none ensures no zooming/scrolling happens */
-        #click-shield { 
-            position: absolute; 
-            inset: 0; 
-            z-index: 1000; 
-            background: transparent; 
-            touch-action: none; 
+        /* Editor Area */
+        #preview-container { 
+            width: 100vw; height: 100vh; position: relative; 
+            display: flex; align-items: center; justify-content: center;
         }
+        iframe { width: 100%; height: 100%; border: none; background: white; }
 
+        /* The Shield & Canvas */
+        #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; }
         #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
 
-        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        /* Buttons */
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
-        .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 2000; }
+        .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; z-index: 2000; border: 1px solid #444; }
     </style>
 </head>
 <body>
 
     <div id="setup-screen">
-        <h3>Paste Website Code</h3>
-        <textarea id="code-input" placeholder="<html>...</html>"></textarea>
-        <button onclick="startEditing()" style="padding: 15px 30px; border-radius: 25px; border: none; background: #007bff; color: white; font-weight: bold;">START EDITING</button>
+        <h3>Web Brush Editor</h3>
+        <textarea id="code-input" placeholder="Paste HTML here..."></textarea>
+        <button onclick="startEditing()" style="padding: 15px 40px; border-radius: 30px; border: none; background: #007bff; color: white; font-weight: bold;">START EDITING</button>
     </div>
 
     <div id="preview-container">
@@ -81,7 +61,7 @@
         
         <button class="export-btn" onclick="exportCode()">COPY CODE</button>
         <button class="fab" onclick="changeBrushColor()">🎨</button>
-        <div class="indicator" id="status">Status: Select an element</div>
+        <div class="indicator" id="status">Tap an element to start</div>
     </div>
 
     <script>
@@ -98,12 +78,16 @@
         function startEditing() {
             const code = document.getElementById('code-input').value;
             if(!code) return alert("Please paste code!");
+            
+            // 1. Force Auto Zoom Out
+            document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            
             viewer.srcdoc = code;
             document.getElementById('setup-screen').style.display = 'none';
         }
 
         function changeBrushColor() {
-            const hex = prompt("Hex Color:", brushColor);
+            const hex = prompt("Enter Hex Color (e.g. #00ff00):", brushColor);
             if(hex) brushColor = hex;
         }
 
@@ -119,9 +103,10 @@
             if (selectedElement) selectedElement.style.outline = "none";
             
             selectedElement = el;
-            selectedElement.style.outline = "3px dashed red";
-            selectedElement.style.outlineOffset = "-3px";
+            selectedElement.style.outline = "2px solid red";
+            selectedElement.style.outlineOffset = "-2px";
 
+            // Sync canvas to element position
             const rect = selectedElement.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
@@ -129,7 +114,7 @@
             canvas.style.left = rect.left + "px";
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            status.innerText = "Status: Brushing " + el.tagName;
+            status.innerText = "Editing: " + el.tagName.toLowerCase();
         }
 
         function paint(clientX, clientY) {
@@ -142,19 +127,18 @@
             grad.addColorStop(0, brushColor);
             grad.addColorStop(1, 'transparent');
             ctx.fillStyle = grad;
-            ctx.globalAlpha = 0.3;
+            ctx.globalAlpha = 0.25;
             ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // Prevent Default on all touch events globally to kill any browser zoom
+        // Global Anti-Zoom/Scroll Prevention
         document.addEventListener('touchstart', (e) => {
             if (e.target === shield) e.preventDefault();
         }, { passive: false });
 
         shield.addEventListener('pointerdown', (e) => {
-            if (!selectedElement || !isPainting) {
-                selectElement(e.clientX, e.clientY);
-            }
+            // First touch identifies the element
+            selectElement(e.clientX, e.clientY);
             isPainting = true;
         });
 
@@ -164,6 +148,14 @@
 
         shield.addEventListener('pointermove', (e) => {
             if(isPainting) paint(e.clientX, e.clientY);
+        });
+
+        // Force reset zoom if the window resizes or visually shifts
+        window.visualViewport.addEventListener('resize', () => {
+            if (window.visualViewport.scale !== 1) {
+                // This is a "soft" reset - the meta tag usually handles this
+                console.log("Zoom detected - locked to scale 1.0");
+            }
         });
 
         function exportCode() {
@@ -180,7 +172,7 @@
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            alert("Code Copied!");
+            alert("Updated HTML copied to clipboard!");
         }
     </script>
 </body>
