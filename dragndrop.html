@@ -8,14 +8,22 @@
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
         
-        /* The Canvas Wrapper helps simulate the screen size */
+        /* The Viewport allows vertical scrolling for long pages */
         #viewport { 
-            width: 100vw; height: 100vh; margin: 0 auto; background: white; position: relative; overflow: hidden; transition: width 0.3s ease;
+            width: 100vw; height: 100vh; margin: 0 auto; background: white; position: relative; 
+            overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease, height 0.3s ease;
             box-shadow: 0 0 50px rgba(0,0,0,0.1);
             background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
             background-size: 25px 25px;
+            scroll-behavior: smooth;
         }
-        #viewport.mobile { width: 375px; height: 667px; margin-top: 5vh; border: 12px solid #333; border-radius: 30px; height: 85vh; }
+        
+        /* Mobile mode constraints */
+        #viewport.mobile { 
+            width: 375px; height: 80vh; margin: 5vh auto; 
+            border: 12px solid #333; border-radius: 30px; 
+            position: relative;
+        }
 
         /* UI ELEMENTS */
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -39,7 +47,7 @@
         .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
         #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; }
-        #size-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
+        #size-control, #height-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
     </style>
 </head>
 <body>
@@ -47,7 +55,7 @@
     <button id="copy-btn">Copy Full Website</button>
     
     <div id="viewport">
-        <div id="canvas" style="width:100%; height:100%; position:relative;"></div>
+        <div id="canvas" style="width:100%; height:1000px; position:relative; min-height: 100%;"></div>
     </div>
 
     <button id="add-btn" class="fab">+</button>
@@ -65,6 +73,7 @@
         <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
+        <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
     </div>
 
     <div id="size-control">
@@ -74,6 +83,13 @@
         <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
     </div>
 
+    <div id="height-control">
+        <strong>Page Height</strong><br>
+        <input type="range" id="height-slider" min="500" max="8000" value="1000">
+        <input type="number" id="height-num" value="1000"> px<br><br>
+        <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+    </div>
+
     <input type="color" id="colorPicker" style="display:none">
     <input type="color" id="canvasColorPicker" style="display:none">
 
@@ -81,8 +97,17 @@
         const canvas = document.getElementById('canvas');
         const viewport = document.getElementById('viewport');
         const modeToggle = document.getElementById('mode-toggle');
-        let currentMode = 'desktop'; // desktop or mobile
+        const heightSlider = document.getElementById('height-slider');
+        const heightNum = document.getElementById('height-num');
+        
+        let currentMode = 'desktop'; 
         let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
+
+        heightSlider.oninput = heightNum.oninput = (e) => {
+            const val = e.target.value;
+            heightSlider.value = heightNum.value = val;
+            canvas.style.height = val + 'px';
+        };
 
         function toggleViewMode() {
             currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
@@ -90,7 +115,6 @@
             modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
             modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
             
-            // Apply coordinates for the new mode
             document.querySelectorAll('.dropped-element').forEach(el => {
                 const data = JSON.parse(el.dataset[currentMode] || '{}');
                 if (data.w) {
@@ -124,7 +148,11 @@
         }
 
         document.querySelectorAll('.item[data-type]').forEach(i => {
-            i.onclick = () => { createNode(i.dataset.type, 50, 50); toggleP('panel'); };
+            i.onclick = () => { 
+                const scrollPos = viewport.scrollTop;
+                createNode(i.dataset.type, 50, scrollPos + 50); 
+                toggleP('panel'); 
+            };
         });
 
         function createNode(type, x, y) {
@@ -156,7 +184,8 @@
                 document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
                 el.classList.add('selected');
                 const t = e.touches ? e.touches[0] : e;
-                startX = t.clientX - el.offsetLeft; startY = t.clientY - el.offsetTop;
+                startX = t.clientX - el.offsetLeft; 
+                startY = t.clientY - el.offsetTop;
             };
 
             el.querySelectorAll('.resizer').forEach(r => {
@@ -170,12 +199,17 @@
                 };
             });
             
-            // Edit trigger
+            // Interaction logic: 2 clicks to edit, 3 clicks to delete
             let clicks = 0;
             el.onclick = () => {
                 clicks++;
-                if (clicks === 2) { edit(el); clicks = 0; }
-                setTimeout(() => clicks = 0, 400);
+                if (clicks === 2) {
+                    setTimeout(() => { if(clicks === 2) edit(el); }, 250);
+                } else if (clicks === 3) {
+                    if(confirm("Delete this element?")) el.remove();
+                    clicks = 0;
+                }
+                setTimeout(() => clicks = 0, 500);
             };
         }
 
@@ -190,13 +224,11 @@
                 const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
                 if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
                 if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
-                // ... (other corners similar)
             }
             if (isMoving || currentResizer) saveCurrentState(activeEl);
         };
         window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
 
-        // Reuse existing Edit & Size logic, but call saveCurrentState(el) after every change.
         function edit(el) {
             const inner = el.querySelector('h2, p, button, img, div');
             const action = prompt("1: Content/Link | 2: Size (Text) | 3: Color");
@@ -227,6 +259,7 @@
 
         document.getElementById('copy-btn').onclick = () => {
             let desktopStyles = "", mobileStyles = "";
+            const finalHeight = canvas.style.height || "1000px";
             
             document.querySelectorAll('.dropped-element').forEach((el, index) => {
                 const id = `el-${index}`;
@@ -249,7 +282,7 @@
 <style>
     body, html { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; }
     #site-canvas { 
-        width:100vw; height:100vh; position:relative; 
+        width:100vw; height:${finalHeight}; position:relative; 
         background-color:${canvas.style.backgroundColor};
         background-image:${canvas.style.backgroundImage};
         background-size:cover;
@@ -257,11 +290,7 @@
     .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
     .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; }
     button { border:none; cursor:pointer; }
-    
-    /* Desktop Layout */
     ${desktopStyles}
-    
-    /* Mobile Layout */
     @media (max-width: 600px) {
         ${mobileStyles}
     }
