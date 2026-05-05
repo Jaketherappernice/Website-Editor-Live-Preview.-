@@ -303,7 +303,30 @@
             navigator.clipboard.writeText(finalHTML);
             alert("Responsive Website Copied!");
         };
+        
+        // Fix for Responsive Export Bug
+const originalCopyBtn = document.getElementById('copy-btn').onclick;
+
+document.getElementById('copy-btn').onclick = () => {
+    // Force save state for all elements before exporting
+    document.querySelectorAll('.dropped-element').forEach(el => {
+        saveCurrentState(el);
+    });
+    
+    // Call the original export function
+    originalCopyBtn();
+};
+
+// Injection to ensure z-index and overflow are handled
+const styleFix = document.createElement('style');
+styleFix.innerHTML = `
+    @media (max-width: 600px) {
+        #site-canvas { width: 100% !important; overflow-x: hidden; }
+        .dropped-element { transition: all 0.2s ease; }
+    }
+`;
+document.head.appendChild(styleFix);
+
     </script>
 </body>
 </html>
- 
