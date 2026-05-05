@@ -5,22 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; height:1500px; background-color:rgb(0, 0, 0); background-image:none; background-size:cover; background-position:center; margin:0 auto; }
+        #site-canvas { position:relative; width:100%; height:1000px; background-color:white; background-image:none; background-size:cover; background-position:center; margin:0 auto; }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
         .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
         button { cursor: pointer; transition: transform 0.1s; }
         button:active { transform: scale(0.98); }
-        @media (min-width: 601px) { #el-0 { left:219.341px !important; top:367.015px !important; width:180px !important; height:50px !important; z-index: 10; }
-#el-0 > * { font-size:16px !important; }
-#el-1 { left:418.476px !important; top:605.68px !important; width:180px !important; height:50px !important; z-index: 10; }
+        @media (min-width: 601px) { #el-0 { left:226.676px !important; top:207.238px !important; width:446.516px !important; height:1049.34px !important; z-index: 10; }
+#el-1 { left:246.602px !important; top:342.959px !important; width:412.394px !important; height:257.707px !important; z-index: 10; }
+#el-2 { left:314.434px !important; top:621.606px !important; width:301.055px !important; height:57.4832px !important; z-index: 10; }
+#el-2 > * { font-size:48px !important; }
  }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:219.341px !important; top:367.015px !important; width:180px !important; height:50px !important; z-index: 10; }
-#el-0 > * { font-size:16px !important; }
-#el-1 { left:11.1062px !important; top:92.7418px !important; width:180px !important; height:50px !important; z-index: 10; }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:27.3602px !important; top:244.238px !important; width:298.742px !important; height:625.179px !important; z-index: 10; }
+#el-1 { left:30.0944px !important; top:287.637px !important; width:290.265px !important; height:183.168px !important; z-index: 10; }
+#el-2 { left:34.3199px !important; top:488.45px !important; width:301.055px !important; height:57.4832px !important; z-index: 10; }
+#el-2 > * { font-size:48px !important; }
  }
     </style>
 </head>
 <body>
-    <div id="site-canvas"><div id="el-0" class="dropped-element"><p style="font-size:16px;color:#000;">Text...</p></div><div id="el-1" class="dropped-element"><button style="background: rgb(0, 255, 255); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer;" onclick="window.location.href='https://deltaexploits.gg'">Click</button></div></div>
+    <div id="site-canvas"><div id="el-0" class="dropped-element"><div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div></div><div id="el-1" class="dropped-element"><img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.QW8qZljenZpka8FWoUhUVQHaFj%3Fpid%3DApi&amp;f=1&amp;ipt=1f075bc1ba202e4a97c354199581973a33d81c36743d4c2744e587c80b03e518&amp;ipo=images" style="border-radius:12px;width:100%;height:100%;"></div><div id="el-2" class="dropped-element"><p style="font-size: 48px; color: rgb(0, 0, 0);">Lorem Ipsum</p></div></div>
 </body>
 </html>
