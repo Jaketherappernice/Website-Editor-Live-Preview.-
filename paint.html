@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta id="vp" name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Force Zoom-Out Editor</title>
+    <meta id="vp" name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Persistent Brush & Anti-Zoom</title>
     <style>
         * {
             touch-action: none; 
             -webkit-tap-highlight-color: transparent;
             -webkit-user-select: none;
             user-select: none;
+            box-sizing: border-box;
         }
 
         body, html { 
@@ -25,18 +26,23 @@
         }
 
         textarea { 
-            width: 90%; height: 50%; background: #222; color: #0f0; 
+            width: 95%; height: 50%; background: #222; color: #0f0; 
             border: 1px solid #444; padding: 10px; border-radius: 8px; 
             margin-bottom: 20px; touch-action: auto; user-select: text;
+            font-family: monospace;
         }
 
         #preview-container { width: 100vw; height: 100vh; position: relative; }
         iframe { width: 100%; height: 100%; border: none; background: white; }
 
+        /* The Shield */
         #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; }
+        
+        /* The Canvas: Now has a background to show what you've already painted */
         #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
 
-        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        /* UI */
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
         .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; z-index: 2000; border: 1px solid #444; }
     </style>
@@ -44,8 +50,8 @@
 <body>
 
     <div id="setup-screen">
-        <h3>Web Brush Editor</h3>
-        <textarea id="code-input" placeholder="Paste HTML here..."></textarea>
+        <h3>Persistent Brush Editor</h3>
+        <textarea id="code-input" placeholder="Paste HTML source code here..."></textarea>
         <button onclick="startEditing()" style="padding: 15px 40px; border-radius: 30px; border: none; background: #007bff; color: white; font-weight: bold;">START EDITING</button>
     </div>
 
@@ -56,7 +62,7 @@
         
         <button class="export-btn" onclick="exportCode()">COPY CODE</button>
         <button class="fab" onclick="changeBrushColor()">🎨</button>
-        <div class="indicator" id="status">Ready</div>
+        <div class="indicator" id="status">Tap an element to start</div>
     </div>
 
     <script>
@@ -71,29 +77,20 @@
         let selectedElement = null;
         let isPainting = false;
 
-        // --- THE AUTO ZOOM-OUT LOGIC ---
-        function forceZoomOut() {
-            // Re-inject the viewport tag to force the browser to recalculate scale
-            vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-            
-            // Scroll to top left just in case the zoom-in shifted the view
-            window.scrollTo(0, 0);
+        // --- EXTREME ANTI-ZOOM ---
+        function resetZoom() {
+            if (window.visualViewport && window.visualViewport.scale !== 1) {
+                vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                window.scrollTo(0, 0);
+            }
         }
-
-        // Monitor the visual viewport for any scale changes
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                if (window.visualViewport.scale > 1) {
-                    forceZoomOut();
-                    status.innerText = "Zoom Detected: Resetting...";
-                }
-            });
-        }
+        // Check every 500ms to ensure no zoom happened
+        setInterval(resetZoom, 500);
 
         function startEditing() {
             const code = document.getElementById('code-input').value;
             if(!code) return alert("Please paste code!");
-            forceZoomOut();
+            resetZoom();
             viewer.srcdoc = code;
             document.getElementById('setup-screen').style.display = 'none';
         }
@@ -103,26 +100,38 @@
             if(hex) brushColor = hex;
         }
 
-        function getElementAt(x, y) {
-            const doc = viewer.contentDocument;
-            return doc.elementFromPoint(x, y);
+        function saveCurrentBrushToElement() {
+            if (selectedElement) {
+                const dataURL = canvas.toDataURL();
+                selectedElement.style.backgroundImage = `url(${dataURL})`;
+                selectedElement.style.backgroundSize = '100% 100%';
+                selectedElement.style.backgroundRepeat = 'no-repeat';
+            }
         }
 
         function selectElement(x, y) {
-            const el = getElementAt(x, y);
+            const doc = viewer.contentDocument;
+            const el = doc.elementFromPoint(x, y);
+            
             if (!el || el.tagName === 'HTML' || el.tagName === 'BODY') return;
+            if (el === selectedElement) return; // Don't reset if clicking same element
+
+            // Save the work on the PREVIOUS element before moving
+            saveCurrentBrushToElement();
 
             if (selectedElement) selectedElement.style.outline = "none";
             selectedElement = el;
             selectedElement.style.outline = "2px solid red";
             selectedElement.style.outlineOffset = "-2px";
 
+            // Resize canvas to new element
             const rect = selectedElement.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
             canvas.style.top = rect.top + "px";
             canvas.style.left = rect.left + "px";
             
+            // Clear canvas for the NEW element session
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             status.innerText = "Brushing: " + el.tagName.toLowerCase();
         }
@@ -136,15 +145,17 @@
             const grad = ctx.createRadialGradient(x, y, 0, x, y, 15);
             grad.addColorStop(0, brushColor);
             grad.addColorStop(1, 'transparent');
+            
             ctx.fillStyle = grad;
-            ctx.globalAlpha = 0.25;
+            ctx.globalAlpha = 0.2; 
             ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // Event listeners
+        // Pointer Events for Shield
         shield.addEventListener('pointerdown', (e) => {
             selectElement(e.clientX, e.clientY);
             isPainting = true;
+            paint(e.clientX, e.clientY);
         });
 
         window.addEventListener('pointerup', () => isPainting = false);
@@ -153,19 +164,16 @@
             if(isPainting) paint(e.clientX, e.clientY);
         });
 
-        // Block accidental browser behaviors
+        // Global touch block for multi-finger zoom
         document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) e.preventDefault(); // Block multi-touch zoom
-            if (e.target === shield) e.preventDefault();
+            if (e.touches.length > 1) e.preventDefault();
         }, { passive: false });
 
         function exportCode() {
-            if(selectedElement) {
-                const dataURL = canvas.toDataURL();
-                selectedElement.style.backgroundImage = `url(${dataURL})`;
-                selectedElement.style.backgroundSize = '100% 100%';
-                selectedElement.style.outline = "none";
-            }
+            // Final save for the currently selected element
+            saveCurrentBrushToElement();
+            if(selectedElement) selectedElement.style.outline = "none";
+
             const finalCode = viewer.contentDocument.documentElement.outerHTML;
             const ta = document.createElement('textarea');
             ta.value = finalCode;
@@ -173,7 +181,7 @@
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            alert("Updated HTML copied!");
+            alert("Full code with all brushed elements copied!");
         }
     </script>
 </body>
