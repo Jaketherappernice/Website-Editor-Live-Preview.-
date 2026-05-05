@@ -329,15 +329,25 @@ document.head.appendChild(styleFix);
 
 
 
- // AUTO-PATCHER: Paste this at the bottom of your <script>
 (function patchExport() {
     const copyBtn = document.getElementById('copy-btn');
     if (!copyBtn) return;
 
     copyBtn.onclick = () => {
+        // FIX: Force save current positions for EVERY element before generating the HTML
+        document.querySelectorAll('.dropped-element').forEach(el => {
+            const inner = el.querySelector('h2, p, button, img, div');
+            const state = {
+                w: el.style.width, h: el.style.height,
+                l: el.style.left, t: el.style.top,
+                fs: inner ? inner.style.fontSize : null
+            };
+            el.dataset[currentMode] = JSON.stringify(state);
+        });
+
         let desktopStyles = "", mobileStyles = "";
-        const finalHeight = document.getElementById('canvas').style.height || "1000px";
         const canvasEl = document.getElementById('canvas');
+        const finalHeight = canvasEl.style.height || "1000px";
         const bgColor = canvasEl.style.backgroundColor || "white";
         const bgImg = canvasEl.style.backgroundImage || "none";
         
@@ -347,60 +357,44 @@ document.head.appendChild(styleFix);
             const m = JSON.parse(el.dataset.mobile || '{}');
             el.setAttribute('id', id);
             
-            // Only add styles if desktop data exists
+            // Desktop logic
             if (d.l) {
-                desktopStyles += `#${id} { left:${d.l}; top:${d.t}; width:${d.w}; height:${d.h}; z-index:${el.style.zIndex || 1}; }\n`;
+                desktopStyles += `#${id} { left:${d.l}; top:${d.t}; width:${d.w}; height:${d.h}; }\n`;
                 if(d.fs) desktopStyles += `#${id} > * { font-size:${d.fs}; }\n`;
             }
             
-            // Mobile overrides
-            if (m.l) {
-                mobileStyles += `#${id} { left:${m.l}; top:${m.t}; width:${m.w}; height:${m.h}; }\n`;
-                if(m.fs) mobileStyles += `#${id} > * { font-size:${m.fs}; }\n`;
-            }
+            // Mobile logic (falls back to desktop if mobile wasn't set)
+            mobileStyles += `#${id} { left:${m.l || d.l}; top:${m.t || d.t}; width:${m.w || d.w}; height:${m.h || d.h}; }\n`;
+            if(m.fs || d.fs) mobileStyles += `#${id} > * { font-size:${m.fs || d.fs}; }\n`;
         });
 
-        const finalHTML = `
-<!DOCTYPE html>
+        const finalHTML = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body, html { margin:0; padding:0; width:100%; overflow-x:hidden; background:#f3f4f6; }
+        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; }
         #site-canvas { 
             position:relative; width:100%; height:${finalHeight}; 
             background-color:${bgColor}; background-image:${bgImg}; 
-            background-size:cover; background-position:center; margin:0 auto;
+            background-size:cover; background-position:center;
         }
         .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
         .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; }
-        
-        /* DESKTOP - Lock the layout */
-        @media (min-width: 601px) {
-            #site-canvas { width: 100%; }
-            ${desktopStyles}
-        }
-        
-        /* MOBILE - Apply the tweaks */
-        @media (max-width: 600px) {
-            #site-canvas { width: 100vw; }
-            ${mobileStyles}
-        }
+        @media (min-width: 601px) { ${desktopStyles} }
+        @media (max-width: 600px) { ${mobileStyles} }
     </style>
 </head>
 <body>
-    <div id="site-canvas">
-        ${canvasEl.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}
-    </div>
+    <div id="site-canvas">${canvasEl.innerHTML.replace(/<div class="resizer.*?<\/div>/g, '')}</div>
 </body>
 </html>`;
         
         navigator.clipboard.writeText(finalHTML);
-        alert("Fixed! Desktop and Mobile views are now isolated.");
+        alert("Export Fixed! It now captures the current view automatically.");
     };
 })();
-
 
     </script>
 </body>
