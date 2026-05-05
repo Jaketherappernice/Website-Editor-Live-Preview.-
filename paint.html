@@ -3,48 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Spray Web Editor</title>
+    <title>Fixed Web Brush</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; background: #000; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: #000; }
         
-        /* Setup Screen */
-        #setup-screen { position: fixed; inset: 0; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; padding: 20px; text-align: center; }
-        textarea { width: 90%; height: 40%; margin: 20px 0; background: #222; color: #0f0; border: 1px solid #444; padding: 10px; font-family: monospace; border-radius: 8px; font-size: 14px; }
-        .btn-primary { padding: 15px 40px; background: #007bff; color: white; border: none; border-radius: 30px; font-weight: bold; font-size: 16px; }
+        /* Setup */
+        #setup-screen { position: fixed; inset: 0; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; padding: 20px; }
+        textarea { width: 90%; height: 50%; background: #222; color: #0f0; border: 1px solid #444; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
 
-        /* Canvas & Viewport */
-        #preview-container { width: 100vw; height: 100vh; position: relative; background: white; }
-        iframe { width: 100%; height: 100%; border: none; pointer-events: auto; }
-        #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1500; }
+        /* Preview Area */
+        #preview-container { width: 100vw; height: 100vh; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
 
-        /* UI Controls */
-        .fab { position: fixed; bottom: 30px; left: 30px; width: 65px; height: 65px; border-radius: 50%; background: #007bff; border: 4px solid white; color: white; font-size: 28px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.4); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 10px; cursor: pointer; z-index: 2000; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        /* The Shield: Prevents the website's buttons from working */
+        #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; touch-action: none; }
 
-        /* Helper Classes */
-        .highlight-target { outline: 4px dashed #ff0000 !important; outline-offset: -4px; }
+        /* The Canvas: Where the painting happens */
+        #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
+
+        /* UI */
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
+        
+        .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 2000; }
     </style>
 </head>
 <body>
 
     <div id="setup-screen">
-        <h2>Web Brush Editor</h2>
-        <p>Paste your HTML source code below:</p>
+        <h3>Paste Website Code</h3>
         <textarea id="code-input" placeholder="<html>...</html>"></textarea>
-        <button class="btn-primary" onclick="startEditing()">LAUNCH PREVIEW</button>
+        <button onclick="startEditing()" style="padding: 15px 30px; border-radius: 25px; border: none; background: #007bff; color: white; font-weight: bold;">START EDITING</button>
     </div>
 
     <div id="preview-container">
-        <button class="export-btn" onclick="exportCode()">EXPORT CODE</button>
-        <button class="fab" onclick="changeBrushColor()">🖌️</button>
-        <iframe id="viewer"></iframe>
+        <div id="click-shield"></div>
         <canvas id="brush-canvas"></canvas>
+        <iframe id="viewer"></iframe>
+        
+        <button class="export-btn" onclick="exportCode()">COPY CODE</button>
+        <button class="fab" onclick="changeBrushColor()">🎨</button>
+        <div class="indicator" id="status">Status: Select an element</div>
     </div>
 
     <script>
         const viewer = document.getElementById('viewer');
+        const shield = document.getElementById('click-shield');
         const canvas = document.getElementById('brush-canvas');
         const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
         
         let brushColor = '#ff0000';
         let selectedElement = null;
@@ -52,121 +59,89 @@
 
         function startEditing() {
             const code = document.getElementById('code-input').value;
-            if(!code) return alert("Paste code first!");
-            
-            // Inject the code into the iframe
-            const blob = new Blob([code], {type: 'text/html'});
-            viewer.src = URL.createObjectURL(blob);
-            
+            if(!code) return alert("Please paste code!");
+            viewer.srcdoc = code;
             document.getElementById('setup-screen').style.display = 'none';
-            viewer.onload = setupInteractions;
         }
 
         function changeBrushColor() {
-            const hex = prompt("Enter Hex Color (e.g., #00ff00):", brushColor);
-            if (hex && /^#[0-9A-F]{6}$/i.test(hex)) {
-                brushColor = hex;
-            }
+            const hex = prompt("Hex Color:", brushColor);
+            if(hex) brushColor = hex;
         }
 
-        function setupInteractions() {
-            const doc = viewer.contentDocument || viewer.contentWindow.document;
-
-            // Handle Element Selection (Click/Tap)
-            doc.addEventListener('click', (e) => {
-                // If we are currently painting, don't switch elements immediately
-                if(isPainting) return;
-
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Remove previous highlight
-                if(selectedElement) selectedElement.classList.remove('highlight-target');
-
-                selectedElement = e.target;
-                selectedElement.classList.add('highlight-target');
-
-                // Align canvas to the clicked element
-                const rect = selectedElement.getBoundingClientRect();
-                canvas.width = rect.width;
-                canvas.height = rect.height;
-                canvas.style.top = (rect.top + viewer.getBoundingClientRect().top) + 'px';
-                canvas.style.left = (rect.left + viewer.getBoundingClientRect().left) + 'px';
-                
-                // Enable the canvas for drawing
-                canvas.style.pointerEvents = 'auto';
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            });
+        // Logic to find element inside Iframe through the shield
+        function getElementAt(x, y) {
+            const doc = viewer.contentDocument;
+            return doc.elementFromPoint(x, y);
         }
 
-        // CORE PAINTING LOGIC
-        function draw(x, y) {
+        function selectElement(x, y) {
+            const el = getElementAt(x, y);
+            if (!el || el.tagName === 'HTML' || el.tagName === 'BODY') return;
+
+            if (selectedElement) selectedElement.style.outline = "none";
+            
+            selectedElement = el;
+            selectedElement.style.outline = "3px dashed red";
+            selectedElement.style.outlineOffset = "-3px";
+
+            // Fit canvas to element
+            const rect = selectedElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            canvas.style.top = rect.top + "px";
+            canvas.style.left = rect.left + "px";
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            status.innerText = "Status: Brushing " + el.tagName;
+        }
+
+        function paint(clientX, clientY) {
             if (!isPainting || !selectedElement) return;
-
             const rect = canvas.getBoundingClientRect();
-            const localX = x - rect.left;
-            const localY = y - rect.top;
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
 
-            // Spray paint gradient effect
-            const radGrad = ctx.createRadialGradient(localX, localY, 0, localX, localY, 15);
-            radGrad.addColorStop(0, brushColor);
-            radGrad.addColorStop(1, 'rgba(0,0,0,0)');
-
-            ctx.fillStyle = radGrad;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, 15);
+            grad.addColorStop(0, brushColor);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
             ctx.globalAlpha = 0.3;
-            ctx.beginPath();
-            ctx.arc(localX, localY, 15, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // MOUSE CONTROLS
-        canvas.addEventListener('mousedown', () => isPainting = true);
-        window.addEventListener('mouseup', () => isPainting = false);
-        canvas.addEventListener('mousemove', (e) => draw(e.clientX, e.clientY));
-
-        // MOBILE TOUCH CONTROLS
-        canvas.addEventListener('touchstart', (e) => {
-            isPainting = true;
-            const touch = e.touches[0];
-            draw(touch.clientX, touch.clientY);
-            e.preventDefault(); 
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            draw(touch.clientX, touch.clientY);
-            e.preventDefault();
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', () => isPainting = false);
-
-        // EXPORT LOGIC
-        function exportCode() {
-            if (!selectedElement) return alert("Select and brush an element first!");
-
-            // Flatten canvas to element background
-            const dataURL = canvas.toDataURL();
-            selectedElement.style.backgroundImage = `url(${dataURL})`;
-            selectedElement.style.backgroundSize = '100% 100%';
-            selectedElement.style.backgroundRepeat = 'no-repeat';
-            selectedElement.classList.remove('highlight-target');
-
-            // Get full HTML
-            const fullHTML = viewer.contentDocument.documentElement.outerHTML;
-
-            // Copy to Clipboard (Fallback Method for Mobile)
-            const textArea = document.createElement("textarea");
-            textArea.value = fullHTML;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                alert("FULL CODE COPIED TO CLIPBOARD!");
-            } catch (err) {
-                alert("Manual copy required. See console.");
-                console.log(fullHTML);
+        // Handle ALL interactions on the shield
+        shield.addEventListener('pointerdown', (e) => {
+            // First tap: Select element
+            if (!selectedElement || !isPainting) {
+                selectElement(e.clientX, e.clientY);
             }
-            document.body.removeChild(textArea);
+            isPainting = true;
+        });
+
+        window.addEventListener('pointerup', () => {
+            isPainting = false;
+        });
+
+        shield.addEventListener('pointermove', (e) => {
+            if(isPainting) paint(e.clientX, e.clientY);
+        });
+
+        function exportCode() {
+            if(selectedElement) {
+                const dataURL = canvas.toDataURL();
+                selectedElement.style.backgroundImage = `url(${dataURL})`;
+                selectedElement.style.backgroundSize = '100% 100%';
+                selectedElement.style.outline = "none";
+            }
+            const finalCode = viewer.contentDocument.documentElement.outerHTML;
+            const ta = document.createElement('textarea');
+            ta.value = finalCode;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            alert("Code Copied!");
         }
     </script>
 </body>
