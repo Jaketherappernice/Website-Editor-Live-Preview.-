@@ -2,29 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fixed Web Brush</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Anti-Zoom Web Brush</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: #000; }
-        
-        /* Setup */
-        #setup-screen { position: fixed; inset: 0; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; padding: 20px; }
-        textarea { width: 90%; height: 50%; background: #222; color: #0f0; border: 1px solid #444; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+        * {
+            /* Disables the double-tap to zoom gesture on mobile */
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        /* Preview Area */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            background: #000;
+            position: fixed; /* Prevents "pull to refresh" or bounce effects */
+            width: 100%;
+        }
+        
+        #setup-screen { 
+            position: fixed; 
+            inset: 0; 
+            background: #121212; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 5000; 
+            padding: 20px; 
+        }
+
+        textarea { 
+            width: 90%; 
+            height: 50%; 
+            background: #222; 
+            color: #0f0; 
+            border: 1px solid #444; 
+            padding: 10px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            touch-action: auto; /* Allow scrolling inside the textarea */
+        }
+
         #preview-container { width: 100vw; height: 100vh; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* The Shield: Prevents the website's buttons from working */
-        #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; touch-action: none; }
+        /* The Shield: touch-action: none ensures no zooming/scrolling happens */
+        #click-shield { 
+            position: absolute; 
+            inset: 0; 
+            z-index: 1000; 
+            background: transparent; 
+            touch-action: none; 
+        }
 
-        /* The Canvas: Where the painting happens */
         #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
 
-        /* UI */
         .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
-        
         .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 2000; }
     </style>
 </head>
@@ -69,7 +107,6 @@
             if(hex) brushColor = hex;
         }
 
-        // Logic to find element inside Iframe through the shield
         function getElementAt(x, y) {
             const doc = viewer.contentDocument;
             return doc.elementFromPoint(x, y);
@@ -85,7 +122,6 @@
             selectedElement.style.outline = "3px dashed red";
             selectedElement.style.outlineOffset = "-3px";
 
-            // Fit canvas to element
             const rect = selectedElement.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
@@ -110,9 +146,12 @@
             ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // Handle ALL interactions on the shield
+        // Prevent Default on all touch events globally to kill any browser zoom
+        document.addEventListener('touchstart', (e) => {
+            if (e.target === shield) e.preventDefault();
+        }, { passive: false });
+
         shield.addEventListener('pointerdown', (e) => {
-            // First tap: Select element
             if (!selectedElement || !isPainting) {
                 selectElement(e.clientX, e.clientY);
             }
