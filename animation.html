@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Visual Animation Injector Pro</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
+        /* Prevents layout stretching and ensures smooth interaction */
+        html { touch-action: pan-x pan-y; }
+
         #setup-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
@@ -17,7 +20,9 @@
         #code-input {
             width: 70%; height: 350px; padding: 20px;
             border-radius: 15px; border: 2px solid #ddd;
-            font-family: 'Courier New', Courier, monospace; font-size: 14px;
+            font-family: 'Courier New', Courier, monospace; 
+            /* Set to 16px to prevent mobile browsers from auto-zooming on click */
+            font-size: 16px; 
             box-shadow: 0 20px 40px rgba(0,0,0,0.1); outline: none;
         }
 
@@ -31,7 +36,6 @@
 
         #render-canvas { width: 100%; min-height: 100vh; display: none; padding: 20px; box-sizing: border-box; }
 
-        /* Highlight during edit */
         .editing-now { outline: 4px solid #00ff88 !important; outline-offset: 4px; border-radius: 2px; }
 
         #export-btn {
@@ -91,7 +95,6 @@
             else if (e.detail === 2) {
                 const cssInput = prompt("Paste your @keyframes and .class block here:");
                 if (cssInput) {
-                    // SMART INJECTION: Find the class name in the input (e.g., .bouncing-box)
                     const classMatch = cssInput.match(/\.([a-zA-Z0-9_-]+)/);
                     if (classMatch && classMatch[1]) {
                         activeEl.classList.add(classMatch[1]);
@@ -103,7 +106,7 @@
                 }
             } 
             else if (e.detail === 3) {
-                activeEl.className = ""; // Wipe classes
+                activeEl.className = ""; 
                 activeEl.style.animation = "none";
                 alert("Animations cleared.");
             }
@@ -128,9 +131,38 @@
 </html>`;
 
             navigator.clipboard.writeText(finalDoc).then(() => {
-                alert("You have exported your site! The HTML and Keyframes are in your clipboard.");
+                alert("Exported! HTML and Keyframes are in your clipboard.");
             });
         };
+
+        // --- SELECTIVE ANTI-ZOOM (Blocks Zoom In, Allows Zoom Out) ---
+        
+        // Prevents Keyboard Zoom In
+        window.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Prevents Mouse/Trackpad Zoom In
+        window.addEventListener('wheel', function (e) {
+            if (e.ctrlKey && e.deltaY < 0) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Prevents Pinch-to-Zoom (Mobile/Trackpad)
+        document.addEventListener('touchstart', function (e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Force reset zoom scale if browser tries to jitter
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
     </script>
 </body>
 </html>
