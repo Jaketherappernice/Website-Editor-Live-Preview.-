@@ -2,45 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Anti-Zoom Spray Editor</title>
+    <meta id="vp" name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Force Zoom-Out Editor</title>
     <style>
         * {
-            touch-action: none; /* Disables all browser gestures (zoom/pan) */
+            touch-action: none; 
             -webkit-tap-highlight-color: transparent;
-            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%;
             font-family: sans-serif; overflow: hidden; background: #000;
-            position: fixed; /* Locks the body in place */
+            position: fixed; 
         }
         
-        /* Input Screen */
         #setup-screen { 
             position: fixed; inset: 0; background: #121212; color: white; 
             display: flex; flex-direction: column; align-items: center; 
             justify-content: center; z-index: 5000; padding: 20px; 
         }
+
         textarea { 
             width: 90%; height: 50%; background: #222; color: #0f0; 
             border: 1px solid #444; padding: 10px; border-radius: 8px; 
-            margin-bottom: 20px; touch-action: auto; 
+            margin-bottom: 20px; touch-action: auto; user-select: text;
         }
 
-        /* Editor Area */
-        #preview-container { 
-            width: 100vw; height: 100vh; position: relative; 
-            display: flex; align-items: center; justify-content: center;
-        }
+        #preview-container { width: 100vw; height: 100vh; position: relative; }
         iframe { width: 100%; height: 100%; border: none; background: white; }
 
-        /* The Shield & Canvas */
         #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; }
         #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
 
-        /* Buttons */
         .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
         .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; z-index: 2000; border: 1px solid #444; }
@@ -61,7 +56,7 @@
         
         <button class="export-btn" onclick="exportCode()">COPY CODE</button>
         <button class="fab" onclick="changeBrushColor()">🎨</button>
-        <div class="indicator" id="status">Tap an element to start</div>
+        <div class="indicator" id="status">Ready</div>
     </div>
 
     <script>
@@ -70,18 +65,35 @@
         const canvas = document.getElementById('brush-canvas');
         const ctx = canvas.getContext('2d');
         const status = document.getElementById('status');
+        const vp = document.getElementById('vp');
         
         let brushColor = '#ff0000';
         let selectedElement = null;
         let isPainting = false;
 
+        // --- THE AUTO ZOOM-OUT LOGIC ---
+        function forceZoomOut() {
+            // Re-inject the viewport tag to force the browser to recalculate scale
+            vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            
+            // Scroll to top left just in case the zoom-in shifted the view
+            window.scrollTo(0, 0);
+        }
+
+        // Monitor the visual viewport for any scale changes
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                if (window.visualViewport.scale > 1) {
+                    forceZoomOut();
+                    status.innerText = "Zoom Detected: Resetting...";
+                }
+            });
+        }
+
         function startEditing() {
             const code = document.getElementById('code-input').value;
             if(!code) return alert("Please paste code!");
-            
-            // 1. Force Auto Zoom Out
-            document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-            
+            forceZoomOut();
             viewer.srcdoc = code;
             document.getElementById('setup-screen').style.display = 'none';
         }
@@ -101,12 +113,10 @@
             if (!el || el.tagName === 'HTML' || el.tagName === 'BODY') return;
 
             if (selectedElement) selectedElement.style.outline = "none";
-            
             selectedElement = el;
             selectedElement.style.outline = "2px solid red";
             selectedElement.style.outlineOffset = "-2px";
 
-            // Sync canvas to element position
             const rect = selectedElement.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
@@ -114,7 +124,7 @@
             canvas.style.left = rect.left + "px";
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            status.innerText = "Editing: " + el.tagName.toLowerCase();
+            status.innerText = "Brushing: " + el.tagName.toLowerCase();
         }
 
         function paint(clientX, clientY) {
@@ -131,32 +141,23 @@
             ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // Global Anti-Zoom/Scroll Prevention
-        document.addEventListener('touchstart', (e) => {
-            if (e.target === shield) e.preventDefault();
-        }, { passive: false });
-
+        // Event listeners
         shield.addEventListener('pointerdown', (e) => {
-            // First touch identifies the element
             selectElement(e.clientX, e.clientY);
             isPainting = true;
         });
 
-        window.addEventListener('pointerup', () => {
-            isPainting = false;
-        });
+        window.addEventListener('pointerup', () => isPainting = false);
 
         shield.addEventListener('pointermove', (e) => {
             if(isPainting) paint(e.clientX, e.clientY);
         });
 
-        // Force reset zoom if the window resizes or visually shifts
-        window.visualViewport.addEventListener('resize', () => {
-            if (window.visualViewport.scale !== 1) {
-                // This is a "soft" reset - the meta tag usually handles this
-                console.log("Zoom detected - locked to scale 1.0");
-            }
-        });
+        // Block accidental browser behaviors
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) e.preventDefault(); // Block multi-touch zoom
+            if (e.target === shield) e.preventDefault();
+        }, { passive: false });
 
         function exportCode() {
             if(selectedElement) {
@@ -172,7 +173,7 @@
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            alert("Updated HTML copied to clipboard!");
+            alert("Updated HTML copied!");
         }
     </script>
 </body>
