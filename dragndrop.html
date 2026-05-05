@@ -23,6 +23,7 @@
 
         /* CANVAS ELEMENTS */
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
+        /* pointer-events: none is only for the EDITOR so we can drag the parent */
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         .selected { outline: 2px solid var(--primary); z-index: 50; }
 
@@ -63,7 +64,6 @@
         const colorPicker = document.getElementById('colorPicker');
         let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-        // Toggle Panels
         document.getElementById('add-btn').onclick = () => toggleP('panel');
         document.getElementById('settings-btn').onclick = () => toggleP('settings-panel');
         function toggleP(id) {
@@ -73,7 +73,6 @@
             p.style.display = visible ? 'none' : 'flex';
         }
 
-        // Add Logic
         document.querySelectorAll('.item[data-type]').forEach(i => {
             i.onclick = () => { createNode(i.dataset.type, 50, 50); toggleP('panel'); };
         });
@@ -88,7 +87,7 @@
             const html = {
                 'Heading': '<h2>Heading</h2>',
                 'Paragraph': '<p>Text...</p>',
-                'Button': '<button style="background:var(--primary);color:white;border:none;border-radius:5px;width:100%;height:100%;">Click</button>',
+                'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:5px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
                 'Image': '<img src="https://via.placeholder.com/150">',
                 'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;"></div>'
             };
@@ -135,6 +134,17 @@
             const inner = el.querySelector('h2, p, button, img, div');
             if (el.dataset.type === 'Image') {
                 const s = prompt("Image URL:", inner.src); if(s) inner.src = s;
+            } else if (el.dataset.type === 'Button') {
+                const action = prompt("1: Edit Text | 2: Edit Link | 3: Color");
+                if (action === '1') {
+                    const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
+                } else if (action === '2') {
+                    const l = prompt("URL:", el.dataset.link || "https://");
+                    if(l) el.dataset.link = l;
+                } else if (action === '3') {
+                    colorPicker.click();
+                    colorPicker.oninput = () => { inner.style.backgroundColor = colorPicker.value; };
+                }
             } else if (confirm("Edit Text? (Cancel for Color)")) {
                 const t = prompt("Text:", inner.innerText); if(t) inner.innerText = t;
             } else {
@@ -147,15 +157,15 @@
         }
 
         window.onmousemove = window.ontouchmove = (e) => {
-            if (!activeEl) return;
+            if (!activeEl || !isMoving && !currentResizer) return;
             const t = e.touches ? e.touches[0] : e;
             if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
             if (currentResizer) {
                 const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
-                if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-                if (c.contains('sw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-                if (c.contains('ne')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
-                if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+                if (c.contains('se')) { activeEl.style.width = Math.max(20, startW + dx)+'px'; activeEl.style.height = Math.max(20, startH + dy)+'px'; }
+                if (c.contains('sw')) { activeEl.style.width = Math.max(20, startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = Math.max(20, startH + dy)+'px'; }
+                if (c.contains('ne')) { activeEl.style.width = Math.max(20, startW + dx)+'px'; activeEl.style.height = Math.max(20, startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+                if (c.contains('nw')) { activeEl.style.width = Math.max(20, startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = Math.max(20, startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
             }
         };
         window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
@@ -166,23 +176,46 @@
         document.getElementById('copy-btn').onclick = () => {
             const canvasClone = canvas.cloneNode(true);
             canvasClone.querySelectorAll('.resizer').forEach(r => r.remove());
-            canvasClone.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
             
+            // Clean up elements and apply link logic
+            canvasClone.querySelectorAll('.dropped-element').forEach(d => {
+                d.classList.remove('selected');
+                d.style.border = "none"; // Remove any editor-only outlines
+                
+                const inner = d.querySelector('h2, p, button, img, div');
+                if(d.dataset.type === 'Button' && d.dataset.link) {
+                    const link = document.createElement('a');
+                    link.href = d.dataset.link;
+                    link.target = "_blank";
+                    link.style.cssText = "text-decoration:none; display:block; width:100%; height:100%;";
+                    const btn = inner.cloneNode(true);
+                    btn.style.pointerEvents = "auto";
+                    link.appendChild(btn);
+                    inner.replaceWith(link);
+                } else if (inner) {
+                    inner.style.pointerEvents = "auto"; // Re-enable clicks for non-linked buttons/items
+                }
+            });
+
             const styles = `
-                body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow-x: hidden; }
+                body, html { margin:0; padding:0; width:100%; height:100%; overflow-x:hidden; font-family:sans-serif; }
                 #exported-canvas { 
-                    width: 100vw; height: 100vh; position: relative; 
+                    width:100vw; height:100vh; position:relative; 
                     background-color: ${canvas.style.backgroundColor || 'white'};
                     background-image: ${canvas.style.backgroundImage || 'none'};
                     background-size: cover; background-position: center;
                 }
-                .dropped-element { position: absolute; display: flex; align-items: center; justify-content: center; }
-                .dropped-element > * { width: 100%; height: 100%; margin: 0; object-fit: cover; }
+                .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; pointer-events: none; }
+                /* FORCE VISIBILITY AND CLICKS */
+                .dropped-element > * { width:100%; height:100%; margin:0; display:block; pointer-events: auto !important; }
+                h2, p { margin:0; padding:0; }
+                button { border:none; cursor:pointer; font-family:inherit; }
+                img { object-fit: cover; }
             `;
 
             const fullHTML = `<!DOCTYPE html><html><head><style>${styles}</style></head><body><div id="exported-canvas">${canvasClone.innerHTML}</div></body></html>`;
             navigator.clipboard.writeText(fullHTML);
-            alert("Full Project Copied!");
+            alert("Exported! The button is now fixed and will look exactly like it does here.");
         };
     </script>
 </body>
