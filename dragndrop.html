@@ -349,6 +349,70 @@
     };
 })();
 
+// --- FINAL OVERLAY & EXPORT FIXER ---
+(function() {
+    const getZIndex = (type) => {
+        if (type === 'Heading' || type === 'Paragraph') return 40;
+        if (type === 'Button') return 30;
+        if (type === 'Image') return 20;
+        return 10; // Container/Box
+    };
+
+    document.getElementById('copy-btn').onclick = () => {
+        document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+        let dStyles = "", mStyles = "";
+        const fHeight = canvas.style.height || "1000px";
+        const bgC = canvas.style.backgroundColor || "white";
+        const bgI = canvas.style.backgroundImage || "none";
+        
+        let elementsHTML = "";
+        document.querySelectorAll('.dropped-element').forEach((el, index) => {
+            const id = `el-${index}`;
+            const type = el.dataset.type;
+            const z = getZIndex(type); // Get Rank from Leaderboard
+            const d = JSON.parse(el.dataset.desktop || '{}');
+            const m = JSON.parse(el.dataset.mobile || '{}');
+            const inner = el.querySelector('h2, p, button, img, div').cloneNode(true);
+            
+            if (type === 'Button' && el.dataset.link) {
+                inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
+            }
+
+            elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
+
+            // INJECTING LEADERBOARD Z-INDEX INTO CSS
+            dStyles += `#${id} { left:${d.l} !important; top:${d.t} !important; width:${d.w} !important; height:${d.h} !important; z-index: ${z} !important; }\n`;
+            if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
+            
+            const ml = m.l || d.l, mt = m.t || d.t, mw = m.w || d.w, mh = m.h || d.h, mfs = m.fs || d.fs;
+            mStyles += `#${id} { left:${ml} !important; top:${mt} !important; width:${mw} !important; height:${mh} !important; z-index: ${z} !important; }\n`;
+            if(mfs) mStyles += `#${id} > * { font-size:${mfs} !important; }\n`;
+        });
+
+        const finalHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
+        #site-canvas { position:relative; width:100%; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; }
+        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
+        button { cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } ${mStyles} }
+    </style>
+</head>
+<body><div id="site-canvas">${elementsHTML}</div></body>
+</html>`;
+        navigator.clipboard.writeText(finalHTML);
+        alert("Export Fixed: Leaderboard Stacking applied to final site.");
+    };
+})();
+
+
 </script> 
 </body>
 </html>
