@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta id="vp" name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Persistent Brush & Anti-Zoom</title>
+    <title>Fixed Persistent Brush</title>
     <style>
         * {
             touch-action: none; 
@@ -12,37 +12,26 @@
             user-select: none;
             box-sizing: border-box;
         }
-
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%;
             font-family: sans-serif; overflow: hidden; background: #000;
             position: fixed; 
         }
-        
         #setup-screen { 
             position: fixed; inset: 0; background: #121212; color: white; 
             display: flex; flex-direction: column; align-items: center; 
             justify-content: center; z-index: 5000; padding: 20px; 
         }
-
         textarea { 
             width: 95%; height: 50%; background: #222; color: #0f0; 
             border: 1px solid #444; padding: 10px; border-radius: 8px; 
             margin-bottom: 20px; touch-action: auto; user-select: text;
-            font-family: monospace;
         }
-
         #preview-container { width: 100vw; height: 100vh; position: relative; }
         iframe { width: 100%; height: 100%; border: none; background: white; }
-
-        /* The Shield */
         #click-shield { position: absolute; inset: 0; z-index: 1000; background: transparent; }
-        
-        /* The Canvas: Now has a background to show what you've already painted */
         #brush-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1100; }
-
-        /* UI */
-        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; border-radius: 50%; background: #007bff; border: 3px solid #fff; color: white; font-size: 24px; z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .export-btn { position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 8px; z-index: 2000; font-weight: bold; }
         .indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; z-index: 2000; border: 1px solid #444; }
     </style>
@@ -50,8 +39,8 @@
 <body>
 
     <div id="setup-screen">
-        <h3>Persistent Brush Editor</h3>
-        <textarea id="code-input" placeholder="Paste HTML source code here..."></textarea>
+        <h3>Web Spray Editor</h3>
+        <textarea id="code-input" placeholder="Paste HTML code here..."></textarea>
         <button onclick="startEditing()" style="padding: 15px 40px; border-radius: 30px; border: none; background: #007bff; color: white; font-weight: bold;">START EDITING</button>
     </div>
 
@@ -62,7 +51,7 @@
         
         <button class="export-btn" onclick="exportCode()">COPY CODE</button>
         <button class="fab" onclick="changeBrushColor()">🎨</button>
-        <div class="indicator" id="status">Tap an element to start</div>
+        <div class="indicator" id="status">Double-tap an element to paint</div>
     </div>
 
     <script>
@@ -76,64 +65,60 @@
         let brushColor = '#ff0000';
         let selectedElement = null;
         let isPainting = false;
+        let lastTap = 0;
 
-        // --- EXTREME ANTI-ZOOM ---
-        function resetZoom() {
+        // Auto-zoom-out check
+        setInterval(() => {
             if (window.visualViewport && window.visualViewport.scale !== 1) {
-                vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                document.getElementById('vp').setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
                 window.scrollTo(0, 0);
             }
-        }
-        // Check every 500ms to ensure no zoom happened
-        setInterval(resetZoom, 500);
+        }, 500);
 
         function startEditing() {
             const code = document.getElementById('code-input').value;
-            if(!code) return alert("Please paste code!");
-            resetZoom();
+            if(!code) return alert("Paste code!");
             viewer.srcdoc = code;
             document.getElementById('setup-screen').style.display = 'none';
         }
 
         function changeBrushColor() {
-            const hex = prompt("Enter Hex Color (e.g. #00ff00):", brushColor);
+            const hex = prompt("Hex Color:", brushColor);
             if(hex) brushColor = hex;
         }
 
-        function saveCurrentBrushToElement() {
-            if (selectedElement) {
+        function saveLayer() {
+            if (selectedElement && canvas.width > 0) {
                 const dataURL = canvas.toDataURL();
+                // Combine existing background with the new one
                 selectedElement.style.backgroundImage = `url(${dataURL})`;
                 selectedElement.style.backgroundSize = '100% 100%';
                 selectedElement.style.backgroundRepeat = 'no-repeat';
             }
         }
 
-        function selectElement(x, y) {
+        function selectNewElement(x, y) {
             const doc = viewer.contentDocument;
             const el = doc.elementFromPoint(x, y);
             
             if (!el || el.tagName === 'HTML' || el.tagName === 'BODY') return;
-            if (el === selectedElement) return; // Don't reset if clicking same element
-
-            // Save the work on the PREVIOUS element before moving
-            saveCurrentBrushToElement();
+            
+            // Save work on previous element
+            saveLayer();
 
             if (selectedElement) selectedElement.style.outline = "none";
             selectedElement = el;
             selectedElement.style.outline = "2px solid red";
-            selectedElement.style.outlineOffset = "-2px";
 
-            // Resize canvas to new element
             const rect = selectedElement.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
             canvas.style.top = rect.top + "px";
             canvas.style.left = rect.left + "px";
             
-            // Clear canvas for the NEW element session
+            // Start fresh for THIS element
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            status.innerText = "Brushing: " + el.tagName.toLowerCase();
+            status.innerText = "Locked: " + el.tagName.toLowerCase();
         }
 
         function paint(clientX, clientY) {
@@ -151,29 +136,35 @@
             ctx.fillRect(x - 15, y - 15, 30, 30);
         }
 
-        // Pointer Events for Shield
         shield.addEventListener('pointerdown', (e) => {
-            selectElement(e.clientX, e.clientY);
-            isPainting = true;
-            paint(e.clientX, e.clientY);
+            const now = Date.now();
+            const timesince = now - lastTap;
+            
+            // DOUBLE TAP logic to switch elements
+            if (timesince < 300 && timesince > 0) {
+                selectNewElement(e.clientX, e.clientY);
+                isPainting = false; // Prevent immediate painting on double tap
+            } else {
+                // SINGLE TAP starts painting on CURRENT element
+                if (selectedElement) {
+                    isPainting = true;
+                    paint(e.clientX, e.clientY);
+                }
+            }
+            lastTap = now;
         });
 
-        window.addEventListener('pointerup', () => isPainting = false);
+        window.addEventListener('pointerup', () => {
+            isPainting = false;
+        });
 
         shield.addEventListener('pointermove', (e) => {
             if(isPainting) paint(e.clientX, e.clientY);
         });
 
-        // Global touch block for multi-finger zoom
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) e.preventDefault();
-        }, { passive: false });
-
         function exportCode() {
-            // Final save for the currently selected element
-            saveCurrentBrushToElement();
+            saveLayer();
             if(selectedElement) selectedElement.style.outline = "none";
-
             const finalCode = viewer.contentDocument.documentElement.outerHTML;
             const ta = document.createElement('textarea');
             ta.value = finalCode;
@@ -181,7 +172,7 @@
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            alert("Full code with all brushed elements copied!");
+            alert("Code Saved & Copied!");
         }
     </script>
 </body>
