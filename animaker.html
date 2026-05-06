@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Portable CSS Keyframer</title>
+    <title>CSS Keyframer v8</title>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
         :root {
@@ -17,7 +17,7 @@
         * { box-sizing: border-box; touch-action: manipulation; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, system-ui, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -29,24 +29,23 @@
 
         header {
             width: 100%;
-            padding: 10px 15px;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: var(--panel-color);
-            z-index: 10;
+            border-bottom: 1px solid #334155;
         }
-
-        header h2 { margin: 0; font-size: 1.1rem; }
 
         button {
             background: var(--accent-color);
             color: #000;
             border: none;
-            padding: 8px 12px;
+            padding: 8px 14px;
             border-radius: 6px;
             font-weight: bold;
             font-size: 0.85rem;
+            cursor: pointer;
         }
 
         #stage-container {
@@ -54,38 +53,26 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #111;
-            padding: 10px;
+            background: #000;
         }
 
         #stage {
             width: 300px;
             height: 300px;
-            background-color: #334155;
-            background-image: 
-                radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-color: #1e293b;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
             background-size: 20px 20px;
             position: relative;
-            overflow: hidden; /* Important for displacement fix */
-            border: 2px solid #475569;
-            border-radius: 8px;
+            border: 1px solid #475569;
+            border-radius: 4px;
         }
 
-        /* Center Crosshair */
-        #stage::after, #stage::before {
-            content: '';
-            position: absolute;
-            background: rgba(255,255,255,0.1);
-        }
-        #stage::after { top: 50%; left: 0; width: 100%; height: 1px; }
-        #stage::before { left: 50%; top: 0; width: 1px; height: 100%; }
-
+        /* The Box */
         #target-box {
             width: 80px;
             height: 80px;
             background-color: var(--accent-color);
             position: absolute;
-            /* Start exactly in middle */
             top: 50%;
             left: 50%;
             display: flex;
@@ -95,47 +82,33 @@
             color: #000;
             font-weight: bold;
             border-radius: 4px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
-            /* Initial transform strictly uses -50% to center itself on the 50%/50% top/left */
-            transform: translate(-50%, -50%) rotate(0deg) scale(1);
+            /* Anchored to center */
+            transform: translate(-50%, -50%);
             transform-origin: center center;
         }
 
         #controls {
             background: var(--panel-color);
-            padding: 15px;
-            border-top: 1px solid #475569;
+            padding: 20px;
+            border-top: 1px solid #334155;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
 
-        .control-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-        }
+        .control-row { display: flex; align-items: center; gap: 12px; }
+        .control-row label { width: 60px; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; }
 
-        .control-row label { width: 70px; font-size: 0.75rem; color: #94a3b8; }
+        input[type="range"] { flex-grow: 1; accent-color: var(--accent-color); }
+        .val-display { width: 40px; font-size: 0.75rem; text-align: right; font-family: monospace; }
 
-        input[type="range"] {
-            flex-grow: 1;
-            height: 25px;
-            accent-color: var(--accent-color);
-        }
-
-        .val-display { width: 40px; font-size: 0.75rem; text-align: right; }
-
-        .button-group { display: flex; gap: 8px; justify-content: center; }
-
-        .btn-secondary { background: #475569; color: white; }
-        .btn-danger { background: var(--danger-color); color: white; }
+        .button-group { display: flex; gap: 10px; justify-content: center; }
+        .btn-reset { background: var(--danger-color); color: white; }
 
         #modal-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            inset: 0;
             background: rgba(0,0,0,0.9);
             flex-direction: column;
             padding: 20px;
@@ -144,65 +117,55 @@
 
         #output-text {
             flex-grow: 1;
-            background: #000;
-            color: #10b981;
-            font-family: monospace;
+            background: #020617;
+            color: #22c55e;
+            font-family: 'Courier New', monospace;
             padding: 15px;
-            border: 1px solid var(--accent-color);
+            border: 1px solid #334155;
             margin-bottom: 15px;
             font-size: 0.8rem;
-            white-space: pre;
+            line-height: 1.4;
         }
-
-        .kf-counter { text-align: center; font-size: 0.7rem; color: var(--accent-color); }
     </style>
 </head>
 <body>
 
 <header>
-    <h2>Keyframer <span style="color: var(--accent-color)">Portable</span></h2>
+    <h2 style="margin:0; font-size: 1rem;">Visual Keyframer <span style="color:var(--accent-color)">v8</span></h2>
     <div>
         <button onclick="playPreview()">▶ Play</button>
-        <button class="btn-secondary" onclick="exportCSS()">Export</button>
+        <button style="background:#475569; color:white;" onclick="exportCSS()">Export</button>
     </div>
 </header>
 
 <div id="stage-container">
     <div id="stage">
-        <div id="target-box" 
-             data-x="0" 
-             data-y="0" 
-             data-angle="0" 
-             data-scale="1">
-            TARGET
-        </div>
+        <div id="target-box" data-x="0" data-y="0" data-angle="0" data-scale="1">TARGET</div>
     </div>
 </div>
 
 <div id="controls">
     <div class="control-row">
-        <label>Timeline</label>
+        <label>Time</label>
         <input type="range" id="timeline" min="0" max="100" value="0">
         <span class="val-display" id="time-val">0%</span>
     </div>
-
     <div class="control-row">
         <label>Rotate</label>
         <input type="range" id="rotator" min="-180" max="180" value="0">
         <span class="val-display" id="rot-val">0°</span>
     </div>
-
     <div class="control-row">
         <label>Scale</label>
         <input type="range" id="scaler" min="0.1" max="3" step="0.1" value="1">
-        <span class="val-display" id="scale-val">1x</span>
+        <span class="val-display" id="scale-val">1.0</span>
     </div>
 
-    <div class="kf-counter" id="kf-info">No keyframes saved</div>
+    <div style="text-align:center; font-size: 0.7rem; color: var(--accent-color);" id="kf-status">0 keyframes saved</div>
 
     <div class="button-group">
         <button onclick="addKeyframe()">+ Add Keyframe</button>
-        <button class="btn-danger" onclick="clearKeyframes()">Reset</button>
+        <button class="btn-reset" onclick="clearKeyframes()">Reset</button>
     </div>
 </div>
 
@@ -213,125 +176,113 @@
 </div>
 
 <script>
-    let savedKeyframes = [];
-    const target = document.getElementById('target-box');
+    let keyframes = [];
+    const box = document.getElementById('target-box');
     const timeline = document.getElementById('timeline');
     const rotator = document.getElementById('rotator');
     const scaler = document.getElementById('scaler');
-    const kfInfo = document.getElementById('kf-info');
 
-    // Initial State
-    updateTransform(0, 0, 0, 1);
-
+    // Dragging setup
     interact('#target-box').draggable({
         listeners: {
             move(event) {
-                let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-                let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-                updateTransform(x, y, null, null);
+                const x = (parseFloat(box.getAttribute('data-x')) || 0) + event.dx;
+                const y = (parseFloat(box.getAttribute('data-y')) || 0) + event.dy;
+                updateView(x, y, null, null);
             }
-        },
-        inertia: true
+        }
     });
 
+    // Input Listeners
     timeline.oninput = () => document.getElementById('time-val').innerText = timeline.value + '%';
     rotator.oninput = () => {
         document.getElementById('rot-val').innerText = rotator.value + '°';
-        updateTransform(null, null, rotator.value, null);
+        updateView(null, null, rotator.value, null);
     };
     scaler.oninput = () => {
-        document.getElementById('scale-val').innerText = scaler.value + 'x';
-        updateTransform(null, null, null, scaler.value);
+        document.getElementById('scale-val').innerText = parseFloat(scaler.value).toFixed(1);
+        updateView(null, null, null, scaler.value);
     };
 
-    function updateTransform(x, y, angle, scale) {
-        if (x !== null) target.setAttribute('data-x', x);
-        if (y !== null) target.setAttribute('data-y', y);
-        if (angle !== null) target.setAttribute('data-angle', angle);
-        if (scale !== null) target.setAttribute('data-scale', scale);
+    function updateView(x, y, a, s) {
+        if (x !== null) box.setAttribute('data-x', x);
+        if (y !== null) box.setAttribute('data-y', y);
+        if (a !== null) box.setAttribute('data-angle', a);
+        if (s !== null) box.setAttribute('data-scale', s);
 
-        const curX = parseFloat(target.getAttribute('data-x'));
-        const curY = parseFloat(target.getAttribute('data-y'));
-        const curA = target.getAttribute('data-angle');
-        const curS = target.getAttribute('data-scale');
+        const curX = box.getAttribute('data-x');
+        const curY = box.getAttribute('data-y');
+        const curA = box.getAttribute('data-angle');
+        const curS = box.getAttribute('data-scale');
 
-        // IMPORTANT: We keep the -50%, -50% to maintain center-alignment of the div itself
-        // Then we add the delta (curX, curY)
-        target.style.transform = `translate(calc(-50% + ${curX}px), calc(-50% + ${curY}px)) rotate(${curA}deg) scale(${curS})`;
-    }
-
-    // Logic to build a clean string for the Keyframe data
-    function getCleanTransformString() {
-        const x = parseFloat(target.getAttribute('data-x'));
-        const y = parseFloat(target.getAttribute('data-y'));
-        const a = target.getAttribute('data-angle');
-        const s = target.getAttribute('data-scale');
-
-        let str = "";
-        // Only add translate if there is actual movement
-        if (x !== 0 || y !== 0) {
-            str += `translate(${x}px, ${y}px) `;
-        }
-        str += `rotate(${a}deg) scale(${s})`;
-        return str.trim();
+        // We use calc(-50% + offset) to keep it centered on the stage
+        box.style.transform = `translate(calc(-50% + ${curX}px), calc(-50% + ${curY}px)) rotate(${curA}deg) scale(${curS})`;
     }
 
     function addKeyframe() {
         const percent = parseInt(timeline.value);
-        const transformStr = getCleanTransformString();
-        
-        savedKeyframes = savedKeyframes.filter(kf => kf.percent !== percent);
-        savedKeyframes.push({ percent, transform: transformStr });
-        savedKeyframes.sort((a, b) => a.percent - b.percent);
-        
-        kfInfo.innerText = `Keyframes: ${savedKeyframes.length} (Saved ${percent}%)`;
-    }
+        const x = parseFloat(box.getAttribute('data-x'));
+        const y = parseFloat(box.getAttribute('data-y'));
+        const a = box.getAttribute('data-angle');
+        const s = box.getAttribute('data-scale');
 
-    function clearKeyframes() {
-        savedKeyframes = [];
-        kfInfo.innerText = "No keyframes saved";
-        target.style.animation = "none";
-        updateTransform(0, 0, 0, 1);
-        rotator.value = 0;
-        scaler.value = 1;
-        document.getElementById('rot-val').innerText = "0°";
-        document.getElementById('scale-val').innerText = "1x";
+        // Explicitly format with units for the export data
+        const transformString = `translate(${x}px, ${y}px) rotate(${a}deg) scale(${s})`;
+
+        keyframes = keyframes.filter(k => k.percent !== percent);
+        keyframes.push({ percent, transform: transformString });
+        keyframes.sort((a, b) => a.percent - b.percent);
+        
+        document.getElementById('kf-status').innerText = `${keyframes.length} keyframes saved`;
     }
 
     function playPreview() {
-        if (savedKeyframes.length < 2) return;
-        const animationName = "previewAnim";
-        let keyframesCSS = `@keyframes ${animationName} {`;
-        savedKeyframes.forEach(kf => {
-            // In preview, we still need the -50% because of how the stage is set up
-            keyframesCSS += `${kf.percent}% { transform: translate(-50%, -50%) ${kf.transform}; } `;
+        if (keyframes.length < 2) return;
+        const styleId = 'anim-preview-style';
+        let styleTag = document.getElementById(styleId) || document.createElement('style');
+        styleTag.id = styleId;
+
+        let css = `@keyframes previewMove {\n`;
+        keyframes.forEach(k => {
+            // Preview needs that -50% offset to stay centered in the stage
+            css += `  ${k.percent}% { transform: translate(-50%, -50%) ${k.transform}; }\n`;
         });
-        keyframesCSS += `}`;
-
-        let styleTag = document.getElementById('preview-style') || document.createElement('style');
-        styleTag.id = 'preview-style';
-        styleTag.innerHTML = keyframesCSS;
+        css += `}`;
+        
+        styleTag.innerHTML = css;
         document.head.appendChild(styleTag);
-
-        target.style.animation = "none";
+        
+        box.style.animation = 'none';
         setTimeout(() => {
-            target.style.animation = `${animationName} 2s infinite ease-in-out`;
+            box.style.animation = `previewMove 2s infinite ease-in-out`;
         }, 10);
     }
 
     function exportCSS() {
-        if (savedKeyframes.length === 0) return;
-        let css = `/* CSS Usage */\n.animated-element {\n`;
-        css += `  transform-origin: center center;\n`;
-        css += `  animation: myAnimation 2s infinite ease-in-out;\n`;
-        css += `}\n\n`;
-        css += `@keyframes myAnimation {\n`;
-        savedKeyframes.forEach(kf => {
-            css += `  ${kf.percent}% { transform: ${kf.transform}; }\n`;
+        if (keyframes.length === 0) return;
+        
+        let output = `/* Generated CSS - Apply to your element */\n`;
+        output += `.my-animated-element {\n`;
+        output += `  display: inline-block; /* Critical for transforms */\n`;
+        output += `  transform-origin: center;\n`;
+        output += `  animation: myGeneratedAnim 2s infinite ease-in-out;\n`;
+        output += `}\n\n`;
+        output += `@keyframes myGeneratedAnim {\n`;
+        
+        keyframes.forEach(k => {
+            output += `  ${k.percent}% { transform: ${k.transform}; }\n`;
         });
-        css += `}`;
-        document.getElementById('output-text').value = css;
+        output += `}`;
+
+        document.getElementById('output-text').value = output;
         document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function clearKeyframes() {
+        keyframes = [];
+        document.getElementById('kf-status').innerText = `0 keyframes saved`;
+        box.style.animation = 'none';
+        updateView(0, 0, 0, 1);
     }
 
     function closeModal() {
