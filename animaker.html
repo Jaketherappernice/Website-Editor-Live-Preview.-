@@ -62,16 +62,30 @@
         }
 
         #stage {
-            width: 100%;
-            max-width: 350px;
-            aspect-ratio: 1 / 1;
+            width: 300px; /* Standardized size for easier math */
+            height: 300px;
             background-color: #334155;
-            background-image: radial-gradient(#475569 1px, transparent 1px);
+            background-image: 
+                linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
             background-size: 20px 20px;
             position: relative;
             overflow: hidden;
             border: 2px solid #475569;
             border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* The Center Marker (The "Anchor" point) */
+        #stage::before {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
         }
 
         #target-box {
@@ -88,6 +102,7 @@
             border-radius: 4px;
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
             transform-origin: center center;
+            /* Start at local 0,0 */
         }
 
         #controls {
@@ -164,7 +179,7 @@
 <body>
 
 <header>
-    <h2>Keyframer <span style="color: var(--accent-color)">Mobile</span></h2>
+    <h2>Keyframer <span style="color: var(--accent-color)">Relative</span></h2>
     <div>
         <button onclick="playPreview()">▶ Play</button>
         <button class="btn-secondary" onclick="exportCSS()">Export</button>
@@ -174,8 +189,8 @@
 <div id="stage-container">
     <div id="stage">
         <div id="target-box" 
-             data-x="135" 
-             data-y="135" 
+             data-x="0" 
+             data-y="0" 
              data-angle="0" 
              data-scale="1">
             TARGET
@@ -219,21 +234,18 @@
 <script>
     let savedKeyframes = [];
     const target = document.getElementById('target-box');
-    
     const timeline = document.getElementById('timeline');
     const rotator = document.getElementById('rotator');
     const scaler = document.getElementById('scaler');
-    
-    const timeVal = document.getElementById('time-val');
-    const rotVal = document.getElementById('rot-val');
-    const scaleVal = document.getElementById('scale-val');
     const kfInfo = document.getElementById('kf-info');
 
-    updateTransform(135, 135, 0, 1);
+    // Initialize at center (0,0 relative)
+    updateTransform(0, 0, 0, 1);
 
     interact('#target-box').draggable({
         listeners: {
             move(event) {
+                // Now adding movement to the RELATIVE x/y
                 let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
                 let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
                 updateTransform(x, y, null, null);
@@ -242,15 +254,15 @@
         inertia: true
     });
 
-    timeline.oninput = () => timeVal.innerText = timeline.value + '%';
+    timeline.oninput = () => document.getElementById('time-val').innerText = timeline.value + '%';
     
     rotator.oninput = () => {
-        rotVal.innerText = rotator.value + '°';
+        document.getElementById('rot-val').innerText = rotator.value + '°';
         updateTransform(null, null, rotator.value, null);
     };
     
     scaler.oninput = () => {
-        scaleVal.innerText = scaler.value + 'x';
+        document.getElementById('scale-val').innerText = scaler.value + 'x';
         updateTransform(null, null, null, scaler.value);
     };
 
@@ -265,6 +277,7 @@
         const curA = target.getAttribute('data-angle');
         const curS = target.getAttribute('data-scale');
 
+        // This transform is now applied relative to the element's original position
         target.style.transform = `translate(${curX}px, ${curY}px) rotate(${curA}deg) scale(${curS})`;
     }
 
@@ -276,28 +289,20 @@
         savedKeyframes.push({ percent, transform: transformStr });
         savedKeyframes.sort((a, b) => a.percent - b.percent);
         
-        kfInfo.innerText = `Keyframes: ${savedKeyframes.length} (Last: ${percent}%)`;
-        kfInfo.style.color = "#10b981";
+        kfInfo.innerText = `Keyframes: ${savedKeyframes.length} (Saved ${percent}%)`;
     }
 
     function clearKeyframes() {
         savedKeyframes = [];
         kfInfo.innerText = "No keyframes saved";
-        kfInfo.style.color = "var(--accent-color)";
         target.style.animation = "none";
-        updateTransform(135, 135, 0, 1);
+        updateTransform(0, 0, 0, 1);
         rotator.value = 0;
-        rotVal.innerText = "0°";
         scaler.value = 1;
-        scaleVal.innerText = "1x";
     }
 
     function playPreview() {
-        if (savedKeyframes.length < 2) {
-            alert("Need 2+ keyframes!");
-            return;
-        }
-
+        if (savedKeyframes.length < 2) return;
         const animationName = "previewAnim";
         let keyframesCSS = `@keyframes ${animationName} {`;
         savedKeyframes.forEach(kf => {
@@ -312,24 +317,18 @@
 
         target.style.animation = "none";
         setTimeout(() => {
-            target.style.animation = `${animationName} 2s infinite alternate ease-in-out`;
+            target.style.animation = `${animationName} 2s infinite ease-in-out`;
         }, 10);
     }
 
     function exportCSS() {
         if (savedKeyframes.length === 0) return;
-
-        let css = `/* Usage example: */\n`;
-        css += `.animate-me {\n`;
-        css += `  animation: myAnimation 2s infinite ease-in-out;\n`;
-        css += `}\n\n`;
+        let css = `/* This animation moves relative to the element's original position */\n`;
         css += `@keyframes myAnimation {\n`;
-        
         savedKeyframes.forEach(kf => {
             css += `  ${kf.percent}% { transform: ${kf.transform}; }\n`;
         });
         css += `}`;
-
         document.getElementById('output-text').value = css;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
