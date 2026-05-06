@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile CSS Keyframe Animator</title>
+    <title>Portable CSS Keyframer</title>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
         :root {
@@ -14,10 +14,7 @@
             --danger-color: #ef4444;
         }
 
-        * {
-            box-sizing: border-box;
-            touch-action: manipulation;
-        }
+        * { box-sizing: border-box; touch-action: manipulation; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -62,37 +59,35 @@
         }
 
         #stage {
-            width: 300px; /* Standardized size for easier math */
+            width: 300px;
             height: 300px;
             background-color: #334155;
             background-image: 
-                linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+                radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
             background-size: 20px 20px;
             position: relative;
-            overflow: hidden;
+            overflow: hidden; /* Important for displacement fix */
             border: 2px solid #475569;
             border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        /* The Center Marker (The "Anchor" point) */
-        #stage::before {
+        /* Center Crosshair */
+        #stage::after, #stage::before {
             content: '';
             position: absolute;
-            width: 10px;
-            height: 10px;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
         }
+        #stage::after { top: 50%; left: 0; width: 100%; height: 1px; }
+        #stage::before { left: 50%; top: 0; width: 1px; height: 100%; }
 
         #target-box {
             width: 80px;
             height: 80px;
             background-color: var(--accent-color);
             position: absolute;
+            /* Start exactly in middle */
+            top: 50%;
+            left: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -101,8 +96,9 @@
             font-weight: bold;
             border-radius: 4px;
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            /* Initial transform strictly uses -50% to center itself on the 50%/50% top/left */
+            transform: translate(-50%, -50%) rotate(0deg) scale(1);
             transform-origin: center center;
-            /* Start at local 0,0 */
         }
 
         #controls {
@@ -121,11 +117,7 @@
             width: 100%;
         }
 
-        .control-row label {
-            width: 70px;
-            font-size: 0.75rem;
-            color: #94a3b8;
-        }
+        .control-row label { width: 70px; font-size: 0.75rem; color: #94a3b8; }
 
         input[type="range"] {
             flex-grow: 1;
@@ -133,17 +125,9 @@
             accent-color: var(--accent-color);
         }
 
-        .val-display {
-            width: 40px;
-            font-size: 0.75rem;
-            text-align: right;
-        }
+        .val-display { width: 40px; font-size: 0.75rem; text-align: right; }
 
-        .button-group {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
+        .button-group { display: flex; gap: 8px; justify-content: center; }
 
         .btn-secondary { background: #475569; color: white; }
         .btn-danger { background: var(--danger-color); color: white; }
@@ -167,19 +151,16 @@
             border: 1px solid var(--accent-color);
             margin-bottom: 15px;
             font-size: 0.8rem;
+            white-space: pre;
         }
 
-        .kf-counter {
-            text-align: center;
-            font-size: 0.7rem;
-            color: var(--accent-color);
-        }
+        .kf-counter { text-align: center; font-size: 0.7rem; color: var(--accent-color); }
     </style>
 </head>
 <body>
 
 <header>
-    <h2>Keyframer <span style="color: var(--accent-color)">Relative</span></h2>
+    <h2>Keyframer <span style="color: var(--accent-color)">Portable</span></h2>
     <div>
         <button onclick="playPreview()">▶ Play</button>
         <button class="btn-secondary" onclick="exportCSS()">Export</button>
@@ -226,7 +207,7 @@
 </div>
 
 <div id="modal-overlay">
-    <h3 style="margin-top:0">Generated CSS</h3>
+    <h3 style="margin-top:0">Portable CSS Output</h3>
     <textarea id="output-text" readonly></textarea>
     <button onclick="closeModal()" style="width: 100%">Close</button>
 </div>
@@ -239,13 +220,12 @@
     const scaler = document.getElementById('scaler');
     const kfInfo = document.getElementById('kf-info');
 
-    // Initialize at center (0,0 relative)
+    // Initial State
     updateTransform(0, 0, 0, 1);
 
     interact('#target-box').draggable({
         listeners: {
             move(event) {
-                // Now adding movement to the RELATIVE x/y
                 let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
                 let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
                 updateTransform(x, y, null, null);
@@ -255,12 +235,10 @@
     });
 
     timeline.oninput = () => document.getElementById('time-val').innerText = timeline.value + '%';
-    
     rotator.oninput = () => {
         document.getElementById('rot-val').innerText = rotator.value + '°';
         updateTransform(null, null, rotator.value, null);
     };
-    
     scaler.oninput = () => {
         document.getElementById('scale-val').innerText = scaler.value + 'x';
         updateTransform(null, null, null, scaler.value);
@@ -272,18 +250,35 @@
         if (angle !== null) target.setAttribute('data-angle', angle);
         if (scale !== null) target.setAttribute('data-scale', scale);
 
-        const curX = target.getAttribute('data-x');
-        const curY = target.getAttribute('data-y');
+        const curX = parseFloat(target.getAttribute('data-x'));
+        const curY = parseFloat(target.getAttribute('data-y'));
         const curA = target.getAttribute('data-angle');
         const curS = target.getAttribute('data-scale');
 
-        // This transform is now applied relative to the element's original position
-        target.style.transform = `translate(${curX}px, ${curY}px) rotate(${curA}deg) scale(${curS})`;
+        // IMPORTANT: We keep the -50%, -50% to maintain center-alignment of the div itself
+        // Then we add the delta (curX, curY)
+        target.style.transform = `translate(calc(-50% + ${curX}px), calc(-50% + ${curY}px)) rotate(${curA}deg) scale(${curS})`;
+    }
+
+    // Logic to build a clean string for the Keyframe data
+    function getCleanTransformString() {
+        const x = parseFloat(target.getAttribute('data-x'));
+        const y = parseFloat(target.getAttribute('data-y'));
+        const a = target.getAttribute('data-angle');
+        const s = target.getAttribute('data-scale');
+
+        let str = "";
+        // Only add translate if there is actual movement
+        if (x !== 0 || y !== 0) {
+            str += `translate(${x}px, ${y}px) `;
+        }
+        str += `rotate(${a}deg) scale(${s})`;
+        return str.trim();
     }
 
     function addKeyframe() {
         const percent = parseInt(timeline.value);
-        const transformStr = target.style.transform;
+        const transformStr = getCleanTransformString();
         
         savedKeyframes = savedKeyframes.filter(kf => kf.percent !== percent);
         savedKeyframes.push({ percent, transform: transformStr });
@@ -299,6 +294,8 @@
         updateTransform(0, 0, 0, 1);
         rotator.value = 0;
         scaler.value = 1;
+        document.getElementById('rot-val').innerText = "0°";
+        document.getElementById('scale-val').innerText = "1x";
     }
 
     function playPreview() {
@@ -306,7 +303,8 @@
         const animationName = "previewAnim";
         let keyframesCSS = `@keyframes ${animationName} {`;
         savedKeyframes.forEach(kf => {
-            keyframesCSS += `${kf.percent}% { transform: ${kf.transform}; } `;
+            // In preview, we still need the -50% because of how the stage is set up
+            keyframesCSS += `${kf.percent}% { transform: translate(-50%, -50%) ${kf.transform}; } `;
         });
         keyframesCSS += `}`;
 
@@ -323,7 +321,10 @@
 
     function exportCSS() {
         if (savedKeyframes.length === 0) return;
-        let css = `/* This animation moves relative to the element's original position */\n`;
+        let css = `/* CSS Usage */\n.animated-element {\n`;
+        css += `  transform-origin: center center;\n`;
+        css += `  animation: myAnimation 2s infinite ease-in-out;\n`;
+        css += `}\n\n`;
         css += `@keyframes myAnimation {\n`;
         savedKeyframes.forEach(kf => {
             css += `  ${kf.percent}% { transform: ${kf.transform}; }\n`;
