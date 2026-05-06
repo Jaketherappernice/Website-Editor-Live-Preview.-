@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile CSS Keyframe Animator</title>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-color: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-color);
+            z-index: 10;
+        }
+
+        header h2 { margin: 0; font-size: 1.1rem; }
+
+        button {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        #stage-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #111;
+            padding: 10px;
+        }
+
+        #stage {
+            width: 100%;
+            max-width: 350px;
+            aspect-ratio: 1 / 1;
+            background-color: #334155;
+            background-image: radial-gradient(#475569 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #475569;
+            border-radius: 8px;
+        }
+
+        #target-box {
+            width: 80px;
+            height: 80px;
+            background-color: var(--accent-color);
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #000;
+            font-weight: bold;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            transform-origin: center center;
+        }
+
+        #controls {
+            background: var(--panel-color);
+            padding: 15px;
+            border-top: 1px solid #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .control-row label {
+            width: 70px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            height: 25px;
+            accent-color: var(--accent-color);
+        }
+
+        .val-display {
+            width: 40px;
+            font-size: 0.75rem;
+            text-align: right;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-secondary { background: #475569; color: white; }
+        .btn-danger { background: var(--danger-color); color: white; }
+
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            flex-direction: column;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        #output-text {
+            flex-grow: 1;
+            background: #000;
+            color: #10b981;
+            font-family: monospace;
+            padding: 15px;
+            border: 1px solid var(--accent-color);
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+        }
+
+        .kf-counter {
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>Keyframer <span style="color: var(--accent-color)">Mobile</span></h2>
+    <div>
+        <button onclick="playPreview()">▶ Play</button>
+        <button class="btn-secondary" onclick="exportCSS()">Export</button>
+    </div>
+</header>
+
+<div id="stage-container">
+    <div id="stage">
+        <div id="target-box" 
+             data-x="135" 
+             data-y="135" 
+             data-angle="0" 
+             data-scale="1">
+            TARGET
+        </div>
+    </div>
+</div>
+
+<div id="controls">
+    <div class="control-row">
+        <label>Timeline</label>
+        <input type="range" id="timeline" min="0" max="100" value="0">
+        <span class="val-display" id="time-val">0%</span>
+    </div>
+
+    <div class="control-row">
+        <label>Rotate</label>
+        <input type="range" id="rotator" min="-180" max="180" value="0">
+        <span class="val-display" id="rot-val">0°</span>
+    </div>
+
+    <div class="control-row">
+        <label>Scale</label>
+        <input type="range" id="scaler" min="0.1" max="3" step="0.1" value="1">
+        <span class="val-display" id="scale-val">1x</span>
+    </div>
+
+    <div class="kf-counter" id="kf-info">No keyframes saved</div>
+
+    <div class="button-group">
+        <button onclick="addKeyframe()">+ Add Keyframe</button>
+        <button class="btn-danger" onclick="clearKeyframes()">Reset</button>
+    </div>
+</div>
+
+<div id="modal-overlay">
+    <h3 style="margin-top:0">Generated CSS</h3>
+    <textarea id="output-text" readonly></textarea>
+    <button onclick="closeModal()" style="width: 100%">Close</button>
+</div>
+
+<script>
+    let savedKeyframes = [];
+    const target = document.getElementById('target-box');
+    
+    const timeline = document.getElementById('timeline');
+    const rotator = document.getElementById('rotator');
+    const scaler = document.getElementById('scaler');
+    
+    const timeVal = document.getElementById('time-val');
+    const rotVal = document.getElementById('rot-val');
+    const scaleVal = document.getElementById('scale-val');
+    const kfInfo = document.getElementById('kf-info');
+
+    updateTransform(135, 135, 0, 1);
+
+    interact('#target-box').draggable({
+        listeners: {
+            move(event) {
+                let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+                updateTransform(x, y, null, null);
+            }
+        },
+        inertia: true
+    });
+
+    timeline.oninput = () => timeVal.innerText = timeline.value + '%';
+    
+    rotator.oninput = () => {
+        rotVal.innerText = rotator.value + '°';
+        updateTransform(null, null, rotator.value, null);
+    };
+    
+    scaler.oninput = () => {
+        scaleVal.innerText = scaler.value + 'x';
+        updateTransform(null, null, null, scaler.value);
+    };
+
+    function updateTransform(x, y, angle, scale) {
+        if (x !== null) target.setAttribute('data-x', x);
+        if (y !== null) target.setAttribute('data-y', y);
+        if (angle !== null) target.setAttribute('data-angle', angle);
+        if (scale !== null) target.setAttribute('data-scale', scale);
+
+        const curX = target.getAttribute('data-x');
+        const curY = target.getAttribute('data-y');
+        const curA = target.getAttribute('data-angle');
+        const curS = target.getAttribute('data-scale');
+
+        target.style.transform = `translate(${curX}px, ${curY}px) rotate(${curA}deg) scale(${curS})`;
+    }
+
+    function addKeyframe() {
+        const percent = parseInt(timeline.value);
+        const transformStr = target.style.transform;
+        
+        savedKeyframes = savedKeyframes.filter(kf => kf.percent !== percent);
+        savedKeyframes.push({ percent, transform: transformStr });
+        savedKeyframes.sort((a, b) => a.percent - b.percent);
+        
+        kfInfo.innerText = `Keyframes: ${savedKeyframes.length} (Last: ${percent}%)`;
+        kfInfo.style.color = "#10b981";
+    }
+
+    function clearKeyframes() {
+        savedKeyframes = [];
+        kfInfo.innerText = "No keyframes saved";
+        kfInfo.style.color = "var(--accent-color)";
+        target.style.animation = "none";
+        updateTransform(135, 135, 0, 1);
+        rotator.value = 0;
+        rotVal.innerText = "0°";
+        scaler.value = 1;
+        scaleVal.innerText = "1x";
+    }
+
+    function playPreview() {
+        if (savedKeyframes.length < 2) {
+            alert("Need 2+ keyframes!");
+            return;
+        }
+
+        const animationName = "previewAnim";
+        let keyframesCSS = `@keyframes ${animationName} {`;
+        savedKeyframes.forEach(kf => {
+            keyframesCSS += `${kf.percent}% { transform: ${kf.transform}; } `;
+        });
+        keyframesCSS += `}`;
+
+        let styleTag = document.getElementById('preview-style') || document.createElement('style');
+        styleTag.id = 'preview-style';
+        styleTag.innerHTML = keyframesCSS;
+        document.head.appendChild(styleTag);
+
+        target.style.animation = "none";
+        setTimeout(() => {
+            target.style.animation = `${animationName} 2s infinite alternate ease-in-out`;
+        }, 10);
+    }
+
+    function exportCSS() {
+        if (savedKeyframes.length === 0) return;
+
+        let css = `/* Usage example: */\n`;
+        css += `.animate-me {\n`;
+        css += `  animation: myAnimation 2s infinite ease-in-out;\n`;
+        css += `}\n\n`;
+        css += `@keyframes myAnimation {\n`;
+        
+        savedKeyframes.forEach(kf => {
+            css += `  ${kf.percent}% { transform: ${kf.transform}; }\n`;
+        });
+        css += `}`;
+
+        document.getElementById('output-text').value = css;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
+</script>
+</body>
+</html>
