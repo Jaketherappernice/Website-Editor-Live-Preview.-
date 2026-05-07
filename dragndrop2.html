@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Responsive Builder</title>
+    <style>
+        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
+        
+        #viewport { 
+            width: 100vw; height: 100vh; margin: 0 auto; background: white; position: relative; 
+            overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease, height 0.3s ease;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 25px 25px;
+            scroll-behavior: smooth;
+        }
+        
+        #viewport.mobile { 
+            width: 375px; height: 80vh; margin: 5vh auto; 
+            border: 12px solid #333; border-radius: 30px; 
+            position: relative;
+        }
+
+        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
+        #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
+        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
+        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .toggle-active { background: var(--primary) !important; color: white; }
+
+        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
+        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
+        
+        /* Stacking Leaderboard */
+        .dropped-element[data-type="Box"] { z-index: 10; }
+        .dropped-element[data-type="Image"] { z-index: 20; }
+        .dropped-element[data-type="Button"] { z-index: 30; }
+        .dropped-element[data-type="Heading"], 
+        .dropped-element[data-type="Paragraph"], 
+        .dropped-element[data-type="Textarea"] { z-index: 40; }
+
+        .selected { outline: 2px solid var(--primary); z-index: 100 !important; }
+        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 110; }
+        .selected .resizer { display: block; }
+        .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
+
+        #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
+        #size-control, #height-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <button id="copy-btn">Copy Full Website</button>
+    
+    <div id="viewport">
+        <div id="canvas" style="width:100%; height:1000px; position:relative; min-height: 100%; background-color: white;"></div>
+    </div>
+
+    <button id="add-btn" class="fab">+</button>
+    <button id="settings-btn" class="fab">⚙️</button>
+
+    <div id="panel" class="popup-panel">
+        <div class="item" data-type="Heading">Heading</div>
+        <div class="item" data-type="Paragraph">Paragraph</div>
+        <div class="item" data-type="Button">Button</div>
+        <div class="item" data-type="Image">Image</div>
+        <div class="item" data-type="Textarea">Textarea</div>
+        <div class="item" data-type="Box">Container</div>
+    </div>
+
+    <div id="settings-panel" class="popup-panel">
+        <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
+        <div class="item" onclick="triggerCanvasColor()">BG Color</div>
+        <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
+        <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
+    </div>
+
+    <div id="size-control">
+        <strong>Font Size</strong><br>
+        <input type="range" id="size-slider" min="8" max="200">
+        <input type="number" id="size-num"> px<br><br>
+        <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+    </div>
+
+    <div id="height-control">
+        <strong>Page Height</strong><br>
+        <input type="range" id="height-slider" min="500" max="8000" value="1000">
+        <input type="number" id="height-num" value="1000"> px<br><br>
+        <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+    </div>
+
+    <input type="color" id="colorPicker" style="display:none">
+    <input type="color" id="canvasColorPicker" style="display:none">
+
+    <script>
+    const canvas = document.getElementById('canvas');
+    const viewport = document.getElementById('viewport');
+    const modeToggle = document.getElementById('mode-toggle');
+    const heightSlider = document.getElementById('height-slider');
+    const heightNum = document.getElementById('height-num');
+    
+    let currentMode = 'desktop'; 
+    let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
+
+    function toggleP(id) {
+        const p = document.getElementById(id);
+        const isVisible = p.style.display === 'flex';
+        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
+        p.style.display = isVisible ? 'none' : 'flex';
+    }
+
+    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
+    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
+
+    heightSlider.oninput = heightNum.oninput = (e) => {
+        const val = e.target.value;
+        heightSlider.value = heightNum.value = val;
+        canvas.style.height = val + 'px';
+    };
+
+    function toggleViewMode() {
+        currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
+        viewport.className = currentMode === 'mobile' ? 'mobile' : '';
+        modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
+        modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
+        
+        document.querySelectorAll('.dropped-element').forEach(el => {
+            const data = JSON.parse(el.dataset[currentMode] || '{}');
+            if (data.w) {
+                el.style.width = data.w; el.style.height = data.h;
+                el.style.left = data.l; el.style.top = data.t;
+                const inner = el.querySelector('h2, p, button, img, div, textarea');
+                if (data.fs && inner && ['Heading', 'Paragraph', 'Textarea'].includes(el.dataset.type)) {
+                    inner.style.fontSize = data.fs;
+                }
+            }
+        });
+    }
+
+    function saveCurrentState(el) {
+        const inner = el.querySelector('h2, p, button, img, div, textarea');
+        const state = {
+            w: el.style.width, h: el.style.height,
+            l: el.style.left, t: el.style.top,
+            fs: inner ? inner.style.fontSize : ""
+        };
+        el.dataset[currentMode] = JSON.stringify(state);
+    }
+
+    document.querySelectorAll('.item[data-type]').forEach(i => {
+        i.onclick = () => { 
+            const scrollPos = viewport.scrollTop;
+            createNode(i.dataset.type, 50, scrollPos + 50); 
+            toggleP('panel'); 
+        };
+    });
+
+    function createNode(type, x, y) {
+        const el = document.createElement('div');
+        el.className = 'dropped-element';
+        el.dataset.type = type;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        
+        // Initial dimensions
+        if (type === 'Box' || type === 'Image' || type === 'Textarea') {
+            el.style.width = "200px"; el.style.height = "150px";
+        } else {
+            el.style.width = "180px"; el.style.height = "50px";
+        }
+
+        const html = {
+            'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
+            'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
+            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;">Click</button>',
+            'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
+            'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
+            'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
+        };
+
+        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+        canvas.appendChild(el);
+        saveCurrentState(el);
+        setupEl(el);
+    }
+
+    function setupEl(el) {
+        el.onmousedown = el.ontouchstart = (e) => {
+            if (e.target.classList.contains('resizer')) return;
+            activeEl = el; isMoving = true;
+            document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+            el.classList.add('selected');
+            const t = e.touches ? e.touches[0] : e;
+            startX = t.clientX - el.offsetLeft; 
+            startY = t.clientY - el.offsetTop;
+        };
+        el.querySelectorAll('.resizer').forEach(r => {
+            r.onmousedown = r.ontouchstart = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                currentResizer = r; activeEl = el;
+                const t = e.touches ? e.touches[0] : e;
+                startX = t.clientX; startY = t.clientY;
+                startW = el.offsetWidth; startH = el.offsetHeight;
+                startL = el.offsetLeft; startT = el.offsetTop;
+            };
+        });
+        let clicks = 0;
+        el.onclick = (e) => {
+            e.stopPropagation();
+            clicks++;
+            if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
+            else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
+            setTimeout(() => clicks = 0, 500);
+        };
+    }
+
+    window.onmousemove = window.ontouchmove = (e) => {
+        if (!activeEl) return;
+        const t = e.touches ? e.touches[0] : e;
+        if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
+        if (currentResizer) {
+            const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
+            if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
+            if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+        }
+        if (isMoving || currentResizer) saveCurrentState(activeEl);
+    };
+    window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
+
+    function edit(el) {
+        const inner = el.querySelector('h2, p, button, img, div, textarea');
+        const action = prompt("1: Content/Link | 2: Size | 3: Color");
+        if (action === '1') {
+            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
+            else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
+            else if (el.dataset.type === 'Button') {
+                inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+                let link = prompt("Link (e.g. google.com):", el.dataset.link || "");
+                if (link && !link.startsWith('http')) link = 'https://' + link;
+                el.dataset.link = link;
+            } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+        } else if (action === '2' && ['Heading', 'Paragraph', 'Textarea'].includes(el.dataset.type)) {
+            document.getElementById('size-control').style.display = 'block';
+            const s = document.getElementById('size-slider');
+            const n = document.getElementById('size-num');
+            s.value = n.value = parseInt(inner.style.fontSize) || 16;
+            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
+        } else if (action === '3') {
+            const cp = document.getElementById('colorPicker'); cp.click();
+            cp.oninput = () => { 
+                if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value; 
+                else inner.style.color = cp.value; 
+            };
+        }
+        saveCurrentState(el);
+    }
+
+    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
+    function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
+
+    document.getElementById('copy-btn').onclick = () => {
+        document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+        
+        const getZ = (t) => { 
+            if (t === 'Heading' || t === 'Paragraph' || t === 'Textarea') return 40;
+            if (t === 'Button') return 30;
+            if (t === 'Image') return 20;
+            return 10;
+        };
+
+        let dStyles = "", mStyles = "";
+        const fHeight = canvas.style.height || "1000px";
+        const bgC = canvas.style.backgroundColor || "white";
+        const bgI = canvas.style.backgroundImage || "none";
+        
+        let elementsHTML = "";
+        document.querySelectorAll('.dropped-element').forEach((el, index) => {
+            const id = `el-${index}`;
+            const type = el.dataset.type;
+            const z = getZ(type);
+            const d = JSON.parse(el.dataset.desktop || '{}');
+            const m = JSON.parse(el.dataset.mobile || '{}');
+            const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
+            
+            if (type === 'Button' && el.dataset.link) {
+                inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
+            }
+
+            elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
+            dStyles += `#${id} { left:${d.l}; top:${d.t}; width:${d.w}; height:${d.h}; z-index:${z}; }\n`;
+            if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
+            
+            const ml = m.l || d.l, mt = m.t || d.t, mw = m.w || d.w, mh = m.h || d.h, mfs = m.fs || d.fs;
+            mStyles += `#${id} { left:${ml}; top:${mt}; width:${mw}; height:${mh}; z-index:${z}; }\n`;
+            if(mfs) mStyles += `#${id} > * { font-size:${mfs} !important; }\n`;
+        });
+
+        const finalHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
+        #site-canvas { position:relative; width:100%; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; }
+        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
+        textarea { resize: none; box-sizing: border-box; }
+        button { cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } ${mStyles} }
+    </style>
+</head>
+<body><div id="site-canvas">${elementsHTML}</div></body>
+</html>`;
+        
+        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Textarea included."));
+    };
+    </script> 
+</body>
+</html>
