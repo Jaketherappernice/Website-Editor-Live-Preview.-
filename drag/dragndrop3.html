@@ -361,6 +361,49 @@ observer.observe(canvas, { childList: true, subtree: true, attributes: true });
 // 2. Initial Run
 refreshTransparency();
 
+// 1. Enhanced Support for Base64 and PNG Transparency
+const base64Watcher = new MutationObserver(() => {
+    document.querySelectorAll('.dropped-element[data-type="Image"]').forEach(container => {
+        const img = container.querySelector('img');
+        if (img) {
+            // Force Transparency
+            container.style.backgroundColor = 'transparent';
+            img.style.backgroundColor = 'transparent';
+            img.style.border = 'none';
+
+            // Check if the source is a Base64 string and ensure it loads correctly
+            if (img.src.startsWith('data:image')) {
+                img.style.objectFit = 'contain'; // Better for logos/transparent assets
+            }
+        }
+    });
+});
+
+// Start watching the canvas
+base64Watcher.observe(canvas, { childList: true, subtree: true, attributes: true });
+
+// 2. Override the edit prompt for better Base64 handling
+const originalEdit = window.edit;
+window.edit = function(el) {
+    if (el.dataset.type === 'Image') {
+        const inner = el.querySelector('img');
+        const action = prompt("1: Image URL or Base64 | 2: Resize | 3: Color");
+        if (action === '1') {
+            const newSrc = prompt("Paste URL or Base64 string:", inner.src);
+            if (newSrc) {
+                inner.src = newSrc.trim();
+                saveCurrentState(el);
+            }
+        } else {
+            // If it's not action 1, run the original edit logic for options 2 and 3
+            // This prevents breaking your existing font/color tools
+            originalEdit(el);
+        }
+    } else {
+        originalEdit(el);
+    }
+};
+
 
     </script> 
 </body>
