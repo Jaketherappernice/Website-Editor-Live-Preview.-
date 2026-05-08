@@ -48,7 +48,16 @@
 
         #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
         #size-control, #height-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
-    </style>
+
+/* Ensure Image containers and the images themselves are transparent */
+.dropped-element[data-type="Image"], 
+.dropped-element[data-type="Image"] img {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+    
+
+</style>
 </head>
 <body>
 
@@ -319,6 +328,20 @@
         
         navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Stacking Fixed."));
     };
+
+// Function to ensure images stay transparent during manipulation
+function refreshTransparency() {
+    document.querySelectorAll('.dropped-element[data-type="Image"] img').forEach(img => {
+        img.style.backgroundColor = 'transparent';
+        // This removes any accidental background colors inherited from the editor
+        img.parentElement.style.backgroundColor = 'transparent';
+    });
+}
+
+// Call this whenever an element is created or edited
+// You can add 'refreshTransparency();' inside your createNode and edit functions
+
+
     </script> 
 </body>
 </html>
