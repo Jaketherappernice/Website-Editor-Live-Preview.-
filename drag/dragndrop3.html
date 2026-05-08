@@ -341,6 +341,26 @@ function refreshTransparency() {
 // Call this whenever an element is created or edited
 // You can add 'refreshTransparency();' inside your createNode and edit functions
 
+// 1. Automatic Transparency Watcher
+// This observes the canvas and fixes transparency automatically 
+// so you don't have to edit your existing createNode or edit functions.
+const observer = new MutationObserver(() => {
+    document.querySelectorAll('.dropped-element[data-type="Image"]').forEach(container => {
+        container.style.backgroundColor = 'transparent';
+        const img = container.querySelector('img');
+        if (img) {
+            img.style.backgroundColor = 'transparent';
+            img.style.border = 'none';
+        }
+    });
+});
+
+// Start watching the canvas for any new elements or attribute changes
+observer.observe(canvas, { childList: true, subtree: true, attributes: true });
+
+// 2. Initial Run
+refreshTransparency();
+
 
     </script> 
 </body>
