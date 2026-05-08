@@ -404,6 +404,30 @@ window.edit = function(el) {
     }
 };
 
+// This "Cleaner" watches for image changes and removes placeholder artifacts
+const transparencyCleaner = new MutationObserver(() => {
+    document.querySelectorAll('.dropped-element[data-type="Image"] img').forEach(img => {
+        // If the source is a Base64 or a real URL (not the placeholder)
+        if (img.src.includes('data:image') || !img.src.includes('via.placeholder.com')) {
+            // Remove any background colors or inherited styles that show "checkers"
+            img.style.background = 'transparent';
+            img.style.backgroundImage = 'none';
+            img.parentElement.style.background = 'transparent';
+            img.parentElement.style.backgroundImage = 'none';
+        }
+    });
+});
+
+// Start the observer
+transparencyCleaner.observe(canvas, { childList: true, subtree: true, attributes: true });
+
+// Run once immediately to clean existing images
+document.querySelectorAll('.dropped-element[data-type="Image"]').forEach(el => {
+    el.style.background = 'transparent';
+    const img = el.querySelector('img');
+    if (img) img.style.background = 'transparent';
+});
+
 
     </script> 
 </body>
