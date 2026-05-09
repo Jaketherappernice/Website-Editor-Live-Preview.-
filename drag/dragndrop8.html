@@ -3,72 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder</title>
+    <title>Apollo Hub Builder</title>
     <style>
-        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; --danger: #ef4444; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
+        :root { --primary: #ff6600; --bg: #0a0a0a; --surface: #1a1a1a; --text: #ffffff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: var(--bg); color: var(--text); }
         
         #viewport { 
-            width: 100vw; height: 100vh; margin: 0 auto; background: white; position: relative; 
-            overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease, height 0.3s ease;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
-            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-            background-size: 25px 25px;
-            scroll-behavior: smooth;
+            width: 100vw; height: 100vh; margin: 0 auto; background: #fff; position: relative; 
+            overflow-y: auto; overflow-x: hidden; transition: 0.3s;
         }
         
-        #viewport.mobile { 
-            width: 375px; height: 80vh; margin: 5vh auto; 
-            border: 12px solid #333; border-radius: 30px; 
-            position: relative;
-        }
+        #viewport.mobile { width: 375px; height: 80vh; margin: 5vh auto; border: 8px solid #333; border-radius: 20px; }
 
-        #canvas {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
+        #canvas { background-size: cover; background-position: center; position: relative; min-height: 100%; background-color: #ffffff; }
 
-        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        /* UI Controls */
+        .fab { position: fixed; width: 55px; height: 55px; border-radius: 50%; color: white; border: none; font-size: 20px; z-index: 1001; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255,102,0,0.3); }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
-        #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
+        #settings-btn { bottom: 20px; left: 85px; background: #333; }
         
-        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
-        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .toggle-active { background: var(--primary) !important; color: white; }
+        .popup-panel { position: fixed; bottom: 85px; background: var(--surface); border: 1px solid var(--primary); border-radius: 10px; padding: 12px; display: none; flex-direction: column; z-index: 1000; width: 200px; }
+        .item { padding: 10px; margin-bottom: 5px; background: #222; border-radius: 5px; text-align: center; cursor: pointer; color: #fff; font-size: 14px; }
+        .item:hover { background: var(--primary); }
 
-        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
-        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
-        
-        .dropped-element[data-type="Box"] { z-index: 10 !important; }
-        .dropped-element[data-type="Image"] { z-index: 20 !important; }
-        .dropped-element[data-type="Button"] { z-index: 30 !important; }
-        .dropped-element[data-type="Heading"], 
-        .dropped-element[data-type="Paragraph"], 
-        .dropped-element[data-type="Textarea"] { z-index: 40 !important; }
-
+        .dropped-element { position: absolute; box-sizing: border-box; cursor: move; }
+        .dropped-element > * { width: 100%; height: 100%; pointer-events: none; }
         .selected { outline: 2px solid var(--primary); z-index: 100 !important; }
-        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 110; }
-        .selected .resizer { display: block; }
-        .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
-        #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
+        #copy-btn { position: fixed; top: 15px; right: 15px; padding: 10px 18px; background: var(--primary); color: white; border: none; border-radius: 5px; font-weight: bold; z-index: 1000; cursor: pointer; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--surface); padding: 20px; border-radius: 12px; width: 90%; max-width: 350px; border: 1px solid var(--primary); }
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 320px; max-height: 80vh; overflow-y: auto; text-align: center; color: #333; box-sizing: border-box; }
-        .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 5px; }
-        .save-entry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; flex-grow: 1; text-align: left; }
-        
-        #size-control, #height-control, #opacity-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
-        .dropped-element[data-type="Image"], .dropped-element[data-type="Image"] img { background-color: transparent !important; background-image: none !important; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; border-radius: 5px; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .save-entry { background: #222; padding: 8px; margin-top: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .del-btn { background: #ff4444; border: none; color: white; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <button id="copy-btn">Copy Full Website</button>
+    <button id="copy-btn">Export Code</button>
     
     <div id="viewport">
-        <div id="canvas" style="width:100%; height:1000px; position:relative; min-height: 100%; background-color: white;"></div>
+        <div id="canvas" style="width:100%; height:1200px;"></div>
     </div>
 
     <button id="add-btn" class="fab">+</button>
@@ -76,322 +54,166 @@
 
     <div id="panel" class="popup-panel">
         <div class="item" data-type="Heading">Heading</div>
-        <div class="item" data-type="Paragraph">Paragraph</div>
+        <div class="item" data-type="Paragraph">Text</div>
         <div class="item" data-type="Button">Button</div>
         <div class="item" data-type="Image">Image</div>
-        <div class="item" data-type="Textarea">Textarea</div>
         <div class="item" data-type="Box">Container</div>
     </div>
 
     <div id="settings-panel" class="popup-panel">
-        <div class="item" id="mode-toggle">Switch to Mobile</div>
-        <div class="item" id="bg-color-btn">BG Color</div>
-        <div class="item" id="bg-img-btn">BG Image URL</div>
-        <div class="item" id="height-btn">Page Height</div>
-        <div class="item" style="background:#6366f1; color:white;" id="open-manager-btn">Save/Load Manager</div>
+        <div class="item" id="mode-toggle">Mobile Mode</div>
+        <div class="item" id="open-manager-btn" style="background:#ff6600">Save/Load Cloud</div>
     </div>
 
     <div id="save-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3>Project Manager</h3>
-            <input type="text" id="save-name" placeholder="Save name..." style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px;">
-            <button id="firebase-save-btn" style="width: 100%; background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 20px; font-weight: bold;">Create New Save</button>
-            <hr>
-            <div id="save-list" style="margin-top: 15px; min-height: 50px;"></div>
-            <br>
-            <button id="close-modal-btn" style="background:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight: bold;">Close</button>
+            <h3 style="margin:0 0 15px 0">Cloud Projects</h3>
+            <input type="text" id="save-name" placeholder="Name your project...">
+            <button id="firebase-save-btn" class="btn-main">Save to Firebase</button>
+            <div id="save-list" style="margin-top: 20px; max-height: 200px; overflow-y: auto;"></div>
+            <button onclick="document.getElementById('save-modal').style.display='none'" style="background:none; color:#888; border:none; margin-top:15px; width:100%; cursor:pointer;">Close</button>
         </div>
     </div>
 
-    <div id="size-control">
-        <strong>Font Size</strong><br>
-        <input type="range" id="size-slider" min="8" max="200">
-        <input type="number" id="size-num"> px<br><br>
-        <button id="close-size-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
-    </div>
-
-    <div id="opacity-control">
-        <strong>Opacity</strong><br>
-        <input type="range" id="opacity-slider" min="0" max="100" value="100">
-        <span id="opacity-val">100</span>%<br><br>
-        <button id="close-opacity-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
-    </div>
-
-    <div id="height-control">
-        <strong>Page Height</strong><br>
-        <input type="range" id="height-slider" min="500" max="8000" value="1000">
-        <input type="number" id="height-num" value="1000"> px<br><br>
-        <button id="close-height-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
-    </div>
-
-    <input type="color" id="colorPicker" style="display:none">
-    <input type="color" id="canvasColorPicker" style="display:none">
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // VITAL: This config MUST match your Firebase console exactly
         const firebaseConfig = {
             apiKey: "AIzaSyBZG26OmqR_DwV9UKCVQuRE3JzCy6SleAs",
             authDomain: "dragndrop-eeda4.firebaseapp.com",
             projectId: "dragndrop-eeda4",
             storageBucket: "dragndrop-eeda4.firebasestorage.app",
             messagingSenderId: "124148111401",
-            appId: "1:124148111401:web:95011428420e219497e438",
-            measurementId: "G-L6NJ4Y36QW"
+            appId: "1:124148111401:web:95011428420e219497e438"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const projectsRef = collection(db, "projects");
 
-        // State Variables
-        const canvas = document.getElementById('canvas');
-        const viewport = document.getElementById('viewport');
-        const modeToggle = document.getElementById('mode-toggle');
-        const heightSlider = document.getElementById('height-slider');
-        const heightNum = document.getElementById('height-num');
-        let currentMode = 'desktop'; 
-        let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
+        let activeEl, isMoving, startX, startY;
 
-        // UI Helpers
-        const toggleP = (id) => {
-            const p = document.getElementById(id);
-            const isVisible = p.style.display === 'flex';
-            document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-            p.style.display = isVisible ? 'none' : 'flex';
-        };
-
-        const saveCurrentState = (el) => {
-            const inner = el.querySelector('h2, p, button, img, div, textarea');
-            const state = {
-                w: el.style.width, h: el.style.height,
-                l: el.style.left, t: el.style.top,
-                fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
-                op: el.style.opacity || "1"
-            };
-            el.dataset[currentMode] = JSON.stringify(state);
-        };
-
-        const setupEl = (el) => {
-            el.onmousedown = el.ontouchstart = (e) => {
-                if (e.target.classList.contains('resizer')) return;
-                activeEl = el; isMoving = true;
-                document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
-                el.classList.add('selected');
-                const t = e.touches ? e.touches[0] : e;
-                startX = t.clientX - el.offsetLeft; 
-                startY = t.clientY - el.offsetTop;
-            };
-            el.querySelectorAll('.resizer').forEach(r => {
-                r.onmousedown = r.ontouchstart = (e) => {
-                    e.preventDefault(); e.stopPropagation();
-                    currentResizer = r; activeEl = el;
-                    const t = e.touches ? e.touches[0] : e;
-                    startX = t.clientX; startY = t.clientY;
-                    startW = el.offsetWidth; startH = el.offsetHeight;
-                    startL = el.offsetLeft; startT = el.offsetTop;
-                };
-            });
-            let clicks = 0;
-            el.onclick = (e) => {
-                e.stopPropagation();
-                clicks++;
-                if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
-                else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
-                setTimeout(() => clicks = 0, 500);
-            };
-        };
-
-        const createNode = (type, x, y) => {
-            const el = document.createElement('div');
-            el.className = 'dropped-element';
-            el.dataset.type = type;
-            el.style.left = x + 'px'; el.style.top = y + 'px';
-            el.style.width = (type === 'Box' || type === 'Image' || type === 'Textarea') ? "200px" : "180px";
-            el.style.height = (type === 'Box' || type === 'Image' || type === 'Textarea') ? "150px" : "50px";
-
-            const htmlMap = {
-                'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
-                'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
-                'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
-                'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
-                'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
-                'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
-            };
-
-            el.innerHTML = htmlMap[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
-            canvas.appendChild(el);
-            saveCurrentState(el);
-            setupEl(el);
-        };
-
-        function edit(el) {
-            const inner = el.querySelector('h2, p, button, img, div, textarea');
-            const action = prompt("1: Content/Link | 2: Size | 3: Color | 4: Transparency");
-            if (action === '1') {
-                if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
-                else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
-                else if (el.dataset.type === 'Button') {
-                    inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                    let link = prompt("Link:", el.dataset.link || "");
-                    if (link && !link.startsWith('http')) link = 'https://' + link;
-                    el.dataset.link = link;
-                } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-            } else if (action === '2') {
-                document.getElementById('size-control').style.display = 'block';
-                const s = document.getElementById('size-slider');
-                const n = document.getElementById('size-num');
-                s.value = n.value = parseInt(inner.style.fontSize) || 16;
-                s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
-            } else if (action === '3') {
-                const hex = prompt("Enter HEX (e.g. #ff0000):");
-                if (hex) {
-                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = hex;
-                    else inner.style.color = hex;
-                }
-            } else if (action === '4') {
-                document.getElementById('opacity-control').style.display = 'block';
-                const os = document.getElementById('opacity-slider');
-                os.oninput = (e) => { el.style.opacity = e.target.value / 100; document.getElementById('opacity-val').innerText = e.target.value; saveCurrentState(el); };
-            }
-            saveCurrentState(el);
-        }
-
-        // Firebase Operations
+        // Save Function
         const saveProject = async () => {
             const name = document.getElementById('save-name').value.trim();
-            if (!name) return alert("Enter save name!");
-            document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+            if (!name) return alert("Enter a name first!");
+
             const elements = Array.from(document.querySelectorAll('.dropped-element')).map(el => ({
-                type: el.dataset.type, desktop: el.dataset.desktop, mobile: el.dataset.mobile, link: el.dataset.link || "",
-                innerHTML: el.innerHTML, style: { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height, opacity: el.style.opacity || "1" }
+                type: el.dataset.type,
+                html: el.innerHTML,
+                style: {
+                    left: el.style.left,
+                    top: el.style.top,
+                    width: el.style.width,
+                    height: el.style.height,
+                    opacity: el.style.opacity || "1"
+                }
             }));
+
             try {
-                await addDoc(collection(db, "projects"), { name, elements, canvasHeight: canvas.style.height, canvasBgColor: canvas.style.backgroundColor, canvasBgImg: canvas.style.backgroundImage, timestamp: Date.now() });
-                alert("Saved!"); loadSaveList();
-            } catch (e) { alert("Error: " + e.message); }
+                console.log("Attempting to save...");
+                await addDoc(projectsRef, {
+                    name,
+                    elements,
+                    canvasH: document.getElementById('canvas').style.height,
+                    createdAt: serverTimestamp()
+                });
+                alert("Saved successfully!");
+                loadList();
+            } catch (err) {
+                console.error("Firebase Error:", err);
+                alert("FAILED: " + err.message);
+            }
         };
 
-        const loadSaveList = async () => {
+        // Load List Function
+        const loadList = async () => {
             const list = document.getElementById('save-list');
-            list.innerHTML = "Loading...";
-            const snap = await getDocs(collection(db, "projects"));
-            list.innerHTML = "";
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                const div = document.createElement('div');
-                div.className = 'save-entry';
-                div.innerHTML = `<span>${data.name}</span><div><button class="load-btn" data-id="${docSnap.id}">Load</button><button class="del-btn" data-id="${docSnap.id}">Del</button></div>`;
-                list.appendChild(div);
-            });
-            // Attach listeners to new buttons
-            list.querySelectorAll('.load-btn').forEach(btn => btn.onclick = () => loadProject(btn.dataset.id));
-            list.querySelectorAll('.del-btn').forEach(btn => btn.onclick = () => deleteProject(btn.dataset.id));
+            list.innerHTML = "Fetching...";
+            try {
+                const snap = await getDocs(projectsRef);
+                list.innerHTML = "";
+                snap.forEach(pDoc => {
+                    const data = pDoc.data();
+                    const div = document.createElement('div');
+                    div.className = 'save-entry';
+                    div.innerHTML = `<span>${data.name}</span><button class="del-btn" data-id="${pDoc.id}">X</button>`;
+                    div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') loadProject(data); };
+                    list.appendChild(div);
+                });
+                
+                document.querySelectorAll('.del-btn').forEach(b => {
+                    b.onclick = async (e) => {
+                        e.stopPropagation();
+                        await deleteDoc(doc(db, "projects", b.dataset.id));
+                        loadList();
+                    };
+                });
+            } catch (err) {
+                list.innerHTML = "Error loading list.";
+            }
         };
 
-        const loadProject = async (id) => {
-            const snap = await getDocs(collection(db, "projects"));
-            let project = null;
-            snap.forEach(d => { if(d.id === id) project = d.data(); });
-            if (!project) return;
-            canvas.innerHTML = "";
-            canvas.style.height = project.canvasHeight;
-            canvas.style.backgroundColor = project.canvasBgColor;
-            canvas.style.backgroundImage = project.canvasBgImg;
-            project.elements.forEach(data => {
+        const loadProject = (data) => {
+            const cv = document.getElementById('canvas');
+            cv.innerHTML = "";
+            cv.style.height = data.canvasH;
+            data.elements.forEach(elData => {
                 const el = document.createElement('div');
                 el.className = 'dropped-element';
-                el.dataset.type = data.type; el.dataset.desktop = data.desktop; el.dataset.mobile = data.mobile; el.dataset.link = data.link;
-                Object.assign(el.style, data.style); el.innerHTML = data.innerHTML;
-                canvas.appendChild(el); setupEl(el);
+                el.dataset.type = elData.type;
+                Object.assign(el.style, elData.style);
+                el.innerHTML = elData.html;
+                cv.appendChild(el);
+                makeDraggable(el);
             });
             document.getElementById('save-modal').style.display = 'none';
         };
 
-        const deleteProject = async (id) => {
-            if (confirm("Delete?")) { await deleteDoc(doc(db, "projects", id)); loadSaveList(); }
+        // UI Logic
+        const makeDraggable = (el) => {
+            el.onmousedown = (e) => {
+                activeEl = el;
+                startX = e.clientX - el.offsetLeft;
+                startY = e.clientY - el.offsetTop;
+                document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+                el.classList.add('selected');
+            };
         };
 
-        // Event Listeners (Within Module)
-        document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
-        document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
-        document.getElementById('firebase-save-btn').onclick = saveProject;
-        document.getElementById('open-manager-btn').onclick = () => { document.getElementById('save-modal').style.display = 'flex'; loadSaveList(); };
-        document.getElementById('close-modal-btn').onclick = () => document.getElementById('save-modal').style.display = 'none';
-        
+        document.getElementById('add-btn').onclick = () => {
+            const panel = document.getElementById('panel');
+            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+        };
+
         document.querySelectorAll('.item[data-type]').forEach(i => {
-            i.onclick = () => { createNode(i.dataset.type, 50, viewport.scrollTop + 50); toggleP('panel'); };
+            i.onclick = () => {
+                const el = document.createElement('div');
+                el.className = 'dropped-element';
+                el.dataset.type = i.dataset.type;
+                el.style.left = '50px'; el.style.top = '50px';
+                el.style.width = '150px'; el.style.height = '50px';
+                el.innerHTML = `<div style="background:#ddd; height:100%; border-radius:8px; display:flex; align-items:center; justify-content:center;">${i.dataset.type}</div>`;
+                document.getElementById('canvas').appendChild(el);
+                makeDraggable(el);
+            };
         });
 
-        document.getElementById('bg-color-btn').onclick = () => { 
-            const cp = document.getElementById('canvasColorPicker'); cp.click(); 
-            cp.oninput = () => canvas.style.backgroundColor = cp.value;
-        };
-
-        document.getElementById('bg-img-btn').onclick = () => {
-            const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`;
-        };
-
-        document.getElementById('height-btn').onclick = () => document.getElementById('height-control').style.display = 'block';
-        heightSlider.oninput = heightNum.oninput = (e) => { canvas.style.height = e.target.value + 'px'; heightSlider.value = heightNum.value = e.target.value; };
-
-        modeToggle.onclick = () => {
-            currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
-            viewport.className = currentMode === 'mobile' ? 'mobile' : '';
-            modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
-            document.querySelectorAll('.dropped-element').forEach(el => {
-                const d = JSON.parse(el.dataset[currentMode] || '{}');
-                if (d.w) { el.style.width = d.w; el.style.height = d.h; el.style.left = d.l; el.style.top = d.t; }
-            });
-        };
-
-        window.onmousemove = window.ontouchmove = (e) => {
-            if (!activeEl) return;
-            const t = e.touches ? e.touches[0] : e;
-            if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
-            if (currentResizer) {
-                const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
-                if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-                if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+        window.onmousemove = (e) => {
+            if (activeEl) {
+                activeEl.style.left = (e.clientX - startX) + 'px';
+                activeEl.style.top = (e.clientY - startY) + 'px';
             }
-            if (isMoving || currentResizer) saveCurrentState(activeEl);
         };
-        window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
+        window.onmouseup = () => { activeEl = null; };
 
-        document.getElementById('close-size-btn').onclick = () => document.getElementById('size-control').style.display = 'none';
-        document.getElementById('close-opacity-btn').onclick = () => document.getElementById('opacity-control').style.display = 'none';
-        document.getElementById('close-height-btn').onclick = () => document.getElementById('height-control').style.display = 'none';
-
-        // Copy Code Functionality
-        document.getElementById('copy-btn').onclick = () => {
-            document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
-            const referenceW = 1440; 
-            const mobileW = 375;
-            const currentCanvasW = canvas.offsetWidth;
-            let dStyles = "", mStyles = "", elementsHTML = "";
-            
-            document.querySelectorAll('.dropped-element').forEach((el, index) => {
-                const id = `el-${index}`;
-                const d = JSON.parse(el.dataset.desktop || '{}');
-                const m = JSON.parse(el.dataset.mobile || '{}');
-                const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
-                if (el.dataset.type === 'Button' && el.dataset.link) inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
-                
-                elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
-                
-                const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
-                const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
-                dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:10; opacity:${d.op || 1}; }\n`;
-                
-                const mlRaw = m.l || d.l; const mwRaw = m.w || d.w;
-                const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
-                const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
-                mStyles += `#${id} { left:${mL}; top:${m.t || d.t}; width:${mW}; height:${m.h || d.h}; z-index:10; opacity:${m.op || d.op || 1}; }\n`;
-            });
-
-            const finalHTML = `<!DOCTYPE html><html><head><style>body,html{margin:0;padding:0;width:100%;overflow-x:hidden;font-family:sans-serif;}#site-canvas{position:relative;width:100%;max-width:1440px;height:${canvas.style.height};background-color:${canvas.style.backgroundColor};background-image:${canvas.style.backgroundImage};background-size:cover;margin:0 auto;}.dropped-element{position:absolute;display:flex;align-items:center;justify-content:center;}.dropped-element>*{width:100%;height:100%;object-fit:cover;border-radius:12px;border:none;}@media(min-width:601px){${dStyles}}@media(max-width:600px){#site-canvas{width:100vw;}${mStyles}}</style></head><body><div id="site-canvas">${elementsHTML}</div></body></html>`;
-            navigator.clipboard.writeText(finalHTML).then(() => alert("Copied!"));
+        document.getElementById('firebase-save-btn').onclick = saveProject;
+        document.getElementById('open-manager-btn').onclick = () => {
+            document.getElementById('save-modal').style.display = 'flex';
+            loadList();
         };
-    </script> 
+    </script>
 </body>
 </html>
