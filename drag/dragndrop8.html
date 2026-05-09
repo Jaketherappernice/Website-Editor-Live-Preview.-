@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Full Import</title>
+    <title>Pro Responsive Builder - Layout Mirroring</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -27,6 +27,8 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            min-height: 100%;
+            position: relative;
         }
 
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -39,13 +41,6 @@
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         
-        .dropped-element[data-type="Box"] { z-index: 10 !important; }
-        .dropped-element[data-type="Image"] { z-index: 20 !important; }
-        .dropped-element[data-type="Button"] { z-index: 30 !important; }
-        .dropped-element[data-type="Heading"], 
-        .dropped-element[data-type="Paragraph"], 
-        .dropped-element[data-type="Textarea"] { z-index: 40 !important; }
-
         .selected { outline: 2px solid var(--primary); z-index: 100 !important; }
         .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 110; }
         .selected .resizer { display: block; }
@@ -60,11 +55,14 @@
     <button id="copy-btn">Copy Full Website</button>
     
     <div id="viewport">
-        <div id="canvas" style="width:100%; height:1000px; position:relative; min-height: 100%; background-color: white;"></div>
+        <div id="canvas" style="width:100%; height:1000px; background-color: white;"></div>
     </div>
 
     <button id="add-btn" class="fab">+</button>
     <button id="settings-btn" class="fab">⚙️</button>
+
+    <!-- Hidden iframe for code parsing -->
+    <iframe id="import-sandbox" style="display:none"></iframe>
 
     <div id="panel" class="popup-panel">
         <div class="item" data-type="Heading">Heading</div>
@@ -77,7 +75,7 @@
 
     <div id="settings-panel" class="popup-panel">
         <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
-        <div class="item" style="background:#4f46e5; color:white;" onclick="importCode()">Import Code</div>
+        <div class="item" style="background:#4f46e5; color:white;" onclick="importCode()">Import Full Source</div>
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
         <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
@@ -121,7 +119,7 @@
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
         document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-        p.style.display = isVisible ? 'none' : 'flex';
+        if (!isVisible) p.style.display = 'flex';
     }
 
     document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
@@ -132,29 +130,6 @@
         heightSlider.value = heightNum.value = val;
         canvas.style.height = val + 'px';
     };
-
-    function toggleViewMode() {
-        currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
-        viewport.className = currentMode === 'mobile' ? 'mobile' : '';
-        modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
-        modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
-        updateAllElements();
-    }
-
-    function updateAllElements() {
-        document.querySelectorAll('.dropped-element').forEach(el => {
-            const data = JSON.parse(el.dataset[currentMode] || '{}');
-            if (data.w) {
-                el.style.width = data.w; el.style.height = data.h;
-                el.style.left = data.l; el.style.top = data.t;
-                const inner = el.querySelector('h2, p, button, img, div, textarea');
-                if (data.fs && inner && ['Heading', 'Paragraph', 'Textarea', 'Button'].includes(el.dataset.type)) {
-                    inner.style.fontSize = data.fs;
-                }
-                if (data.op) el.style.opacity = data.op;
-            }
-        });
-    }
 
     function saveCurrentState(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
@@ -168,59 +143,69 @@
     }
 
     function importCode() {
-        const code = prompt("Enter full HTML source code:");
-        if (!code) return;
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(code, 'text/html');
-        const bodyContent = doc.body;
+        const source = prompt("Paste your full website code (HTML/CSS):");
+        if (!source) return;
 
         if (confirm("Clear current canvas?")) canvas.innerHTML = "";
 
-        const traverse = (element) => {
-            if (element.nodeType !== 1) return;
-            if (['SCRIPT', 'STYLE', 'META', 'LINK'].includes(element.tagName)) return;
+        const sandbox = document.getElementById('import-sandbox');
+        const doc = sandbox.contentDocument || sandbox.contentWindow.document;
+        doc.open();
+        doc.write(source);
+        doc.close();
 
-            let type = "Box";
-            if (element.tagName.startsWith('H')) type = "Heading";
-            else if (element.tagName === 'P' || element.tagName === 'SPAN') type = "Paragraph";
-            else if (element.tagName === 'BUTTON' || element.tagName === 'A') type = "Button";
-            else if (element.tagName === 'IMG') type = "Image";
-            else if (element.tagName === 'TEXTAREA') type = "Textarea";
+        // Wait for styles to settle
+        setTimeout(() => {
+            const body = doc.body;
+            
+            // Set canvas background if body has styles
+            const bodyStyle = sandbox.contentWindow.getComputedStyle(body);
+            canvas.style.backgroundColor = bodyStyle.backgroundColor;
+            if (bodyStyle.backgroundImage !== 'none') canvas.style.backgroundImage = bodyStyle.backgroundImage;
 
-            const rect = element.getBoundingClientRect();
-            const x = rect.left || 50;
-            const y = (rect.top + viewport.scrollTop) || 50;
-            const w = rect.width > 0 ? rect.width + 'px' : '200px';
-            const h = rect.height > 0 ? rect.height + 'px' : '100px';
+            const elements = body.querySelectorAll('*');
+            elements.forEach((el) => {
+                if (['SCRIPT', 'STYLE', 'BR'].includes(el.tagName)) return;
+                
+                // Only process visible elements with dimensions
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 1 && rect.height < 1) return;
 
-            const newNode = createNode(type, x, y);
-            newNode.style.width = w;
-            newNode.style.height = h;
+                let type = "Box";
+                if (el.tagName.startsWith('H')) type = "Heading";
+                else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
+                else if (el.tagName === 'BUTTON') type = "Button";
+                else if (el.tagName === 'IMG') type = "Image";
+                else if (el.tagName === 'TEXTAREA') type = "Textarea";
 
-            const inner = newNode.querySelector('h2, p, button, img, div, textarea');
-            if (type === "Image") inner.src = element.src || inner.src;
-            else if (type === "Textarea") inner.placeholder = element.placeholder || "";
-            else if (type === "Button") inner.innerText = element.innerText || "Button";
-            else inner.innerHTML = element.innerHTML || element.value || inner.innerHTML;
+                const newNode = createNode(type, rect.left, rect.top + doc.defaultView.scrollY);
+                newNode.style.width = rect.width + 'px';
+                newNode.style.height = rect.height + 'px';
 
-            const style = window.getComputedStyle(element);
-            inner.style.backgroundColor = style.backgroundColor;
-            inner.style.color = style.color;
-            inner.style.fontSize = style.fontSize;
-            inner.style.borderRadius = style.borderRadius;
+                const inner = newNode.querySelector('h2, p, button, img, div, textarea');
+                const style = doc.defaultView.getComputedStyle(el);
 
-            saveCurrentState(newNode);
+                // Transfer Content
+                if (type === "Image") inner.src = el.src;
+                else if (type === "Button" || type === "Heading" || type === "Paragraph") {
+                    inner.innerText = el.innerText;
+                } else if (type === "Box") {
+                    inner.style.border = style.border;
+                }
 
-            // If it's just a generic box/div, we might want to crawl children, 
-            // but for a builder, we import top-level functional blocks.
-            if (type === "Box" && element.children.length > 0 && element.tagName !== 'BUTTON') {
-                Array.from(element.children).forEach(child => traverse(child));
-            }
-        };
+                // Transfer Visuals
+                inner.style.backgroundColor = style.backgroundColor;
+                inner.style.color = style.color;
+                inner.style.fontSize = style.fontSize;
+                inner.style.borderRadius = style.borderRadius;
+                inner.style.backgroundImage = style.backgroundImage;
+                inner.style.backgroundSize = style.backgroundSize;
 
-        Array.from(bodyContent.children).forEach(child => traverse(child));
-        toggleP('settings-panel');
+                saveCurrentState(newNode);
+            });
+            
+            toggleP('settings-panel');
+        }, 100);
     }
 
     function createNode(type, x, y) {
@@ -265,13 +250,12 @@
                 startL = el.offsetLeft; startT = el.offsetTop;
             };
         });
-        let clicks = 0;
         el.onclick = (e) => {
             e.stopPropagation();
-            clicks++;
-            if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
-            else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
-            setTimeout(() => clicks = 0, 500);
+            let clicks = parseInt(el.dataset.clicks || 0) + 1;
+            el.dataset.clicks = clicks;
+            if (clicks === 2) edit(el);
+            setTimeout(() => el.dataset.clicks = 0, 500);
         };
     }
 
@@ -290,49 +274,25 @@
 
     function edit(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const action = prompt("1: Content/Link | 2: Size | 3: Color | 4: Transparency");
-        
-        if (action === '1') {
-            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
-            else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
-            else if (el.dataset.type === 'Button') {
-                inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                let link = prompt("Link:", el.dataset.link || "");
-                if (link && !link.startsWith('http')) link = 'https://' + link;
-                el.dataset.link = link;
-            } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-        } else if (action === '2') {
+        const act = prompt("1: Content | 2: Size | 3: Color");
+        if (act === '1') {
+            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src);
+            else inner.innerText = prompt("Text:", inner.innerText);
+        } else if (act === '2') {
             document.getElementById('size-control').style.display = 'block';
-            const s = document.getElementById('size-slider');
-            const n = document.getElementById('size-num');
-            s.value = n.value = parseInt(inner.style.fontSize) || 16;
-            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
-        } else if (action === '3') {
+        } else if (act === '3') {
             const cp = document.getElementById('colorPicker'); cp.click();
-            cp.oninput = () => { 
-                if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value;
-                else inner.style.color = cp.value;
-                saveCurrentState(el);
-            };
-        } else if (action === '4') {
-            document.getElementById('opacity-control').style.display = 'block';
-            const os = document.getElementById('opacity-slider');
-            os.oninput = (e) => { el.style.opacity = e.target.value / 100; saveCurrentState(el); };
+            cp.oninput = () => { inner.style.backgroundColor = cp.value; saveCurrentState(el); };
         }
+        saveCurrentState(el);
     }
 
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
     document.getElementById('copy-btn').onclick = () => {
-        let elementsHTML = "";
-        document.querySelectorAll('.dropped-element').forEach((el, index) => {
-            const id = `el-${index}`;
-            const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
-            const d = JSON.parse(el.dataset.desktop || '{}');
-            elementsHTML += `<div id="${id}" style="position:absolute;left:${d.l};top:${d.t};width:${d.w};height:${d.h};opacity:${d.op}">${inner.outerHTML}</div>`;
-        });
-        navigator.clipboard.writeText(`<html><body>${elementsHTML}</body></html>`).then(() => alert("Copied!"));
+        const html = canvas.innerHTML;
+        navigator.clipboard.writeText(html).then(() => alert("Code Copied!"));
     };
     </script> 
 </body>
