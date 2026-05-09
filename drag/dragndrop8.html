@@ -521,6 +521,19 @@
         
         navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Layout Fixed for Desktop."));
     };
+
+// FORCE FIX EXPORT BUTTON
+document.getElementById('copy-btn').onclick = function() {
+    const html = document.documentElement.outerHTML;
+    const textarea = document.createElement('textarea');
+    textarea.value = html;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert("copied html");
+    return false;
+};
     </script> 
 </body>
 </html>
