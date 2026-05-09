@@ -54,13 +54,10 @@
 
         #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
         
-        /* Modal Styles */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 320px; max-height: 80vh; overflow-y: auto; text-align: center; color: #333; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 320px; max-height: 80vh; overflow-y: auto; text-align: center; color: #333; box-sizing: border-box; }
         .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 5px; }
         .save-entry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; flex-grow: 1; text-align: left; }
-        .btn-load { background: var(--secondary); color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .btn-delete { background: var(--danger); color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         
         #size-control, #height-control, #opacity-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
         .dropped-element[data-type="Image"], .dropped-element[data-type="Image"] img { background-color: transparent !important; background-image: none !important; }
@@ -87,11 +84,11 @@
     </div>
 
     <div id="settings-panel" class="popup-panel">
-        <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
-        <div class="item" onclick="triggerCanvasColor()">BG Color</div>
-        <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
-        <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
-        <div class="item" style="background:#6366f1; color:white;" onclick="openSaveManager()">Save/Load Manager</div>
+        <div class="item" id="mode-toggle">Switch to Mobile</div>
+        <div class="item" id="bg-color-btn">BG Color</div>
+        <div class="item" id="bg-img-btn">BG Image URL</div>
+        <div class="item" id="height-btn">Page Height</div>
+        <div class="item" style="background:#6366f1; color:white;" id="open-manager-btn">Save/Load Manager</div>
     </div>
 
     <div id="save-modal" class="modal-overlay">
@@ -100,11 +97,9 @@
             <input type="text" id="save-name" placeholder="Save name..." style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px;">
             <button id="firebase-save-btn" style="width: 100%; background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 20px; font-weight: bold;">Create New Save</button>
             <hr>
-            <div id="save-list" style="margin-top: 15px; min-height: 50px;">
-                <!-- Saves list -->
-            </div>
+            <div id="save-list" style="margin-top: 15px; min-height: 50px;"></div>
             <br>
-            <button onclick="document.getElementById('save-modal').style.display='none'" style="background:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight: bold;">Close</button>
+            <button id="close-modal-btn" style="background:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight: bold;">Close</button>
         </div>
     </div>
 
@@ -112,21 +107,21 @@
         <strong>Font Size</strong><br>
         <input type="range" id="size-slider" min="8" max="200">
         <input type="number" id="size-num"> px<br><br>
-        <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+        <button id="close-size-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
     </div>
 
     <div id="opacity-control">
         <strong>Opacity</strong><br>
         <input type="range" id="opacity-slider" min="0" max="100" value="100">
         <span id="opacity-val">100</span>%<br><br>
-        <button onclick="document.getElementById('opacity-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+        <button id="close-opacity-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
     </div>
 
     <div id="height-control">
         <strong>Page Height</strong><br>
         <input type="range" id="height-slider" min="500" max="8000" value="1000">
         <input type="number" id="height-num" value="1000"> px<br><br>
-        <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+        <button id="close-height-btn" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
     </div>
 
     <input type="color" id="colorPicker" style="display:none">
@@ -149,397 +144,254 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Explicitly attach to window so HTML onclicks can find them
-        window.saveProject = async () => {
-            const nameInput = document.getElementById('save-name');
-            const name = nameInput.value.trim();
-            if (!name) return alert("Please enter a name for your save!");
+        // State Variables
+        const canvas = document.getElementById('canvas');
+        const viewport = document.getElementById('viewport');
+        const modeToggle = document.getElementById('mode-toggle');
+        const heightSlider = document.getElementById('height-slider');
+        const heightNum = document.getElementById('height-num');
+        let currentMode = 'desktop'; 
+        let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-            // Trigger global save state to ensure dataset is fresh
-            document.querySelectorAll('.dropped-element').forEach(el => {
-                if (typeof window.saveCurrentState === 'function') window.saveCurrentState(el);
-            });
+        // UI Helpers
+        const toggleP = (id) => {
+            const p = document.getElementById(id);
+            const isVisible = p.style.display === 'flex';
+            document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
+            p.style.display = isVisible ? 'none' : 'flex';
+        };
 
-            const elements = [];
-            document.querySelectorAll('.dropped-element').forEach(el => {
-                elements.push({
-                    type: el.dataset.type,
-                    desktop: el.dataset.desktop,
-                    mobile: el.dataset.mobile,
-                    link: el.dataset.link || "",
-                    innerHTML: el.innerHTML,
-                    style: {
-                        left: el.style.left,
-                        top: el.style.top,
-                        width: el.style.width,
-                        height: el.style.height,
-                        opacity: el.style.opacity || "1"
-                    }
-                });
-            });
-
-            const projectData = {
-                name: name,
-                elements: elements,
-                canvasHeight: document.getElementById('canvas').style.height,
-                canvasBgColor: document.getElementById('canvas').style.backgroundColor,
-                canvasBgImg: document.getElementById('canvas').style.backgroundImage,
-                timestamp: Date.now()
+        const saveCurrentState = (el) => {
+            const inner = el.querySelector('h2, p, button, img, div, textarea');
+            const state = {
+                w: el.style.width, h: el.style.height,
+                l: el.style.left, t: el.style.top,
+                fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
+                op: el.style.opacity || "1"
             };
-
-            try {
-                await addDoc(collection(db, "projects"), projectData);
-                alert("Saved to Firebase successfully!");
-                nameInput.value = "";
-                window.loadSaveList();
-            } catch (e) {
-                console.error("Firebase Error: ", e);
-                alert("Error saving: " + e.message + "\nCheck if your Firestore rules allow writes.");
-            }
+            el.dataset[currentMode] = JSON.stringify(state);
         };
 
-        window.loadSaveList = async () => {
-            const listContainer = document.getElementById('save-list');
-            listContainer.innerHTML = "<i>Refreshing list...</i>";
-            try {
-                const querySnapshot = await getDocs(collection(db, "projects"));
-                listContainer.innerHTML = "";
-                if (querySnapshot.empty) listContainer.innerHTML = "No saves found.";
-                
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const div = document.createElement('div');
-                    div.className = 'save-entry';
-                    div.innerHTML = `
-                        <span>${data.name}</span>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn-load" onclick="window.loadProject('${docSnap.id}')">Load</button>
-                            <button class="btn-delete" onclick="window.deleteProject('${docSnap.id}')">Del</button>
-                        </div>
-                    `;
-                    listContainer.appendChild(div);
-                });
-            } catch (e) {
-                listContainer.innerHTML = "Error loading list.";
-            }
-        };
-
-        window.loadProject = async (id) => {
-            try {
-                const querySnapshot = await getDocs(collection(db, "projects"));
-                let project = null;
-                querySnapshot.forEach(docSnap => { if(docSnap.id === id) project = docSnap.data(); });
-
-                if (!project) return alert("Project not found!");
-
-                const canvasEl = document.getElementById('canvas');
-                canvasEl.innerHTML = "";
-                canvasEl.style.height = project.canvasHeight || "1000px";
-                canvasEl.style.backgroundColor = project.canvasBgColor || "white";
-                canvasEl.style.backgroundImage = project.canvasBgImg || "none";
-                
-                document.getElementById('height-slider').value = document.getElementById('height-num').value = parseInt(project.canvasHeight) || 1000;
-
-                project.elements.forEach(data => {
-                    const el = document.createElement('div');
-                    el.className = 'dropped-element';
-                    el.dataset.type = data.type;
-                    el.dataset.desktop = data.desktop;
-                    el.dataset.mobile = data.mobile;
-                    el.dataset.link = data.link;
-                    el.style.left = data.style.left;
-                    el.style.top = data.style.top;
-                    el.style.width = data.style.width;
-                    el.style.height = data.style.height;
-                    el.style.opacity = data.style.opacity;
-                    el.innerHTML = data.innerHTML;
-                    canvasEl.appendChild(el);
-                    if (typeof window.setupEl === 'function') window.setupEl(el);
-                });
-
-                document.getElementById('save-modal').style.display = 'none';
-                alert("Loaded: " + project.name);
-            } catch (e) {
-                alert("Load failed: " + e.message);
-            }
-        };
-
-        window.deleteProject = async (id) => {
-            if (!confirm("Delete this project forever?")) return;
-            try {
-                await deleteDoc(doc(db, "projects", id));
-                window.loadSaveList();
-            } catch (e) {
-                alert("Delete failed: " + e.message);
-            }
-        };
-
-        window.openSaveManager = () => {
-            document.getElementById('save-modal').style.display = 'flex';
-            window.loadSaveList();
-        };
-
-        // Event listener for the save button inside the module
-        document.getElementById('firebase-save-btn').addEventListener('click', window.saveProject);
-    </script>
-
-    <script>
-    /* NON-MODULE LOGIC PRESERVED */
-    const canvas = document.getElementById('canvas');
-    const viewport = document.getElementById('viewport');
-    const modeToggle = document.getElementById('mode-toggle');
-    const heightSlider = document.getElementById('height-slider');
-    const heightNum = document.getElementById('height-num');
-    
-    let currentMode = 'desktop'; 
-    let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
-
-    function toggleP(id) {
-        const p = document.getElementById(id);
-        const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-        p.style.display = isVisible ? 'none' : 'flex';
-    }
-
-    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
-    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
-
-    heightSlider.oninput = heightNum.oninput = (e) => {
-        const val = e.target.value;
-        heightSlider.value = heightNum.value = val;
-        canvas.style.height = val + 'px';
-    };
-
-    function toggleViewMode() {
-        currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
-        viewport.className = currentMode === 'mobile' ? 'mobile' : '';
-        modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
-        modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
-        
-        document.querySelectorAll('.dropped-element').forEach(el => {
-            const data = JSON.parse(el.dataset[currentMode] || '{}');
-            if (data.w) {
-                el.style.width = data.w; el.style.height = data.h;
-                el.style.left = data.l; el.style.top = data.t;
-                const inner = el.querySelector('h2, p, button, img, div, textarea');
-                if (data.fs && inner && ['Heading', 'Paragraph', 'Textarea', 'Button'].includes(el.dataset.type)) {
-                    inner.style.fontSize = data.fs;
-                }
-                if (data.op) el.style.opacity = data.op;
-            }
-        });
-    }
-
-    // Attach to window so module can call it
-    window.saveCurrentState = function(el) {
-        const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const state = {
-            w: el.style.width, h: el.style.height,
-            l: el.style.left, t: el.style.top,
-            fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
-            op: el.style.opacity || "1"
-        };
-        el.dataset[currentMode] = JSON.stringify(state);
-    }
-
-    document.querySelectorAll('.item[data-type]').forEach(i => {
-        i.onclick = () => { 
-            const scrollPos = viewport.scrollTop;
-            createNode(i.dataset.type, 50, scrollPos + 50); 
-            toggleP('panel'); 
-        };
-    });
-
-    function createNode(type, x, y) {
-        const el = document.createElement('div');
-        el.className = 'dropped-element';
-        el.dataset.type = type;
-        el.style.left = x + 'px'; el.style.top = y + 'px';
-        
-        if (type === 'Box' || type === 'Image' || type === 'Textarea') {
-            el.style.width = "200px"; el.style.height = "150px";
-        } else {
-            el.style.width = "180px"; el.style.height = "50px";
-        }
-
-        const html = {
-            'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
-            'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
-            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
-            'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
-            'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
-            'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
-        };
-
-        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
-        canvas.appendChild(el);
-        window.saveCurrentState(el);
-        window.setupEl(el);
-    }
-
-    window.setupEl = function(el) {
-        el.onmousedown = el.ontouchstart = (e) => {
-            if (e.target.classList.contains('resizer')) return;
-            activeEl = el; isMoving = true;
-            document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
-            el.classList.add('selected');
-            const t = e.touches ? e.touches[0] : e;
-            startX = t.clientX - el.offsetLeft; 
-            startY = t.clientY - el.offsetTop;
-        };
-        el.querySelectorAll('.resizer').forEach(r => {
-            r.onmousedown = r.ontouchstart = (e) => {
-                e.preventDefault(); e.stopPropagation();
-                currentResizer = r; activeEl = el;
+        const setupEl = (el) => {
+            el.onmousedown = el.ontouchstart = (e) => {
+                if (e.target.classList.contains('resizer')) return;
+                activeEl = el; isMoving = true;
+                document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+                el.classList.add('selected');
                 const t = e.touches ? e.touches[0] : e;
-                startX = t.clientX; startY = t.clientY;
-                startW = el.offsetWidth; startH = el.offsetHeight;
-                startL = el.offsetLeft; startT = el.offsetTop;
+                startX = t.clientX - el.offsetLeft; 
+                startY = t.clientY - el.offsetTop;
             };
-        });
-        let clicks = 0;
-        el.onclick = (e) => {
-            e.stopPropagation();
-            clicks++;
-            if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
-            else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
-            setTimeout(() => clicks = 0, 500);
-        };
-    }
-
-    window.onmousemove = window.ontouchmove = (e) => {
-        if (!activeEl) return;
-        const t = e.touches ? e.touches[0] : e;
-        if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
-        if (currentResizer) {
-            const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
-            if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-            if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
-        }
-        if (isMoving || currentResizer) window.saveCurrentState(activeEl);
-    };
-    window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
-
-    function edit(el) {
-        const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const action = prompt("1: Content/Link | 2: Size | 3: Color | 4: Transparency");
-        
-        if (action === '1') {
-            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
-            else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
-            else if (el.dataset.type === 'Button') {
-                inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                let link = prompt("Link (e.g. google.com):", el.dataset.link || "");
-                if (link && !link.startsWith('http')) link = 'https://' + link;
-                el.dataset.link = link;
-            } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-        } else if (action === '2' && ['Heading', 'Paragraph', 'Textarea', 'Button'].includes(el.dataset.type)) {
-            document.getElementById('size-control').style.display = 'block';
-            const s = document.getElementById('size-slider');
-            const n = document.getElementById('size-num');
-            s.value = n.value = parseInt(inner.style.fontSize) || 16;
-            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; window.saveCurrentState(el); };
-        } else if (action === '3') {
-            let choice = prompt("1: Color Picker | 2: HEX Code | 3: Image URL (Stroke/BG)");
-            if (choice === '1') {
-                const cp = document.getElementById('colorPicker'); cp.click();
-                cp.oninput = () => { 
-                    if (['Button', 'Box'].includes(el.dataset.type)) {
-                        inner.style.backgroundColor = cp.value;
-                        inner.style.backgroundImage = 'none';
-                    } else {
-                        inner.style.color = cp.value;
-                        inner.style.webkitTextFillColor = '';
-                        inner.style.webkitBackgroundClip = '';
-                        inner.style.backgroundImage = '';
-                    }
+            el.querySelectorAll('.resizer').forEach(r => {
+                r.onmousedown = r.ontouchstart = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    currentResizer = r; activeEl = el;
+                    const t = e.touches ? e.touches[0] : e;
+                    startX = t.clientX; startY = t.clientY;
+                    startW = el.offsetWidth; startH = el.offsetHeight;
+                    startL = el.offsetLeft; startT = el.offsetTop;
                 };
-            } else if (choice === '2') {
-                let hex = prompt("Enter HEX (e.g. #ff0000):");
+            });
+            let clicks = 0;
+            el.onclick = (e) => {
+                e.stopPropagation();
+                clicks++;
+                if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
+                else if (clicks === 3) { if(confirm("Delete?")) el.remove(); clicks = 0; }
+                setTimeout(() => clicks = 0, 500);
+            };
+        };
+
+        const createNode = (type, x, y) => {
+            const el = document.createElement('div');
+            el.className = 'dropped-element';
+            el.dataset.type = type;
+            el.style.left = x + 'px'; el.style.top = y + 'px';
+            el.style.width = (type === 'Box' || type === 'Image' || type === 'Textarea') ? "200px" : "180px";
+            el.style.height = (type === 'Box' || type === 'Image' || type === 'Textarea') ? "150px" : "50px";
+
+            const htmlMap = {
+                'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
+                'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
+                'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
+                'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
+                'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
+                'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
+            };
+
+            el.innerHTML = htmlMap[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+            canvas.appendChild(el);
+            saveCurrentState(el);
+            setupEl(el);
+        };
+
+        function edit(el) {
+            const inner = el.querySelector('h2, p, button, img, div, textarea');
+            const action = prompt("1: Content/Link | 2: Size | 3: Color | 4: Transparency");
+            if (action === '1') {
+                if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
+                else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
+                else if (el.dataset.type === 'Button') {
+                    inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+                    let link = prompt("Link:", el.dataset.link || "");
+                    if (link && !link.startsWith('http')) link = 'https://' + link;
+                    el.dataset.link = link;
+                } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
+            } else if (action === '2') {
+                document.getElementById('size-control').style.display = 'block';
+                const s = document.getElementById('size-slider');
+                const n = document.getElementById('size-num');
+                s.value = n.value = parseInt(inner.style.fontSize) || 16;
+                s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
+            } else if (action === '3') {
+                const hex = prompt("Enter HEX (e.g. #ff0000):");
                 if (hex) {
-                    if (['Button', 'Box'].includes(el.dataset.type)) {
-                        inner.style.backgroundColor = hex;
-                        inner.style.backgroundImage = 'none';
-                    } else {
-                        inner.style.color = hex;
-                        inner.style.webkitTextFillColor = '';
-                        inner.style.webkitBackgroundClip = '';
-                        inner.style.backgroundImage = '';
-                    }
+                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = hex;
+                    else inner.style.color = hex;
                 }
-            } else if (choice === '3') {
-                let url = prompt("Enter Image URL:");
-                if (url) {
-                    if (['Button', 'Box'].includes(el.dataset.type)) {
-                        inner.style.backgroundImage = `url('${url}')`;
-                        inner.style.backgroundSize = 'cover';
-                    } else {
-                        inner.style.backgroundImage = `url('${url}')`;
-                        inner.style.webkitBackgroundClip = 'text';
-                        inner.style.webkitTextFillColor = 'transparent';
-                        inner.style.backgroundSize = 'cover';
-                        inner.style.backgroundPosition = 'center';
-                    }
-                }
-            }
-        } else if (action === '4') {
-            if (el.dataset.type === 'Button') {
-                let currentBg = window.getComputedStyle(inner).backgroundColor;
-                let opacity = prompt("Enter Background Opacity (0 to 1):", "0.5");
-                let rgba = currentBg.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
-                inner.style.backgroundColor = rgba;
-            } else {
+            } else if (action === '4') {
                 document.getElementById('opacity-control').style.display = 'block';
                 const os = document.getElementById('opacity-slider');
-                const ov = document.getElementById('opacity-val');
-                os.value = (parseFloat(el.style.opacity) || 1) * 100;
-                ov.innerText = os.value;
-                os.oninput = (e) => { 
-                    el.style.opacity = e.target.value / 100; 
-                    ov.innerText = e.target.value; 
-                    window.saveCurrentState(el); 
-                };
+                os.oninput = (e) => { el.style.opacity = e.target.value / 100; document.getElementById('opacity-val').innerText = e.target.value; saveCurrentState(el); };
             }
+            saveCurrentState(el);
         }
-        window.saveCurrentState(el);
-    }
 
-    window.triggerCanvasColor = function() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
-    window.triggerCanvasImage = function() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
+        // Firebase Operations
+        const saveProject = async () => {
+            const name = document.getElementById('save-name').value.trim();
+            if (!name) return alert("Enter save name!");
+            document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+            const elements = Array.from(document.querySelectorAll('.dropped-element')).map(el => ({
+                type: el.dataset.type, desktop: el.dataset.desktop, mobile: el.dataset.mobile, link: el.dataset.link || "",
+                innerHTML: el.innerHTML, style: { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height, opacity: el.style.opacity || "1" }
+            }));
+            try {
+                await addDoc(collection(db, "projects"), { name, elements, canvasHeight: canvas.style.height, canvasBgColor: canvas.style.backgroundColor, canvasBgImg: canvas.style.backgroundImage, timestamp: Date.now() });
+                alert("Saved!"); loadSaveList();
+            } catch (e) { alert("Error: " + e.message); }
+        };
 
-    document.getElementById('copy-btn').onclick = () => {
-        document.querySelectorAll('.dropped-element').forEach(window.saveCurrentState);
-        const referenceW = 1440; 
-        const mobileW = 375;
-        const currentCanvasW = canvas.offsetWidth;
-        let dStyles = "", mStyles = "";
-        const fHeight = canvas.style.height || "1000px";
-        const bgC = canvas.style.backgroundColor || "white";
-        const bgI = canvas.style.backgroundImage || "none";
-        let elementsHTML = "";
-        document.querySelectorAll('.dropped-element').forEach((el, index) => {
-            const id = `el-${index}`;
-            const type = el.dataset.type;
-            const d = JSON.parse(el.dataset.desktop || '{}');
-            const m = JSON.parse(el.dataset.mobile || '{}');
-            const sourceInner = el.querySelector('h2, p, button, img, div, textarea');
-            const inner = sourceInner.cloneNode(true);
-            inner.style.cssText = sourceInner.style.cssText;
-            if (type === 'Button' && el.dataset.link) inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
-            elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
-            const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
-            const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
-            dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:10 !important; opacity:${d.op || 1}; }\n`;
-            if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
-            const mlRaw = m.l || d.l; const mtRaw = m.t || d.t; const mwRaw = m.w || d.w; const mhRaw = m.h || d.h;
-            const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
-            const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
-            mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:10 !important; opacity:${m.op || d.op || 1}; }\n`;
-            if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
+        const loadSaveList = async () => {
+            const list = document.getElementById('save-list');
+            list.innerHTML = "Loading...";
+            const snap = await getDocs(collection(db, "projects"));
+            list.innerHTML = "";
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
+                const div = document.createElement('div');
+                div.className = 'save-entry';
+                div.innerHTML = `<span>${data.name}</span><div><button class="load-btn" data-id="${docSnap.id}">Load</button><button class="del-btn" data-id="${docSnap.id}">Del</button></div>`;
+                list.appendChild(div);
+            });
+            // Attach listeners to new buttons
+            list.querySelectorAll('.load-btn').forEach(btn => btn.onclick = () => loadProject(btn.dataset.id));
+            list.querySelectorAll('.del-btn').forEach(btn => btn.onclick = () => deleteProject(btn.dataset.id));
+        };
+
+        const loadProject = async (id) => {
+            const snap = await getDocs(collection(db, "projects"));
+            let project = null;
+            snap.forEach(d => { if(d.id === id) project = d.data(); });
+            if (!project) return;
+            canvas.innerHTML = "";
+            canvas.style.height = project.canvasHeight;
+            canvas.style.backgroundColor = project.canvasBgColor;
+            canvas.style.backgroundImage = project.canvasBgImg;
+            project.elements.forEach(data => {
+                const el = document.createElement('div');
+                el.className = 'dropped-element';
+                el.dataset.type = data.type; el.dataset.desktop = data.desktop; el.dataset.mobile = data.mobile; el.dataset.link = data.link;
+                Object.assign(el.style, data.style); el.innerHTML = data.innerHTML;
+                canvas.appendChild(el); setupEl(el);
+            });
+            document.getElementById('save-modal').style.display = 'none';
+        };
+
+        const deleteProject = async (id) => {
+            if (confirm("Delete?")) { await deleteDoc(doc(db, "projects", id)); loadSaveList(); }
+        };
+
+        // Event Listeners (Within Module)
+        document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
+        document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
+        document.getElementById('firebase-save-btn').onclick = saveProject;
+        document.getElementById('open-manager-btn').onclick = () => { document.getElementById('save-modal').style.display = 'flex'; loadSaveList(); };
+        document.getElementById('close-modal-btn').onclick = () => document.getElementById('save-modal').style.display = 'none';
+        
+        document.querySelectorAll('.item[data-type]').forEach(i => {
+            i.onclick = () => { createNode(i.dataset.type, 50, viewport.scrollTop + 50); toggleP('panel'); };
         });
-        const finalHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; } #site-canvas { position:relative; width:100%; max-width:${referenceW}px; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; overflow:hidden; } .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing: border-box; } .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; } @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} } @media (max-width: 600px) { #site-canvas { width: 100vw; max-width: 100vw; } ${mStyles} } </style></head><body><div id="site-canvas">${elementsHTML}</div></body></html>`;
-        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied!"));
-    };
+
+        document.getElementById('bg-color-btn').onclick = () => { 
+            const cp = document.getElementById('canvasColorPicker'); cp.click(); 
+            cp.oninput = () => canvas.style.backgroundColor = cp.value;
+        };
+
+        document.getElementById('bg-img-btn').onclick = () => {
+            const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`;
+        };
+
+        document.getElementById('height-btn').onclick = () => document.getElementById('height-control').style.display = 'block';
+        heightSlider.oninput = heightNum.oninput = (e) => { canvas.style.height = e.target.value + 'px'; heightSlider.value = heightNum.value = e.target.value; };
+
+        modeToggle.onclick = () => {
+            currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
+            viewport.className = currentMode === 'mobile' ? 'mobile' : '';
+            modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
+            document.querySelectorAll('.dropped-element').forEach(el => {
+                const d = JSON.parse(el.dataset[currentMode] || '{}');
+                if (d.w) { el.style.width = d.w; el.style.height = d.h; el.style.left = d.l; el.style.top = d.t; }
+            });
+        };
+
+        window.onmousemove = window.ontouchmove = (e) => {
+            if (!activeEl) return;
+            const t = e.touches ? e.touches[0] : e;
+            if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
+            if (currentResizer) {
+                const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
+                if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
+                if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+            }
+            if (isMoving || currentResizer) saveCurrentState(activeEl);
+        };
+        window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
+
+        document.getElementById('close-size-btn').onclick = () => document.getElementById('size-control').style.display = 'none';
+        document.getElementById('close-opacity-btn').onclick = () => document.getElementById('opacity-control').style.display = 'none';
+        document.getElementById('close-height-btn').onclick = () => document.getElementById('height-control').style.display = 'none';
+
+        // Copy Code Functionality
+        document.getElementById('copy-btn').onclick = () => {
+            document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+            const referenceW = 1440; 
+            const mobileW = 375;
+            const currentCanvasW = canvas.offsetWidth;
+            let dStyles = "", mStyles = "", elementsHTML = "";
+            
+            document.querySelectorAll('.dropped-element').forEach((el, index) => {
+                const id = `el-${index}`;
+                const d = JSON.parse(el.dataset.desktop || '{}');
+                const m = JSON.parse(el.dataset.mobile || '{}');
+                const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
+                if (el.dataset.type === 'Button' && el.dataset.link) inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
+                
+                elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
+                
+                const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
+                const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
+                dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:10; opacity:${d.op || 1}; }\n`;
+                
+                const mlRaw = m.l || d.l; const mwRaw = m.w || d.w;
+                const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
+                const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
+                mStyles += `#${id} { left:${mL}; top:${m.t || d.t}; width:${mW}; height:${m.h || d.h}; z-index:10; opacity:${m.op || d.op || 1}; }\n`;
+            });
+
+            const finalHTML = `<!DOCTYPE html><html><head><style>body,html{margin:0;padding:0;width:100%;overflow-x:hidden;font-family:sans-serif;}#site-canvas{position:relative;width:100%;max-width:1440px;height:${canvas.style.height};background-color:${canvas.style.backgroundColor};background-image:${canvas.style.backgroundImage};background-size:cover;margin:0 auto;}.dropped-element{position:absolute;display:flex;align-items:center;justify-content:center;}.dropped-element>*{width:100%;height:100%;object-fit:cover;border-radius:12px;border:none;}@media(min-width:601px){${dStyles}}@media(max-width:600px){#site-canvas{width:100vw;}${mStyles}}</style></head><body><div id="site-canvas">${elementsHTML}</div></body></html>`;
+            navigator.clipboard.writeText(finalHTML).then(() => alert("Copied!"));
+        };
     </script> 
 </body>
 </html>
