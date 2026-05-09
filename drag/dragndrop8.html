@@ -522,40 +522,53 @@
         navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Layout Fixed for Desktop."));
     };
 
-// FIXED EXPORT - Copies ONLY the built website content
+// FINAL WORKING EXPORT - Keeps ALL styles and positioning
 document.getElementById('copy-btn').onclick = function() {
-    // Hide editor UI temporarily
-    const addBtn = document.getElementById('add-btn');
-    const settingsBtn = document.getElementById('settings-btn');
-    const copyBtn = document.getElementById('copy-btn');
-    const panels = document.querySelectorAll('.popup-panel');
+    // Hide only the buttons and panels
+    const uiElements = document.querySelectorAll('#add-btn, #settings-btn, #copy-btn, .popup-panel, #size-control, #opacity-control, #height-control');
+    uiElements.forEach(el => {
+        if (el) el.style.display = 'none';
+    });
     
-    addBtn.style.display = 'none';
-    settingsBtn.style.display = 'none';
-    copyBtn.style.display = 'none';
-    panels.forEach(p => p.style.display = 'none');
+    // Copy the entire viewport (what you actually designed)
+    const viewportClone = document.getElementById('viewport').cloneNode(true);
     
-    // Copy the canvas content only
-    const canvasClone = document.getElementById('canvas').cloneNode(true);
-    const tempDiv = document.createElement('div');
-    tempDiv.appendChild(canvasClone);
+    // Remove any leftover UI inside the clone
+    viewportClone.querySelectorAll('#add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control').forEach(el => el.remove());
+    
+    const styles = document.querySelector('style').innerHTML;
     
     const finalHTML = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-    body { margin:0; padding:0; font-family:sans-serif; }
-    #canvas { position:relative; width:100%; min-height:100vh; background:white; }
-    .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
-    .dropped-element > * { width:100%; height:100%; }
-</style>
-</head><body>${tempDiv.innerHTML}</body></html>`;
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>${styles}</style>
+    <style>
+        /* Hide editor-only elements in export */
+        #add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control, #copy-btn {
+            display: none !important;
+        }
+        body { overflow: auto !important; }
+        #viewport { 
+            width: 100% !important; 
+            height: auto !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body>${viewportClone.outerHTML}</body>
+</html>`;
     
     // Restore UI
-    addBtn.style.display = 'flex';
-    settingsBtn.style.display = 'flex';
-    copyBtn.style.display = 'block';
+    uiElements.forEach(el => {
+        if (el) el.style.display = '';
+    });
     
-    // Copy to clipboard
+    // Copy
     const textarea = document.createElement('textarea');
     textarea.value = finalHTML;
     document.body.appendChild(textarea);
