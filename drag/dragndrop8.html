@@ -68,7 +68,8 @@
         .close-btn { cursor: pointer; font-size: 24px; border: none; background: transparent; color: #666; }
         .save-input-group { display: flex; gap: 8px; margin-bottom: 20px; }
         .save-input-group input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-        .save-input-group button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .save-input-group button { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .save-input-group button:disabled { opacity: 0.6; cursor: not-allowed; }
         .save-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; background: #f8fafc; }
         .save-item-name { font-weight: bold; color: #333; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .save-actions button { border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; margin-left: 5px; color: white; }
@@ -104,7 +105,6 @@
         <div class="item" style="background:#4b5563;color:white;border:none;" onclick="openSaveLoad()">💾 Save & Load</div>
     </div>
 
-    <!-- Save & Load Modal -->
     <div id="save-load-modal">
         <div class="save-header">
             <h3>Projects</h3>
@@ -112,10 +112,9 @@
         </div>
         <div class="save-input-group">
             <input type="text" id="save-name-input" placeholder="Project Name...">
-            <button onclick="window.saveProject()">Save</button>
+            <button id="save-action-btn" onclick="window.saveProject()">Save</button>
         </div>
         <div id="saves-list">
-            <!-- Saved items will load here -->
         </div>
     </div>
 
@@ -143,7 +142,6 @@
     <input type="color" id="colorPicker" style="display:none">
     <input type="color" id="canvasColorPicker" style="display:none">
 
-    <!-- Firebase SDK (ES Modules via CDN) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -163,11 +161,26 @@
         
         window.loadedProjectsData = {};
 
+        // Helper function to force timeouts on Firebase calls
+        const withTimeout = (promise, ms, errorMsg) => {
+            let timeoutId;
+            const timeoutPromise = new Promise((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error(errorMsg)), ms);
+            });
+            return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+        };
+
         window.loadSavesList = async function() {
             const listEl = document.getElementById('saves-list');
             listEl.innerHTML = '<div style="text-align:center;color:#666;">Loading saves...</div>';
             try {
-                const querySnapshot = await getDocs(collection(db, "saves"));
+                // Timeout after 8 seconds if rules block reads
+                const querySnapshot = await withTimeout(
+                    getDocs(collection(db, "saves")), 
+                    8000, 
+                    "Firebase took too long to load saves. Check your Firestore Rules."
+                );
+                
                 listEl.innerHTML = '';
                 window.loadedProjectsData = {};
                 
@@ -193,7 +206,7 @@
                 });
             } catch(e) {
                 console.error("Error loading list: ", e);
-                listEl.innerHTML = '<div style="color:red;text-align:center;">Error loading database. Check console.</div>';
+                listEl.innerHTML = `<div style="color:red;font-size:12px;text-align:center;">Failed to load data:<br>${e.message}</div>`;
             }
         };
 
@@ -201,7 +214,6 @@
             const saveName = document.getElementById('save-name-input').value.trim();
             if(!saveName) { alert("Please enter a project name!"); return; }
             
-            // Trigger save state for all elements to ensure latest coords are captured
             document.querySelectorAll('.dropped-element').forEach(window.saveCurrentState);
 
             const elements = [];
@@ -221,39 +233,51 @@
                 bgImg: document.getElementById('canvas').style.backgroundImage || 'none'
             };
 
-            const btn = document.querySelector('.save-input-group button');
+            const btn = document.getElementById('save-action-btn');
             btn.innerText = "Saving...";
+            btn.disabled = true;
             
             try {
-                await addDoc(collection(db, "saves"), {
-                    name: saveName,
-                    elements: elements,
-                    canvas: canvasData,
-                    timestamp: Date.now()
-                });
+                // Timeout after 8 seconds if rules block writes
+                await withTimeout(
+                    addDoc(collection(db, "saves"), {
+                        name: saveName,
+                        elements: elements,
+                        canvas: canvasData,
+                        timestamp: Date.now()
+                    }),
+                    8000,
+                    "Save action timed out. Are your Firestore rules set to allow writes?"
+                );
+
                 document.getElementById('save-name-input').value = '';
+                alert("Project Saved Successfully!");
                 await window.loadSavesList();
             } catch (e) {
                 console.error("Error saving: ", e);
-                alert("Failed to save to database.");
+                alert(`Save Failed:\n${e.message}\n\nPlease check Firebase Console -> Firestore Database -> Rules.`);
             } finally {
                 btn.innerText = "Save";
+                btn.disabled = false;
             }
         };
 
         window.deleteProject = async function(id) {
             if(!confirm("Are you sure you want to delete this save permanently?")) return;
             try {
-                await deleteDoc(doc(db, "saves", id));
+                await withTimeout(
+                    deleteDoc(doc(db, "saves", id)),
+                    8000,
+                    "Delete action timed out."
+                );
                 await window.loadSavesList();
             } catch(e) {
                 console.error("Error deleting: ", e);
-                alert("Failed to delete.");
+                alert(`Failed to delete:\n${e.message}`);
             }
         };
     </script>
 
-    <!-- Main Builder Logic -->
     <script>
     const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
@@ -264,9 +288,8 @@
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-    // Fallbacks for Firebase functions before module loads
     window.loadSavesList = window.loadSavesList || function() {};
-    window.saveProject = window.saveProject || function() { alert("Database still loading..."); };
+    window.saveProject = window.saveProject || function() { alert("Database logic is still connecting... try again in a moment."); };
     window.deleteProject = window.deleteProject || function() {};
 
     function toggleP(id) {
@@ -491,7 +514,6 @@
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    // Logic to Reconstruct Layout from Database
     window.loadProject = function(id) {
         if(!confirm("Loading will overwrite your current unsaved work. Continue?")) return;
         const data = window.loadedProjectsData[id];
