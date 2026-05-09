@@ -166,10 +166,15 @@
         heightSlider.value = heightNum.value = parseInt(project.canvasHeight) || 1000;
 
         project.elements.forEach(item => {
+            // Restore basic node
             const el = createNode(item.type, parseInt(item.currentStyle.left), parseInt(item.currentStyle.top), true);
+            
+            // Restore datasets for export functionality
             el.dataset.desktop = item.desktop;
             el.dataset.mobile = item.mobile;
             el.dataset.link = item.link;
+            
+            // Restore visual styles
             el.style.width = item.currentStyle.width;
             el.style.height = item.currentStyle.height;
             el.style.opacity = item.currentStyle.opacity;
@@ -327,7 +332,11 @@
             const s = document.getElementById('size-slider');
             const n = document.getElementById('size-num');
             s.value = n.value = parseInt(inner.style.fontSize) || 16;
-            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; s.value = n.value = e.target.value; saveCurrentState(el); };
+            s.oninput = n.oninput = (e) => { 
+                inner.style.fontSize = e.target.value + 'px'; 
+                s.value = n.value = e.target.value; 
+                saveCurrentState(el); 
+            };
         } else if (action === '3') {
             let choice = prompt("1: Color Picker | 2: HEX Code | 3: Image URL (Stroke/BG)");
             if (choice === '1') {
@@ -342,7 +351,7 @@
                         inner.style.webkitBackgroundClip = '';
                         inner.style.backgroundImage = '';
                     }
-                    saveProject();
+                    saveCurrentState(el);
                 };
             } else if (choice === '2') {
                 let hex = prompt("Enter HEX (e.g. #ff0000):");
@@ -356,6 +365,7 @@
                         inner.style.webkitBackgroundClip = '';
                         inner.style.backgroundImage = '';
                     }
+                    saveCurrentState(el);
                 }
             } else if (choice === '3') {
                 let url = prompt("Enter Image URL:");
@@ -370,6 +380,7 @@
                         inner.style.backgroundSize = 'cover';
                         inner.style.backgroundPosition = 'center';
                     }
+                    saveCurrentState(el);
                 }
             }
         } else if (action === '4') {
@@ -409,7 +420,9 @@
     };
 
     document.getElementById('copy-btn').onclick = () => {
+        // Force a final state save for every element before exporting
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
+        
         const getZ = (t) => { 
             if (t === 'Heading' || t === 'Paragraph' || t === 'Textarea') return 40;
             if (t === 'Button') return 30;
@@ -428,12 +441,22 @@
         const bgI = canvas.style.backgroundImage || "none";
         
         let elementsHTML = "";
-        document.querySelectorAll('.dropped-element').forEach((el, index) => {
+        const allElements = document.querySelectorAll('.dropped-element');
+        
+        if (allElements.length === 0) {
+            alert("Canvas is empty!");
+            return;
+        }
+
+        allElements.forEach((el, index) => {
             const id = `el-${index}`;
             const type = el.dataset.type;
             const z = getZ(type);
+            
+            // Re-parse to ensure we have the most current data
             const d = JSON.parse(el.dataset.desktop || '{}');
             const m = JSON.parse(el.dataset.mobile || '{}');
+            
             const sourceInner = el.querySelector('h2, p, button, img, div, textarea');
             const inner = sourceInner.cloneNode(true);
             
@@ -444,20 +467,22 @@
 
             elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
             
-            const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
-            const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
+            // Desktop calcs
+            const dL = ((parseFloat(d.l || el.style.left) / currentCanvasW) * 100).toFixed(4) + '%';
+            const dW = ((parseFloat(d.w || el.style.width) / currentCanvasW) * 100).toFixed(4) + '%';
             
-            dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:${z} !important; opacity:${d.op || 1}; }\n`;
+            dStyles += `#${id} { left:${dL}; top:${d.t || el.style.top}; width:${dW}; height:${d.h || el.style.height}; z-index:${z} !important; opacity:${d.op || el.style.opacity || 1}; }\n`;
             if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
             
-            const mlRaw = m.l || d.l;
-            const mtRaw = m.t || d.t;
-            const mwRaw = m.w || d.w;
-            const mhRaw = m.h || d.h;
+            // Mobile calcs
+            const mlRaw = m.l || d.l || el.style.left;
+            const mtRaw = m.t || d.t || el.style.top;
+            const mwRaw = m.w || d.w || el.style.width;
+            const mhRaw = m.h || d.h || el.style.height;
             const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
             const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
             
-            mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || 1}; }\n`;
+            mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || el.style.opacity || 1}; }\n`;
             if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
         });
 
