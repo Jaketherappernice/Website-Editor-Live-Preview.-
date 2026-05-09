@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pro Responsive Builder</title>
     <style>
-        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; --danger: #ef4444; }
+        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
         
         #viewport { 
@@ -32,17 +32,9 @@
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
         #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
-        
-        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; max-height: 400px; overflow-y: auto; }
+        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
         .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .toggle-active { background: var(--primary) !important; color: white; }
-
-        .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; }
-        .save-entry span { font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; }
-        .btn-group { display: flex; gap: 5px; }
-        .small-btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; color: white; }
-        .load-btn { background: var(--secondary); }
-        .del-btn { background: var(--danger); }
 
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
@@ -91,15 +83,8 @@
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
         <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
-        <hr style="width:100%; border:0; border-top:1px solid #eee; margin: 10px 0;">
-        <div class="item" style="background:#4f46e5; color:white;" onclick="saveProject()">Save Current Work</div>
-        <div class="item" onclick="toggleP('save-manager-panel'); renderSaveList();">Manage Saves</div>
-    </div>
-
-    <div id="save-manager-panel" class="popup-panel">
-        <strong style="display:block; margin-bottom:10px; text-align:center;">Saved Projects</strong>
-        <div id="save-list-container"></div>
-        <button onclick="toggleP('save-manager-panel')" style="margin-top:10px; width:100%; padding:8px; border-radius:6px; border:none; background:#eee;">Close</button>
+        <div class="item" onclick="saveProject()" style="background:#1e293b; color:white;">💾 Save Project</div>
+        <div class="item" onclick="loadProject()" style="background:#1e293b; color:white;">📂 Load Project</div>
     </div>
 
     <div id="size-control">
@@ -139,9 +124,7 @@
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => {
-            if(panel.id !== id) panel.style.display = 'none';
-        });
+        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
         p.style.display = isVisible ? 'none' : 'flex';
     }
 
@@ -193,25 +176,16 @@
         };
     });
 
-    function createNode(type, x, y, savedHTML = null, savedData = null) {
+    function createNode(type, x, y, savedData = null) {
         const el = document.createElement('div');
         el.className = 'dropped-element';
         el.dataset.type = type;
         el.style.left = x + 'px'; el.style.top = y + 'px';
         
-        if (savedData) {
-            el.dataset.desktop = savedData.desktop;
-            el.dataset.mobile = savedData.mobile;
-            el.dataset.link = savedData.link || "";
-            const d = JSON.parse(savedData.desktop);
-            el.style.width = d.w; el.style.height = d.h;
-            el.style.opacity = d.op;
+        if (type === 'Box' || type === 'Image' || type === 'Textarea') {
+            el.style.width = "200px"; el.style.height = "150px";
         } else {
-            if (type === 'Box' || type === 'Image' || type === 'Textarea') {
-                el.style.width = "200px"; el.style.height = "150px";
-            } else {
-                el.style.width = "180px"; el.style.height = "50px";
-            }
+            el.style.width = "180px"; el.style.height = "50px";
         }
 
         const html = {
@@ -223,10 +197,25 @@
             'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
         };
 
-        el.innerHTML = (savedHTML || html[type]) + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+        
+        // Restore saved state if loading
+        if(savedData) {
+            el.dataset.desktop = savedData.desktop;
+            el.dataset.mobile = savedData.mobile;
+            el.dataset.link = savedData.link || "";
+            const inner = el.querySelector('h2, p, button, img, div, textarea');
+            inner.outerHTML = savedData.innerHTML;
+            const d = JSON.parse(savedData.desktop);
+            el.style.width = d.w; el.style.height = d.h;
+            el.style.left = d.l; el.style.top = d.t;
+            el.style.opacity = d.op;
+        }
+
         canvas.appendChild(el);
         if(!savedData) saveCurrentState(el);
         setupEl(el);
+        return el;
     }
 
     function setupEl(el) {
@@ -359,92 +348,51 @@
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    // --- SAVE / LOAD SYSTEM ---
+    // --- SAVE AND LOAD FEATURES ---
     function saveProject() {
-        const name = prompt("Enter a name for this project:");
-        if (!name) return;
-        
         const elements = [];
         document.querySelectorAll('.dropped-element').forEach(el => {
-            const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
+            saveCurrentState(el);
             elements.push({
                 type: el.dataset.type,
-                html: inner.outerHTML,
-                data: {
-                    desktop: el.dataset.desktop,
-                    mobile: el.dataset.mobile,
-                    link: el.dataset.link || ""
-                },
-                x: parseInt(el.style.left),
-                y: parseInt(el.style.top)
+                desktop: el.dataset.desktop,
+                mobile: el.dataset.mobile,
+                link: el.dataset.link || "",
+                innerHTML: el.querySelector('h2, p, button, img, div, textarea').outerHTML
             });
         });
-
-        const project = {
-            name: name,
-            canvasBg: canvas.style.backgroundColor,
-            canvasImg: canvas.style.backgroundImage,
+        const projectData = {
+            canvasBgColor: canvas.style.backgroundColor,
+            canvasBgImg: canvas.style.backgroundImage,
             canvasHeight: canvas.style.height,
             elements: elements
         };
-
-        let saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
-        saves.push(project);
-        localStorage.setItem('web_builder_saves', JSON.stringify(saves));
-        alert("Project Saved!");
+        localStorage.setItem('saved_web_project', JSON.stringify(projectData));
+        alert("Project Saved Successfully!");
+        toggleP('settings-panel');
     }
 
-    function renderSaveList() {
-        const container = document.getElementById('save-list-container');
-        container.innerHTML = "";
-        const saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
+    function loadProject() {
+        const data = localStorage.getItem('saved_web_project');
+        if (!data) return alert("No saved project found!");
+        if (!confirm("Load saved project? Current work will be lost.")) return;
+
+        const project = JSON.parse(data);
+        canvas.innerHTML = ""; // Clear current
+        canvas.style.backgroundColor = project.canvasBgColor;
+        canvas.style.backgroundImage = project.canvasBgImg;
+        canvas.style.height = project.canvasHeight;
+        heightSlider.value = heightNum.value = parseInt(project.canvasHeight) || 1000;
+
+        project.elements.forEach(edata => {
+            createNode(edata.type, 0, 0, edata);
+        });
         
-        if (saves.length === 0) {
-            container.innerHTML = "<p style='text-align:center; font-size:12px; color:#666;'>No saves found.</p>";
-            return;
-        }
-
-        saves.forEach((proj, index) => {
-            const div = document.createElement('div');
-            div.className = 'save-entry';
-            div.innerHTML = `
-                <span>${proj.name}</span>
-                <div class="btn-group">
-                    <button class="small-btn load-btn" onclick="loadProject(${index})">Load</button>
-                    <button class="small-btn del-btn" onclick="deleteProject(${index})">Del</button>
-                </div>
-            `;
-            container.appendChild(div);
-        });
+        if(currentMode === 'mobile') { currentMode = 'desktop'; toggleViewMode(); } 
+        alert("Project Loaded!");
+        toggleP('settings-panel');
     }
 
-    function loadProject(index) {
-        if (!confirm("Load this project? Current work will be lost.")) return;
-        const saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
-        const proj = saves[index];
-
-        canvas.innerHTML = "";
-        canvas.style.backgroundColor = proj.canvasBg;
-        canvas.style.backgroundImage = proj.canvasImg;
-        canvas.style.height = proj.canvasHeight;
-        heightSlider.value = heightNum.value = parseInt(proj.canvasHeight);
-
-        proj.elements.forEach(e => {
-            createNode(e.type, e.x, e.y, e.html, e.data);
-        });
-
-        toggleP('save-manager-panel');
-    }
-
-    function deleteProject(index) {
-        if (!confirm("Delete this save?")) return;
-        let saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
-        saves.splice(index, 1);
-        localStorage.setItem('web_builder_saves', JSON.stringify(saves));
-        renderSaveList();
-    }
-
-    // --- EXPORT SYSTEM ---
     document.getElementById('copy-btn').onclick = () => {
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
         
@@ -519,87 +467,8 @@
 <body><div id="site-canvas">${elementsHTML}</div></body>
 </html>`;
         
-        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Layout Fixed for Desktop."));
+        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied!"));
     };
-
-// ----------
-
-document.getElementById('copy-btn').onclick = () => {
-    document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
-    
-    const getZ = (t) => { 
-        if (t === 'Heading' || t === 'Paragraph' || t === 'Textarea') return 40;
-        if (t === 'Button') return 30;
-        if (t === 'Image') return 20;
-        if (t === 'Box') return 10;
-        return 1;
-    };
-
-    const referenceW = 1440; 
-    const mobileW = 375;
-    const currentCanvasW = canvas.offsetWidth;
-
-    let dStyles = "", mStyles = "";
-    const fHeight = canvas.style.height || "1000px";
-    const bgC = canvas.style.backgroundColor || "white";
-    const bgI = canvas.style.backgroundImage || "none";
-    
-    let elementsHTML = "";
-    document.querySelectorAll('.dropped-element').forEach((el, index) => {
-        const id = `el-${index}`;
-        const type = el.dataset.type;
-        const z = getZ(type);
-        const d = JSON.parse(el.dataset.desktop || '{}');
-        const m = JSON.parse(el.dataset.mobile || '{}');
-        const sourceInner = el.querySelector('h2, p, button, img, div, textarea');
-        const inner = sourceInner.cloneNode(true);
-        
-        inner.style.cssText = sourceInner.style.cssText;
-        if (type === 'Button' && el.dataset.link) {
-            inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
-        }
-
-        elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
-        
-        const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
-        const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
-        
-        dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:${z} !important; opacity:${d.op || 1}; }\n`;
-        if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
-        
-        const mlRaw = m.l || d.l;
-        const mtRaw = m.t || d.t;
-        const mwRaw = m.w || d.w;
-        const mhRaw = m.h || d.h;
-        const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
-        const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
-        
-        mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || 1}; }\n`;
-        if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
-    });
-
-    const finalHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; max-width:${referenceW}px; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; overflow:hidden; }
-        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing: border-box; transition: opacity 0.2s; }
-        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; box-sizing: border-box; }
-        textarea { resize: none; box-sizing: border-box; padding: 10px; }
-        button { cursor: pointer; transition: transform 0.1s; background-size: cover; background-position: center; }
-        button:active { transform: scale(0.98); }
-        @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; max-width: 100vw; } ${mStyles} }
-    </style>
-</head>
-<body><div id="site-canvas">${elementsHTML}</div></body>
-</html>`;
-    
-    navigator.clipboard.writeText(finalHTML).then(() => alert("copied html"));
-};
     </script> 
 </body>
 </html>
