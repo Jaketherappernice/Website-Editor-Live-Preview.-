@@ -522,21 +522,38 @@
         navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Layout Fixed for Desktop."));
     };
 
-// FINAL WORKING EXPORT - Keeps ALL styles and positioning
+// ----------
+
+// EXPORT THAT RESPECTS MOBILE/DESKTOP VIEW
 document.getElementById('copy-btn').onclick = function() {
-    // Hide only the buttons and panels
+    const isMobileView = document.getElementById('viewport').classList.contains('mobile');
+    const deviceType = isMobileView ? 'mobile' : 'desktop';
+    
+    // Hide UI
     const uiElements = document.querySelectorAll('#add-btn, #settings-btn, #copy-btn, .popup-panel, #size-control, #opacity-control, #height-control');
-    uiElements.forEach(el => {
-        if (el) el.style.display = 'none';
+    uiElements.forEach(el => { if (el) el.style.display = 'none'; });
+    
+    // Generate CSS with proper device positioning
+    let deviceStyles = "";
+    document.querySelectorAll('.dropped-element').forEach((el, idx) => {
+        const data = JSON.parse(el.dataset[deviceType] || '{}');
+        if (data.w) {
+            deviceStyles += `#export-el-${idx} { left: ${data.l}; top: ${data.t}; width: ${data.w}; height: ${data.h}; opacity: ${data.op || 1}; position: absolute; }\n`;
+            if (data.fs) deviceStyles += `#export-el-${idx} > * { font-size: ${data.fs} !important; }\n`;
+        }
     });
     
-    // Copy the entire viewport (what you actually designed)
+    // Clone viewport and give elements unique IDs
     const viewportClone = document.getElementById('viewport').cloneNode(true);
-    
-    // Remove any leftover UI inside the clone
-    viewportClone.querySelectorAll('#add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control').forEach(el => el.remove());
+    viewportClone.querySelectorAll('.dropped-element').forEach((el, idx) => {
+        el.id = `export-el-${idx}`;
+        // Remove resizers
+        el.querySelectorAll('.resizer').forEach(r => r.remove());
+    });
     
     const styles = document.querySelector('style').innerHTML;
+    const width = isMobileView ? '375px' : '100%';
+    const margin = isMobileView ? '0 auto' : '0';
     
     const finalHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -545,28 +562,27 @@ document.getElementById('copy-btn').onclick = function() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>${styles}</style>
     <style>
-        /* Hide editor-only elements in export */
-        #add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control, #copy-btn {
+        body { margin: 0; padding: 0; background: #f3f4f6; }
+        #viewport { 
+            width: ${width} !important; 
+            margin: ${margin} !important;
+            height: auto !important;
+            overflow-y: auto !important;
+            background: white;
+        }
+        #add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control, #copy-btn, .resizer {
             display: none !important;
         }
-        body { overflow: auto !important; }
-        #viewport { 
-            width: 100% !important; 
-            height: auto !important;
-            margin: 0 !important;
-            border: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-        }
+        .dropped-element { position: absolute; cursor: default; }
+        .dropped-element.selected { outline: none; }
+        ${deviceStyles}
     </style>
 </head>
 <body>${viewportClone.outerHTML}</body>
 </html>`;
     
     // Restore UI
-    uiElements.forEach(el => {
-        if (el) el.style.display = '';
-    });
+    uiElements.forEach(el => { if (el) el.style.display = ''; });
     
     // Copy
     const textarea = document.createElement('textarea');
@@ -575,7 +591,7 @@ document.getElementById('copy-btn').onclick = function() {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    alert("copied html");
+    alert(`copied html (${deviceType} view)`);
 };
     </script> 
 </body>
