@@ -524,120 +524,81 @@
 
 // ----------
 
-// ONE EXPORT - WORKS ON DESKTOP AND MOBILE
-document.getElementById('copy-btn').onclick = function() {
-    // Hide UI
-    const uiElements = document.querySelectorAll('#add-btn, #settings-btn, #copy-btn, .popup-panel, #size-control, #opacity-control, #height-control');
-    uiElements.forEach(el => { if (el) el.style.display = 'none'; });
+document.getElementById('copy-btn').onclick = () => {
+    document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
     
-    // Generate styles for BOTH desktop AND mobile
-    let desktopStyles = "", mobileStyles = "";
-    const desktopW = 1440;
+    const getZ = (t) => { 
+        if (t === 'Heading' || t === 'Paragraph' || t === 'Textarea') return 40;
+        if (t === 'Button') return 30;
+        if (t === 'Image') return 20;
+        if (t === 'Box') return 10;
+        return 1;
+    };
+
+    const referenceW = 1440; 
     const mobileW = 375;
-    const currentW = document.getElementById('canvas').offsetWidth;
+    const currentCanvasW = canvas.offsetWidth;
+
+    let dStyles = "", mStyles = "";
+    const fHeight = canvas.style.height || "1000px";
+    const bgC = canvas.style.backgroundColor || "white";
+    const bgI = canvas.style.backgroundImage || "none";
     
-    document.querySelectorAll('.dropped-element').forEach((el, idx) => {
-        const desktop = JSON.parse(el.dataset.desktop || '{}');
-        const mobile = JSON.parse(el.dataset.mobile || '{}');
+    let elementsHTML = "";
+    document.querySelectorAll('.dropped-element').forEach((el, index) => {
+        const id = `el-${index}`;
+        const type = el.dataset.type;
+        const z = getZ(type);
+        const d = JSON.parse(el.dataset.desktop || '{}');
+        const m = JSON.parse(el.dataset.mobile || '{}');
+        const sourceInner = el.querySelector('h2, p, button, img, div, textarea');
+        const inner = sourceInner.cloneNode(true);
         
-        // Desktop styles (percentage based)
-        if (desktop.w) {
-            const leftPct = (parseFloat(desktop.l) / currentW) * 100;
-            const widthPct = (parseFloat(desktop.w) / currentW) * 100;
-            desktopStyles += `#el-${idx} { left: ${leftPct}%; top: ${desktop.t}; width: ${widthPct}%; height: ${desktop.h}; opacity: ${desktop.op || 1}; }\n`;
-            if (desktop.fs) desktopStyles += `#el-${idx} > * { font-size: ${desktop.fs} !important; }\n`;
+        inner.style.cssText = sourceInner.style.cssText;
+        if (type === 'Button' && el.dataset.link) {
+            inner.setAttribute('onclick', `window.location.href='${el.dataset.link}'`);
         }
+
+        elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
         
-        // Mobile styles
-        if (mobile.w || desktop.w) {
-            const mLeft = mobile.l || desktop.l;
-            const mTop = mobile.t || desktop.t;
-            const mWidth = mobile.w || desktop.w;
-            const mHeight = mobile.h || desktop.h;
-            const leftPct = (parseFloat(mLeft) / mobileW) * 100;
-            const widthPct = (parseFloat(mWidth) / mobileW) * 100;
-            mobileStyles += `#el-${idx} { left: ${leftPct}%; top: ${mTop}; width: ${widthPct}%; height: ${mHeight}; opacity: ${mobile.op || desktop.op || 1}; }\n`;
-            if (mobile.fs || desktop.fs) mobileStyles += `#el-${idx} > * { font-size: ${mobile.fs || desktop.fs} !important; }\n`;
-        }
+        const dL = ((parseFloat(d.l) / currentCanvasW) * 100).toFixed(4) + '%';
+        const dW = ((parseFloat(d.w) / currentCanvasW) * 100).toFixed(4) + '%';
+        
+        dStyles += `#${id} { left:${dL}; top:${d.t}; width:${dW}; height:${d.h}; z-index:${z} !important; opacity:${d.op || 1}; }\n`;
+        if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
+        
+        const mlRaw = m.l || d.l;
+        const mtRaw = m.t || d.t;
+        const mwRaw = m.w || d.w;
+        const mhRaw = m.h || d.h;
+        const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
+        const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
+        
+        mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || 1}; }\n`;
+        if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
     });
-    
-    // Clone canvas and add IDs
-    const canvasClone = document.getElementById('canvas').cloneNode(true);
-    canvasClone.querySelectorAll('.dropped-element').forEach((el, idx) => {
-        el.id = `el-${idx}`;
-        el.querySelectorAll('.resizer').forEach(r => r.remove());
-        // Preserve button links
-        if (el.dataset.type === 'Button' && el.dataset.link) {
-            const btn = el.querySelector('button');
-            if (btn) btn.onclick = () => window.location.href = el.dataset.link;
-        }
-    });
-    
-    const bgColor = document.getElementById('canvas').style.backgroundColor || 'white';
-    const bgImage = document.getElementById('canvas').style.backgroundImage || 'none';
-    const height = document.getElementById('canvas').style.height || '1000px';
-    
+
     const finalHTML = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exported Website</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: sans-serif; background: #f3f4f6; }
-        #canvas {
-            position: relative;
-            width: 100%;
-            max-width: 1440px;
-            height: ${height};
-            background-color: ${bgColor};
-            background-image: ${bgImage};
-            background-size: cover;
-            background-position: center;
-            margin: 0 auto;
-            overflow: hidden;
-        }
-        .dropped-element {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .dropped-element > * {
-            width: 100%;
-            height: 100%;
-            border-radius: 12px;
-        }
-        button { cursor: pointer; }
-        textarea { resize: none; padding: 10px; }
-        
-        /* DESKTOP (default) */
-        ${desktopStyles}
-        
-        /* MOBILE */
-        @media (max-width: 768px) {
-            #canvas { max-width: 100%; }
-            ${mobileStyles}
-        }
+        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
+        #site-canvas { position:relative; width:100%; max-width:${referenceW}px; height:${fHeight}; background-color:${bgC}; background-image:${bgI}; background-size:cover; background-position:center; margin:0 auto; overflow:hidden; }
+        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing: border-box; transition: opacity 0.2s; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; box-sizing: border-box; }
+        textarea { resize: none; box-sizing: border-box; padding: 10px; }
+        button { cursor: pointer; transition: transform 0.1s; background-size: cover; background-position: center; }
+        button:active { transform: scale(0.98); }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } ${dStyles} }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; max-width: 100vw; } ${mStyles} }
     </style>
 </head>
-<body>
-    <div id="canvas">${canvasClone.innerHTML}</div>
-</body>
+<body><div id="site-canvas">${elementsHTML}</div></body>
 </html>`;
     
-    // Restore UI
-    uiElements.forEach(el => { if (el) el.style.display = ''; });
-    
-    // Copy
-    const textarea = document.createElement('textarea');
-    textarea.value = finalHTML;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    alert("copied html");
+    navigator.clipboard.writeText(finalHTML).then(() => alert("copied html"));
 };
     </script> 
 </body>
