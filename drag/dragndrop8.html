@@ -524,61 +524,107 @@
 
 // ----------
 
-// EXPORT THAT RESPECTS MOBILE/DESKTOP VIEW
+// ONE EXPORT - WORKS ON DESKTOP AND MOBILE
 document.getElementById('copy-btn').onclick = function() {
-    const isMobileView = document.getElementById('viewport').classList.contains('mobile');
-    const deviceType = isMobileView ? 'mobile' : 'desktop';
-    
     // Hide UI
     const uiElements = document.querySelectorAll('#add-btn, #settings-btn, #copy-btn, .popup-panel, #size-control, #opacity-control, #height-control');
     uiElements.forEach(el => { if (el) el.style.display = 'none'; });
     
-    // Generate CSS with proper device positioning
-    let deviceStyles = "";
+    // Generate styles for BOTH desktop AND mobile
+    let desktopStyles = "", mobileStyles = "";
+    const desktopW = 1440;
+    const mobileW = 375;
+    const currentW = document.getElementById('canvas').offsetWidth;
+    
     document.querySelectorAll('.dropped-element').forEach((el, idx) => {
-        const data = JSON.parse(el.dataset[deviceType] || '{}');
-        if (data.w) {
-            deviceStyles += `#export-el-${idx} { left: ${data.l}; top: ${data.t}; width: ${data.w}; height: ${data.h}; opacity: ${data.op || 1}; position: absolute; }\n`;
-            if (data.fs) deviceStyles += `#export-el-${idx} > * { font-size: ${data.fs} !important; }\n`;
+        const desktop = JSON.parse(el.dataset.desktop || '{}');
+        const mobile = JSON.parse(el.dataset.mobile || '{}');
+        
+        // Desktop styles (percentage based)
+        if (desktop.w) {
+            const leftPct = (parseFloat(desktop.l) / currentW) * 100;
+            const widthPct = (parseFloat(desktop.w) / currentW) * 100;
+            desktopStyles += `#el-${idx} { left: ${leftPct}%; top: ${desktop.t}; width: ${widthPct}%; height: ${desktop.h}; opacity: ${desktop.op || 1}; }\n`;
+            if (desktop.fs) desktopStyles += `#el-${idx} > * { font-size: ${desktop.fs} !important; }\n`;
+        }
+        
+        // Mobile styles
+        if (mobile.w || desktop.w) {
+            const mLeft = mobile.l || desktop.l;
+            const mTop = mobile.t || desktop.t;
+            const mWidth = mobile.w || desktop.w;
+            const mHeight = mobile.h || desktop.h;
+            const leftPct = (parseFloat(mLeft) / mobileW) * 100;
+            const widthPct = (parseFloat(mWidth) / mobileW) * 100;
+            mobileStyles += `#el-${idx} { left: ${leftPct}%; top: ${mTop}; width: ${widthPct}%; height: ${mHeight}; opacity: ${mobile.op || desktop.op || 1}; }\n`;
+            if (mobile.fs || desktop.fs) mobileStyles += `#el-${idx} > * { font-size: ${mobile.fs || desktop.fs} !important; }\n`;
         }
     });
     
-    // Clone viewport and give elements unique IDs
-    const viewportClone = document.getElementById('viewport').cloneNode(true);
-    viewportClone.querySelectorAll('.dropped-element').forEach((el, idx) => {
-        el.id = `export-el-${idx}`;
-        // Remove resizers
+    // Clone canvas and add IDs
+    const canvasClone = document.getElementById('canvas').cloneNode(true);
+    canvasClone.querySelectorAll('.dropped-element').forEach((el, idx) => {
+        el.id = `el-${idx}`;
         el.querySelectorAll('.resizer').forEach(r => r.remove());
+        // Preserve button links
+        if (el.dataset.type === 'Button' && el.dataset.link) {
+            const btn = el.querySelector('button');
+            if (btn) btn.onclick = () => window.location.href = el.dataset.link;
+        }
     });
     
-    const styles = document.querySelector('style').innerHTML;
-    const width = isMobileView ? '375px' : '100%';
-    const margin = isMobileView ? '0 auto' : '0';
+    const bgColor = document.getElementById('canvas').style.backgroundColor || 'white';
+    const bgImage = document.getElementById('canvas').style.backgroundImage || 'none';
+    const height = document.getElementById('canvas').style.height || '1000px';
     
     const finalHTML = `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>${styles}</style>
+    <title>Exported Website</title>
     <style>
-        body { margin: 0; padding: 0; background: #f3f4f6; }
-        #viewport { 
-            width: ${width} !important; 
-            margin: ${margin} !important;
-            height: auto !important;
-            overflow-y: auto !important;
-            background: white;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #f3f4f6; }
+        #canvas {
+            position: relative;
+            width: 100%;
+            max-width: 1440px;
+            height: ${height};
+            background-color: ${bgColor};
+            background-image: ${bgImage};
+            background-size: cover;
+            background-position: center;
+            margin: 0 auto;
+            overflow: hidden;
         }
-        #add-btn, #settings-btn, .popup-panel, #size-control, #opacity-control, #height-control, #copy-btn, .resizer {
-            display: none !important;
+        .dropped-element {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .dropped-element { position: absolute; cursor: default; }
-        .dropped-element.selected { outline: none; }
-        ${deviceStyles}
+        .dropped-element > * {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+        }
+        button { cursor: pointer; }
+        textarea { resize: none; padding: 10px; }
+        
+        /* DESKTOP (default) */
+        ${desktopStyles}
+        
+        /* MOBILE */
+        @media (max-width: 768px) {
+            #canvas { max-width: 100%; }
+            ${mobileStyles}
+        }
     </style>
 </head>
-<body>${viewportClone.outerHTML}</body>
+<body>
+    <div id="canvas">${canvasClone.innerHTML}</div>
+</body>
 </html>`;
     
     // Restore UI
@@ -591,7 +637,7 @@ document.getElementById('copy-btn').onclick = function() {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    alert(`copied html (${deviceType} view)`);
+    alert("copied html");
 };
     </script> 
 </body>
