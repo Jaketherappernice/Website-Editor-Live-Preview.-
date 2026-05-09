@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Layout Mirroring</title>
+    <title>Pro Responsive Builder - Fixed Importer</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -24,20 +24,21 @@
         }
 
         #canvas {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
             min-height: 100%;
             position: relative;
+            background-color: white;
+            background-size: cover;
+            background-position: center;
         }
 
+        /* UI Elements */
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
         #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
         .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
         .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .toggle-active { background: var(--primary) !important; color: white; }
-
+        
+        /* Builder Elements */
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         
@@ -47,6 +48,11 @@
         .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
         #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
+        
+        /* Hidden Parser Helper */
+        #import-staging { position: absolute; visibility: hidden; pointer-events: none; top: 0; left: 0; width: 100%; }
+        
+        /* Control Modals */
         #size-control, #height-control, #opacity-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
     </style>
 </head>
@@ -55,14 +61,14 @@
     <button id="copy-btn">Copy Full Website</button>
     
     <div id="viewport">
-        <div id="canvas" style="width:100%; height:1000px; background-color: white;"></div>
+        <div id="canvas" style="width:100%; height:1000px;"></div>
     </div>
+
+    <!-- This container helps us calculate layouts of imported code before turning them into objects -->
+    <div id="import-staging"></div>
 
     <button id="add-btn" class="fab">+</button>
     <button id="settings-btn" class="fab">⚙️</button>
-
-    <!-- Hidden iframe for code parsing -->
-    <iframe id="import-sandbox" style="display:none"></iframe>
 
     <div id="panel" class="popup-panel">
         <div class="item" data-type="Heading">Heading</div>
@@ -74,32 +80,17 @@
     </div>
 
     <div id="settings-panel" class="popup-panel">
-        <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
-        <div class="item" style="background:#4f46e5; color:white;" onclick="importCode()">Import Full Source</div>
+        <div class="item" onclick="toggleViewMode()" id="mode-toggle">Switch to Mobile</div>
+        <div class="item" style="background:#4f46e5; color:white;" onclick="importCode()">Import Source Code</div>
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
-        <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
     </div>
 
     <div id="size-control">
         <strong>Font Size</strong><br>
         <input type="range" id="size-slider" min="8" max="200">
         <input type="number" id="size-num"> px<br><br>
-        <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
-    </div>
-
-    <div id="opacity-control">
-        <strong>Opacity</strong><br>
-        <input type="range" id="opacity-slider" min="0" max="100" value="100">
-        <span id="opacity-val">100</span>%<br><br>
-        <button onclick="document.getElementById('opacity-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
-    </div>
-
-    <div id="height-control">
-        <strong>Page Height</strong><br>
-        <input type="range" id="height-slider" min="500" max="8000" value="1000">
-        <input type="number" id="height-num" value="1000"> px<br><br>
-        <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">Done</button>
+        <button onclick="document.getElementById('size-control').style.display='none'">Done</button>
     </div>
 
     <input type="color" id="colorPicker" style="display:none">
@@ -108,9 +99,7 @@
     <script>
     const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
-    const modeToggle = document.getElementById('mode-toggle');
-    const heightSlider = document.getElementById('height-slider');
-    const heightNum = document.getElementById('height-num');
+    const staging = document.getElementById('import-staging');
     
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
@@ -125,12 +114,6 @@
     document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
     document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
 
-    heightSlider.oninput = heightNum.oninput = (e) => {
-        const val = e.target.value;
-        heightSlider.value = heightNum.value = val;
-        canvas.style.height = val + 'px';
-    };
-
     function saveCurrentState(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
         const state = {
@@ -143,69 +126,57 @@
     }
 
     function importCode() {
-        const source = prompt("Paste your full website code (HTML/CSS):");
+        const source = prompt("Paste HTML/CSS code here:");
         if (!source) return;
 
         if (confirm("Clear current canvas?")) canvas.innerHTML = "";
 
-        const sandbox = document.getElementById('import-sandbox');
-        const doc = sandbox.contentDocument || sandbox.contentWindow.document;
-        doc.open();
-        doc.write(source);
-        doc.close();
-
-        // Wait for styles to settle
-        setTimeout(() => {
-            const body = doc.body;
+        // Stage the code to measure it
+        staging.innerHTML = source;
+        
+        // Find the main container or body from the source
+        const allElements = staging.querySelectorAll('*');
+        
+        allElements.forEach((el) => {
+            if (['SCRIPT', 'STYLE', 'META', 'HEAD', 'HTML'].includes(el.tagName)) return;
             
-            // Set canvas background if body has styles
-            const bodyStyle = sandbox.contentWindow.getComputedStyle(body);
-            canvas.style.backgroundColor = bodyStyle.backgroundColor;
-            if (bodyStyle.backgroundImage !== 'none') canvas.style.backgroundImage = bodyStyle.backgroundImage;
+            // Only capture elements that actually take up space
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 5 || rect.height < 5) return;
 
-            const elements = body.querySelectorAll('*');
-            elements.forEach((el) => {
-                if (['SCRIPT', 'STYLE', 'BR'].includes(el.tagName)) return;
-                
-                // Only process visible elements with dimensions
-                const rect = el.getBoundingClientRect();
-                if (rect.width < 1 && rect.height < 1) return;
+            let type = "Box";
+            if (el.tagName.startsWith('H')) type = "Heading";
+            else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
+            else if (el.tagName === 'BUTTON' || el.tagName === 'A') type = "Button";
+            else if (el.tagName === 'IMG') type = "Image";
+            else if (el.tagName === 'TEXTAREA') type = "Textarea";
 
-                let type = "Box";
-                if (el.tagName.startsWith('H')) type = "Heading";
-                else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
-                else if (el.tagName === 'BUTTON') type = "Button";
-                else if (el.tagName === 'IMG') type = "Image";
-                else if (el.tagName === 'TEXTAREA') type = "Textarea";
+            const newNode = createNode(type, rect.left, rect.top + viewport.scrollTop);
+            newNode.style.width = rect.width + 'px';
+            newNode.style.height = rect.height + 'px';
 
-                const newNode = createNode(type, rect.left, rect.top + doc.defaultView.scrollY);
-                newNode.style.width = rect.width + 'px';
-                newNode.style.height = rect.height + 'px';
+            const inner = newNode.querySelector('h2, p, button, img, div, textarea');
+            const style = window.getComputedStyle(el);
 
-                const inner = newNode.querySelector('h2, p, button, img, div, textarea');
-                const style = doc.defaultView.getComputedStyle(el);
+            // Import Content and Styles
+            if (type === "Image") inner.src = el.src;
+            else if (['Heading', 'Paragraph', 'Button'].includes(type)) {
+                inner.innerText = el.innerText || "Text";
+            }
 
-                // Transfer Content
-                if (type === "Image") inner.src = el.src;
-                else if (type === "Button" || type === "Heading" || type === "Paragraph") {
-                    inner.innerText = el.innerText;
-                } else if (type === "Box") {
-                    inner.style.border = style.border;
-                }
+            inner.style.backgroundColor = style.backgroundColor;
+            inner.style.color = style.color;
+            inner.style.fontSize = style.fontSize;
+            inner.style.borderRadius = style.borderRadius;
+            inner.style.backgroundImage = style.backgroundImage;
+            inner.style.backgroundSize = style.backgroundSize;
+            inner.style.border = style.border;
 
-                // Transfer Visuals
-                inner.style.backgroundColor = style.backgroundColor;
-                inner.style.color = style.color;
-                inner.style.fontSize = style.fontSize;
-                inner.style.borderRadius = style.borderRadius;
-                inner.style.backgroundImage = style.backgroundImage;
-                inner.style.backgroundSize = style.backgroundSize;
+            saveCurrentState(newNode);
+        });
 
-                saveCurrentState(newNode);
-            });
-            
-            toggleP('settings-panel');
-        }, 100);
+        staging.innerHTML = ""; // Clean up
+        toggleP('settings-panel');
     }
 
     function createNode(type, x, y) {
@@ -252,7 +223,7 @@
         });
         el.onclick = (e) => {
             e.stopPropagation();
-            let clicks = parseInt(el.dataset.clicks || 0) + 1;
+            let clicks = (parseInt(el.dataset.clicks) || 0) + 1;
             el.dataset.clicks = clicks;
             if (clicks === 2) edit(el);
             setTimeout(() => el.dataset.clicks = 0, 500);
@@ -274,7 +245,7 @@
 
     function edit(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const act = prompt("1: Content | 2: Size | 3: Color");
+        const act = prompt("1: Content | 2: Size | 3: Color | 4: Delete");
         if (act === '1') {
             if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src);
             else inner.innerText = prompt("Text:", inner.innerText);
@@ -283,6 +254,8 @@
         } else if (act === '3') {
             const cp = document.getElementById('colorPicker'); cp.click();
             cp.oninput = () => { inner.style.backgroundColor = cp.value; saveCurrentState(el); };
+        } else if (act === '4') {
+            el.remove();
         }
         saveCurrentState(el);
     }
@@ -292,7 +265,7 @@
 
     document.getElementById('copy-btn').onclick = () => {
         const html = canvas.innerHTML;
-        navigator.clipboard.writeText(html).then(() => alert("Code Copied!"));
+        navigator.clipboard.writeText(html).then(() => alert("Exported to clipboard!"));
     };
     </script> 
 </body>
