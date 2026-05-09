@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Hard Persistence</title>
+    <title>Pro Responsive Builder - Fixed Importer & Persistence</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -31,12 +31,14 @@
             background-position: center;
         }
 
+        /* UI Elements */
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
         #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
         .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
         .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
         
+        /* Builder Elements */
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         
@@ -95,10 +97,12 @@
     <script>
     const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
+    const staging = document.getElementById('import-staging');
     
     let currentMode = localStorage.getItem('builder_mode') || 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
+    // --- Persistence ---
     function saveToLocalStorage() {
         const data = {
             canvasHTML: canvas.innerHTML,
@@ -106,11 +110,11 @@
             canvasImg: canvas.style.backgroundImage,
             mode: currentMode
         };
-        localStorage.setItem('saved_website_data_v2', JSON.stringify(data));
+        localStorage.setItem('saved_website_data_v3', JSON.stringify(data));
     }
 
     function loadFromLocalStorage() {
-        const saved = localStorage.getItem('saved_website_data_v2');
+        const saved = localStorage.getItem('saved_website_data_v3');
         if (saved) {
             const data = JSON.parse(saved);
             canvas.innerHTML = data.canvasHTML;
@@ -123,46 +127,60 @@
                 document.getElementById('mode-toggle').innerText = "Switch to Desktop";
             }
 
-            const elements = canvas.querySelectorAll('.dropped-element');
-            elements.forEach(el => setupEl(el));
+            canvas.querySelectorAll('.dropped-element').forEach(el => setupEl(el));
         }
     }
 
     window.onload = loadFromLocalStorage;
 
-    function toggleViewMode() {
-        saveToLocalStorage(); // Save before switching
-        const btn = document.getElementById('mode-toggle');
-        if (currentMode === 'desktop') {
-            viewport.classList.add('mobile');
-            currentMode = 'mobile';
-            btn.innerText = "Switch to Desktop";
-        } else {
-            viewport.classList.remove('mobile');
-            currentMode = 'desktop';
-            btn.innerText = "Switch to Mobile";
-        }
-        localStorage.setItem('builder_mode', currentMode);
-        saveToLocalStorage(); // Save after switching
+    // --- Import System ---
+    function importCode() {
+        const source = prompt("Paste HTML/CSS code here:");
+        if (!source) return;
+
+        if (confirm("Clear current canvas?")) canvas.innerHTML = "";
+
+        staging.innerHTML = source;
+        const allElements = staging.querySelectorAll('*');
+        
+        allElements.forEach((el) => {
+            if (['SCRIPT', 'STYLE', 'META', 'HEAD', 'HTML', 'BODY'].includes(el.tagName)) return;
+            
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 2 || rect.height < 2) return;
+
+            let type = "Box";
+            if (el.tagName.startsWith('H')) type = "Heading";
+            else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
+            else if (el.tagName === 'BUTTON' || el.tagName === 'A') type = "Button";
+            else if (el.tagName === 'IMG') type = "Image";
+            else if (el.tagName === 'TEXTAREA') type = "Textarea";
+
+            const newNode = createNode(type, rect.left, rect.top + viewport.scrollTop);
+            newNode.style.width = rect.width + 'px';
+            newNode.style.height = rect.height + 'px';
+
+            const inner = newNode.querySelector('h2, p, button, img, div, textarea');
+            const style = window.getComputedStyle(el);
+
+            if (type === "Image") inner.src = el.src;
+            else if (['Heading', 'Paragraph', 'Button'].includes(type)) {
+                inner.innerText = el.innerText || "Text";
+            }
+
+            inner.style.backgroundColor = style.backgroundColor;
+            inner.style.color = style.color;
+            inner.style.fontSize = style.fontSize;
+            inner.style.borderRadius = style.borderRadius;
+            inner.style.border = style.border;
+        });
+
+        staging.innerHTML = ""; 
+        toggleP('settings-panel');
+        saveToLocalStorage(); // Lock it into storage
     }
 
-    function toggleP(id) {
-        const p = document.getElementById(id);
-        const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-        if (!isVisible) p.style.display = 'flex';
-    }
-
-    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
-    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
-
-    document.querySelectorAll('#panel .item').forEach(item => {
-        item.onclick = () => {
-            createNode(item.dataset.type, 50, 50);
-            toggleP('panel');
-        };
-    });
-
+    // --- Node Logic ---
     function createNode(type, x, y) {
         const el = document.createElement('div');
         el.className = 'dropped-element';
@@ -190,7 +208,7 @@
         el.onmousedown = el.ontouchstart = (e) => {
             if (e.target.classList.contains('resizer')) return;
             activeEl = el; isMoving = true;
-            document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+            canvas.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
             el.classList.add('selected');
             const t = e.touches ? e.touches[0] : e;
             startX = t.clientX - el.offsetLeft; 
@@ -215,6 +233,7 @@
         };
     }
 
+    // --- Event Handlers ---
     window.onmousemove = window.ontouchmove = (e) => {
         if (!activeEl) return;
         const t = e.touches ? e.touches[0] : e;
@@ -232,6 +251,38 @@
     
     window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
 
+    function toggleViewMode() {
+        const btn = document.getElementById('mode-toggle');
+        if (currentMode === 'desktop') {
+            viewport.classList.add('mobile');
+            currentMode = 'mobile';
+            btn.innerText = "Switch to Desktop";
+        } else {
+            viewport.classList.remove('mobile');
+            currentMode = 'desktop';
+            btn.innerText = "Switch to Mobile";
+        }
+        localStorage.setItem('builder_mode', currentMode);
+        saveToLocalStorage();
+    }
+
+    function toggleP(id) {
+        const p = document.getElementById(id);
+        const isVisible = p.style.display === 'flex';
+        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
+        if (!isVisible) p.style.display = 'flex';
+    }
+
+    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
+    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
+
+    document.querySelectorAll('#panel .item').forEach(item => {
+        item.onclick = () => {
+            createNode(item.dataset.type, 50, 50);
+            toggleP('panel');
+        };
+    });
+
     function edit(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
         const act = prompt("1: Content | 2: Size | 3: Color | 4: Delete");
@@ -240,6 +291,8 @@
             else inner.innerText = prompt("Text:", inner.innerText);
         } else if (act === '2') {
             document.getElementById('size-control').style.display = 'block';
+            document.getElementById('size-slider').value = parseInt(inner.style.fontSize) || 16;
+            document.getElementById('size-num').value = parseInt(inner.style.fontSize) || 16;
         } else if (act === '3') {
             const cp = document.getElementById('colorPicker'); cp.click();
             cp.oninput = () => { inner.style.backgroundColor = cp.value; saveToLocalStorage(); };
@@ -253,6 +306,8 @@
         if (!activeEl) return;
         const inner = activeEl.querySelector('h2, p, button, img, div, textarea');
         inner.style.fontSize = val + 'px';
+        document.getElementById('size-slider').value = val;
+        document.getElementById('size-num').value = val;
         saveToLocalStorage();
     }
 
@@ -268,9 +323,9 @@
     }
 
     document.getElementById('clear-btn').onclick = () => {
-        if(confirm("Delete everything?")) {
+        if(confirm("Wipe everything?")) {
             canvas.innerHTML = "";
-            localStorage.removeItem('saved_website_data_v2');
+            localStorage.removeItem('saved_website_data_v3');
             location.reload();
         }
     };
@@ -278,7 +333,12 @@
     document.getElementById('copy-btn').onclick = () => {
         saveToLocalStorage();
         const html = canvas.innerHTML;
-        navigator.clipboard.writeText(html).then(() => alert("Exported!"));
+        navigator.clipboard.writeText(html).then(() => alert("Saved and copied!"));
+    };
+
+    canvas.onclick = () => {
+        canvas.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+        activeEl = null;
     };
     </script> 
 </body>
