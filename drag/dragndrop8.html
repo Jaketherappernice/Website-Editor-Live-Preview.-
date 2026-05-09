@@ -32,13 +32,17 @@
         .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
         #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
-        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 250px; max-height: 400px; overflow-y: auto; }
+        
+        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; max-height: 400px; overflow-y: auto; }
         .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .toggle-active { background: var(--primary) !important; color: white; }
 
-        .project-entry { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
-        .project-name { cursor: pointer; flex-grow: 1; font-size: 14px; }
-        .del-proj { color: var(--danger); font-weight: bold; padding: 5px; cursor: pointer; margin-left: 10px; }
+        .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .save-entry span { font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; }
+        .btn-group { display: flex; gap: 5px; }
+        .small-btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; color: white; }
+        .load-btn { background: var(--secondary); }
+        .del-btn { background: var(--danger); }
 
         .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
@@ -87,18 +91,15 @@
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
         <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
         <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
-        <div class="item" style="background:var(--primary); color:white;" onclick="toggleP('storage-panel')">Save and Load</div>
+        <hr style="width:100%; border:0; border-top:1px solid #eee; margin: 10px 0;">
+        <div class="item" style="background:#4f46e5; color:white;" onclick="saveProject()">Save Current Work</div>
+        <div class="item" onclick="toggleP('save-manager-panel'); renderSaveList();">Manage Saves</div>
     </div>
 
-    <div id="storage-panel" class="popup-panel">
-        <h3 style="margin-top:0">Manage Projects</h3>
-        <input type="text" id="project-name-input" placeholder="Project Name" style="width:90%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
-        <div class="item" style="background:var(--secondary); color:white;" onclick="saveCurrentProject()">Save Project</div>
-        <hr style="width:100%; margin:10px 0;">
-        <div id="project-list-container">
-            <!-- Project list will appear here -->
-        </div>
-        <div class="item" style="margin-top:10px;" onclick="toggleP('storage-panel')">Close</div>
+    <div id="save-manager-panel" class="popup-panel">
+        <strong style="display:block; margin-bottom:10px; text-align:center;">Saved Projects</strong>
+        <div id="save-list-container"></div>
+        <button onclick="toggleP('save-manager-panel')" style="margin-top:10px; width:100%; padding:8px; border-radius:6px; border:none; background:#eee;">Close</button>
     </div>
 
     <div id="size-control">
@@ -138,9 +139,10 @@
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
+        document.querySelectorAll('.popup-panel').forEach(panel => {
+            if(panel.id !== id) panel.style.display = 'none';
+        });
         p.style.display = isVisible ? 'none' : 'flex';
-        if (id === 'storage-panel' && !isVisible) renderProjectList();
     }
 
     document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
@@ -191,16 +193,25 @@
         };
     });
 
-    function createNode(type, x, y) {
+    function createNode(type, x, y, savedHTML = null, savedData = null) {
         const el = document.createElement('div');
         el.className = 'dropped-element';
         el.dataset.type = type;
         el.style.left = x + 'px'; el.style.top = y + 'px';
         
-        if (type === 'Box' || type === 'Image' || type === 'Textarea') {
-            el.style.width = "200px"; el.style.height = "150px";
+        if (savedData) {
+            el.dataset.desktop = savedData.desktop;
+            el.dataset.mobile = savedData.mobile;
+            el.dataset.link = savedData.link || "";
+            const d = JSON.parse(savedData.desktop);
+            el.style.width = d.w; el.style.height = d.h;
+            el.style.opacity = d.op;
         } else {
-            el.style.width = "180px"; el.style.height = "50px";
+            if (type === 'Box' || type === 'Image' || type === 'Textarea') {
+                el.style.width = "200px"; el.style.height = "150px";
+            } else {
+                el.style.width = "180px"; el.style.height = "50px";
+            }
         }
 
         const html = {
@@ -212,9 +223,9 @@
             'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
         };
 
-        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
+        el.innerHTML = (savedHTML || html[type]) + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
         canvas.appendChild(el);
-        saveCurrentState(el);
+        if(!savedData) saveCurrentState(el);
         setupEl(el);
     }
 
@@ -348,101 +359,92 @@
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    // STORAGE LOGIC
-    function saveCurrentProject() {
-        const name = document.getElementById('project-name-input').value.trim();
-        if (!name) return alert("Please enter a project name.");
+    // --- SAVE / LOAD SYSTEM ---
+    function saveProject() {
+        const name = prompt("Enter a name for this project:");
+        if (!name) return;
         
-        document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
-        
-        const projectData = {
-            canvasStyles: {
-                height: canvas.style.height,
-                backgroundColor: canvas.style.backgroundColor,
-                backgroundImage: canvas.style.backgroundImage
-            },
-            elements: []
-        };
-
+        const elements = [];
         document.querySelectorAll('.dropped-element').forEach(el => {
-            projectData.elements.push({
+            const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
+            elements.push({
                 type: el.dataset.type,
-                desktop: el.dataset.desktop,
-                mobile: el.dataset.mobile,
-                link: el.dataset.link || "",
-                html: el.innerHTML
+                html: inner.outerHTML,
+                data: {
+                    desktop: el.dataset.desktop,
+                    mobile: el.dataset.mobile,
+                    link: el.dataset.link || ""
+                },
+                x: parseInt(el.style.left),
+                y: parseInt(el.style.top)
             });
         });
 
-        localStorage.setItem('builder_proj_' + name, JSON.stringify(projectData));
-        document.getElementById('project-name-input').value = "";
-        renderProjectList();
+        const project = {
+            name: name,
+            canvasBg: canvas.style.backgroundColor,
+            canvasImg: canvas.style.backgroundImage,
+            canvasHeight: canvas.style.height,
+            elements: elements
+        };
+
+        let saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
+        saves.push(project);
+        localStorage.setItem('web_builder_saves', JSON.stringify(saves));
         alert("Project Saved!");
     }
 
-    function renderProjectList() {
-        const container = document.getElementById('project-list-container');
+    function renderSaveList() {
+        const container = document.getElementById('save-list-container');
         container.innerHTML = "";
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('builder_proj_'));
+        const saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
         
-        if (keys.length === 0) {
-            container.innerHTML = "<p style='font-size:12px; color:#666;'>No saved projects.</p>";
+        if (saves.length === 0) {
+            container.innerHTML = "<p style='text-align:center; font-size:12px; color:#666;'>No saves found.</p>";
             return;
         }
 
-        keys.forEach(key => {
-            const name = key.replace('builder_proj_', '');
+        saves.forEach((proj, index) => {
             const div = document.createElement('div');
-            div.className = 'project-entry';
+            div.className = 'save-entry';
             div.innerHTML = `
-                <span class="project-name" onclick="loadProject('${name}')">${name}</span>
-                <span class="del-proj" onclick="deleteProject('${name}')">Delete</span>
+                <span>${proj.name}</span>
+                <div class="btn-group">
+                    <button class="small-btn load-btn" onclick="loadProject(${index})">Load</button>
+                    <button class="small-btn del-btn" onclick="deleteProject(${index})">Del</button>
+                </div>
             `;
             container.appendChild(div);
         });
     }
 
-    function loadProject(name) {
-        if (!confirm(`Load project "${name}"? Unsaved changes will be lost.`)) return;
-        const data = JSON.parse(localStorage.getItem('builder_proj_' + name));
-        
-        // Restore Canvas
+    function loadProject(index) {
+        if (!confirm("Load this project? Current work will be lost.")) return;
+        const saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
+        const proj = saves[index];
+
         canvas.innerHTML = "";
-        canvas.style.height = data.canvasStyles.height || "1000px";
-        canvas.style.backgroundColor = data.canvasStyles.backgroundColor || "white";
-        canvas.style.backgroundImage = data.canvasStyles.backgroundImage || "none";
-        heightSlider.value = heightNum.value = parseInt(canvas.style.height);
+        canvas.style.backgroundColor = proj.canvasBg;
+        canvas.style.backgroundImage = proj.canvasImg;
+        canvas.style.height = proj.canvasHeight;
+        heightSlider.value = heightNum.value = parseInt(proj.canvasHeight);
 
-        // Restore Elements
-        data.elements.forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'dropped-element';
-            el.dataset.type = item.type;
-            el.dataset.desktop = item.desktop;
-            el.dataset.mobile = item.mobile;
-            if (item.link) el.dataset.link = item.link;
-            el.innerHTML = item.html;
-            
-            // Set initial position based on current mode
-            const state = JSON.parse(el.dataset[currentMode] || '{}');
-            el.style.width = state.w; el.style.height = state.h;
-            el.style.left = state.l; el.style.top = state.t;
-            el.style.opacity = state.op || 1;
-
-            canvas.appendChild(el);
-            setupEl(el);
+        proj.elements.forEach(e => {
+            createNode(e.type, e.x, e.y, e.html, e.data);
         });
 
-        toggleP('storage-panel');
+        toggleP('save-manager-panel');
     }
 
-    function deleteProject(name) {
-        if (confirm(`Delete project "${name}" forever?`)) {
-            localStorage.removeItem('builder_proj_' + name);
-            renderProjectList();
-        }
+    function deleteProject(index) {
+        if (!confirm("Delete this save?")) return;
+        let saves = JSON.parse(localStorage.getItem('web_builder_saves') || '[]');
+        saves.splice(index, 1);
+        localStorage.setItem('web_builder_saves', JSON.stringify(saves));
+        renderSaveList();
     }
 
+    // --- EXPORT SYSTEM ---
     document.getElementById('copy-btn').onclick = () => {
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
         
@@ -517,7 +519,7 @@
 <body><div id="site-canvas">${elementsHTML}</div></body>
 </html>`;
         
-        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied!"));
+        navigator.clipboard.writeText(finalHTML).then(() => alert("Website Copied! Layout Fixed for Desktop."));
     };
     </script> 
 </body>
