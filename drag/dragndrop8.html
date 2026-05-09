@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Fixed Importer</title>
+    <title>Pro Responsive Builder - Persistent Edition</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -48,23 +48,24 @@
         .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
         #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
+        #clear-btn { position: fixed; top: 15px; right: 180px; padding: 12px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
         
         /* Hidden Parser Helper */
         #import-staging { position: absolute; visibility: hidden; pointer-events: none; top: 0; left: 0; width: 100%; }
         
         /* Control Modals */
-        #size-control, #height-control, #opacity-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
+        #size-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
     </style>
 </head>
 <body>
 
+    <button id="clear-btn">Reset Canvas</button>
     <button id="copy-btn">Copy Full Website</button>
     
     <div id="viewport">
         <div id="canvas" style="width:100%; height:1000px;"></div>
     </div>
 
-    <!-- This container helps us calculate layouts of imported code before turning them into objects -->
     <div id="import-staging"></div>
 
     <button id="add-btn" class="fab">+</button>
@@ -88,8 +89,8 @@
 
     <div id="size-control">
         <strong>Font Size</strong><br>
-        <input type="range" id="size-slider" min="8" max="200">
-        <input type="number" id="size-num"> px<br><br>
+        <input type="range" id="size-slider" min="8" max="200" oninput="updateFontSize(this.value)">
+        <input type="number" id="size-num" oninput="updateFontSize(this.value)"> px<br><br>
         <button onclick="document.getElementById('size-control').style.display='none'">Done</button>
     </div>
 
@@ -104,6 +105,33 @@
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
+    // --- Persistence Logic ---
+    function saveToLocalStorage() {
+        const data = {
+            canvasHTML: canvas.innerHTML,
+            canvasBG: canvas.style.backgroundColor,
+            canvasImg: canvas.style.backgroundImage
+        };
+        localStorage.setItem('saved_website_data', JSON.stringify(data));
+    }
+
+    function loadFromLocalStorage() {
+        const saved = localStorage.getItem('saved_website_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            canvas.innerHTML = data.canvasHTML;
+            canvas.style.backgroundColor = data.canvasBG;
+            canvas.style.backgroundImage = data.canvasImg;
+            
+            // Re-attach event listeners to all loaded elements
+            const elements = canvas.querySelectorAll('.dropped-element');
+            elements.forEach(el => setupEl(el));
+        }
+    }
+
+    // --- Core Functions ---
+    window.onload = loadFromLocalStorage;
+
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
@@ -111,79 +139,35 @@
         if (!isVisible) p.style.display = 'flex';
     }
 
+    function toggleViewMode() {
+        const btn = document.getElementById('mode-toggle');
+        if (currentMode === 'desktop') {
+            viewport.classList.add('mobile');
+            currentMode = 'mobile';
+            btn.innerText = "Switch to Desktop";
+        } else {
+            viewport.classList.remove('mobile');
+            currentMode = 'desktop';
+            btn.innerText = "Switch to Mobile";
+        }
+    }
+
     document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
     document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
 
-    function saveCurrentState(el) {
-        const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const state = {
-            w: el.style.width, h: el.style.height,
-            l: el.style.left, t: el.style.top,
-            fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
-            op: el.style.opacity || "1"
+    document.querySelectorAll('#panel .item').forEach(item => {
+        item.onclick = () => {
+            createNode(item.dataset.type, 50, 50);
+            toggleP('panel');
         };
-        el.dataset[currentMode] = JSON.stringify(state);
-    }
-
-    function importCode() {
-        const source = prompt("Paste HTML/CSS code here:");
-        if (!source) return;
-
-        if (confirm("Clear current canvas?")) canvas.innerHTML = "";
-
-        // Stage the code to measure it
-        staging.innerHTML = source;
-        
-        // Find the main container or body from the source
-        const allElements = staging.querySelectorAll('*');
-        
-        allElements.forEach((el) => {
-            if (['SCRIPT', 'STYLE', 'META', 'HEAD', 'HTML'].includes(el.tagName)) return;
-            
-            // Only capture elements that actually take up space
-            const rect = el.getBoundingClientRect();
-            if (rect.width < 5 || rect.height < 5) return;
-
-            let type = "Box";
-            if (el.tagName.startsWith('H')) type = "Heading";
-            else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
-            else if (el.tagName === 'BUTTON' || el.tagName === 'A') type = "Button";
-            else if (el.tagName === 'IMG') type = "Image";
-            else if (el.tagName === 'TEXTAREA') type = "Textarea";
-
-            const newNode = createNode(type, rect.left, rect.top + viewport.scrollTop);
-            newNode.style.width = rect.width + 'px';
-            newNode.style.height = rect.height + 'px';
-
-            const inner = newNode.querySelector('h2, p, button, img, div, textarea');
-            const style = window.getComputedStyle(el);
-
-            // Import Content and Styles
-            if (type === "Image") inner.src = el.src;
-            else if (['Heading', 'Paragraph', 'Button'].includes(type)) {
-                inner.innerText = el.innerText || "Text";
-            }
-
-            inner.style.backgroundColor = style.backgroundColor;
-            inner.style.color = style.color;
-            inner.style.fontSize = style.fontSize;
-            inner.style.borderRadius = style.borderRadius;
-            inner.style.backgroundImage = style.backgroundImage;
-            inner.style.backgroundSize = style.backgroundSize;
-            inner.style.border = style.border;
-
-            saveCurrentState(newNode);
-        });
-
-        staging.innerHTML = ""; // Clean up
-        toggleP('settings-panel');
-    }
+    });
 
     function createNode(type, x, y) {
         const el = document.createElement('div');
         el.className = 'dropped-element';
         el.dataset.type = type;
         el.style.left = x + 'px'; el.style.top = y + 'px';
+        el.style.width = '150px'; el.style.height = '100px';
         
         const html = {
             'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
@@ -197,7 +181,7 @@
         el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
         canvas.appendChild(el);
         setupEl(el);
-        saveCurrentState(el);
+        saveToLocalStorage();
         return el;
     }
 
@@ -233,14 +217,18 @@
     window.onmousemove = window.ontouchmove = (e) => {
         if (!activeEl) return;
         const t = e.touches ? e.touches[0] : e;
-        if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
+        if (isMoving) { 
+            activeEl.style.left = (t.clientX - startX) + 'px'; 
+            activeEl.style.top = (t.clientY - startY) + 'px'; 
+        }
         if (currentResizer) {
             const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
             if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
             if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
         }
-        if (isMoving || currentResizer) saveCurrentState(activeEl);
+        if (isMoving || currentResizer) saveToLocalStorage();
     };
+    
     window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
 
     function edit(el) {
@@ -251,21 +239,54 @@
             else inner.innerText = prompt("Text:", inner.innerText);
         } else if (act === '2') {
             document.getElementById('size-control').style.display = 'block';
+            document.getElementById('size-slider').value = parseInt(inner.style.fontSize) || 16;
+            document.getElementById('size-num').value = parseInt(inner.style.fontSize) || 16;
         } else if (act === '3') {
             const cp = document.getElementById('colorPicker'); cp.click();
-            cp.oninput = () => { inner.style.backgroundColor = cp.value; saveCurrentState(el); };
+            cp.oninput = () => { inner.style.backgroundColor = cp.value; saveToLocalStorage(); };
         } else if (act === '4') {
             el.remove();
         }
-        saveCurrentState(el);
+        saveToLocalStorage();
     }
 
-    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
-    function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
+    function updateFontSize(val) {
+        if (!activeEl) return;
+        const inner = activeEl.querySelector('h2, p, button, img, div, textarea');
+        inner.style.fontSize = val + 'px';
+        document.getElementById('size-slider').value = val;
+        document.getElementById('size-num').value = val;
+        saveToLocalStorage();
+    }
+
+    function triggerCanvasColor() { 
+        const cp = document.getElementById('canvasColorPicker'); 
+        cp.click(); 
+        cp.oninput = () => { canvas.style.backgroundColor = cp.value; saveToLocalStorage(); }; 
+    }
+    
+    function triggerCanvasImage() { 
+        const u = prompt("URL:"); 
+        if(u) { canvas.style.backgroundImage = `url('${u}')`; saveToLocalStorage(); }
+    }
+
+    document.getElementById('clear-btn').onclick = () => {
+        if(confirm("Delete everything and reset?")) {
+            canvas.innerHTML = "";
+            localStorage.removeItem('saved_website_data');
+            location.reload();
+        }
+    };
 
     document.getElementById('copy-btn').onclick = () => {
         const html = canvas.innerHTML;
         navigator.clipboard.writeText(html).then(() => alert("Exported to clipboard!"));
+    };
+
+    // Prevent losing focus on canvas click
+    canvas.onclick = () => {
+        document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
+        activeEl = null;
     };
     </script> 
 </body>
