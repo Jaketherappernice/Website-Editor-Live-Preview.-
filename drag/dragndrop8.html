@@ -2,57 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Fixed viewport to prevent accidental zooming/mobile forcing -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Builder - Desktop Fixed</title>
+    <title>Apollo Builder - Stable Desktop Version</title>
     <style>
-        :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
+        :root { --neon-orange: #ff6600; --dark-bg: #1a1a1a; --grid-color: #333; }
         
-        /* Reset and Base Styles */
+        /* Forces Desktop Layout */
         body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            overflow: hidden; background: #f3f4f6; 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            background: var(--dark-bg); color: white; font-family: sans-serif;
+            overflow: hidden; 
         }
 
-        /* The Main Container - Now defaults to Desktop */
+        /* The Main Builder Canvas */
         #viewport { 
-            width: 100%; height: 100vh; 
-            margin: 0; background: white; 
-            position: relative; overflow-y: auto; overflow-x: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-            background-size: 25px 25px;
+            width: 100%; height: 100%; 
+            overflow-y: auto; overflow-x: auto;
+            background-color: #0f0f0f;
+            background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), 
+                              linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+            position: relative;
         }
 
-        /* Mobile Preview Mode - Only triggers when class is added */
-        #viewport.mobile-preview { 
-            width: 375px; height: 667px; 
-            margin: 40px auto; 
-            border: 16px solid #1f2937; border-radius: 36px; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        #canvas { 
+            min-height: 2000px; /* Long page support */
+            width: 100%; 
+            position: relative; 
         }
 
-        #canvas { min-height: 100%; position: relative; width: 100%; }
+        /* Draggable Components */
+        .dropped-element { 
+            position: absolute; 
+            min-width: 50px; min-height: 20px;
+            cursor: move; 
+            transition: outline 0.1s;
+        }
+        .dropped-element:hover { outline: 1px dashed var(--neon-orange); }
+        .selected { outline: 2px solid var(--neon-orange) !important; z-index: 1000; }
 
-        /* Draggable Elements */
-        .dropped-element { position: absolute; cursor: move; display: flex; align-items: center; justify-content: center; }
-        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; pointer-events: none; }
-        .selected { outline: 2px solid var(--primary); z-index: 100; }
+        /* UI Overlay */
+        .ui-layer { position: fixed; z-index: 9999; pointer-events: none; width: 100%; height: 100%; top: 0; left: 0; }
+        .ui-layer * { pointer-events: auto; }
 
-        /* UI Controls */
-        .fab { position: fixed; width: 56px; height: 56px; border-radius: 50%; color: white; border: none; font-size: 20px; z-index: 1001; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
-        #toggle-view { bottom: 20px; left: 90px; background: #374151; }
+        .fab { 
+            position: absolute; width: 60px; height: 60px; border-radius: 50%; 
+            background: var(--neon-orange); color: white; border: none; 
+            font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        #add-btn { bottom: 30px; left: 30px; }
         
-        .popup-panel { position: fixed; bottom: 85px; left: 20px; background: white; border-radius: 8px; padding: 10px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 200px; }
-        .item { padding: 10px; margin: 2px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 14px; text-align: center; }
-        .item:hover { background: #eff6ff; }
+        .menu-panel { 
+            position: absolute; bottom: 100px; left: 30px; 
+            background: #222; border: 1px solid var(--neon-orange);
+            border-radius: 8px; padding: 10px; display: none; flex-direction: column; 
+            width: 200px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .btn-item { 
+            padding: 12px; margin: 5px 0; background: #333; color: white; 
+            border: none; border-radius: 4px; text-align: left; cursor: pointer;
+        }
+        .btn-item:hover { background: var(--neon-orange); }
 
-        /* Resizers */
-        .resizer { width: 10px; height: 10px; background: white; border: 2px solid var(--primary); position: absolute; z-index: 110; display: none; }
+        /* Hidden Parser */
+        #import-temp { visibility: hidden; position: absolute; top: -9999px; width: 100%; }
+        
+        .resizer { 
+            width: 10px; height: 10px; background: white; 
+            position: absolute; right: -5px; bottom: -5px; 
+            cursor: se-resize; display: none; 
+        }
         .selected .resizer { display: block; }
-        .se { bottom: -5px; right: -5px; cursor: nwse-resize; }
     </style>
 </head>
 <body>
@@ -61,82 +81,123 @@
         <div id="canvas"></div>
     </div>
 
-    <button id="add-btn" class="fab" onclick="togglePanel('panel')">+</button>
-    <button id="toggle-view" class="fab" onclick="toggleMobile()">📱</button>
-
-    <div id="panel" class="popup-panel">
-        <div class="item" onclick="addObject('Heading')">Add Heading</div>
-        <div class="item" onclick="addObject('Box')">Add Container</div>
-        <div class="item" onclick="importPrompt()">Import Source</div>
+    <div class="ui-layer">
+        <button id="add-btn" class="fab" onclick="toggleMenu()">+</button>
+        
+        <div id="main-menu" class="menu-panel">
+            <button class="btn-item" onclick="createObject('Heading')">Text Heading</button>
+            <button class="btn-item" onclick="createObject('Box')">Container Box</button>
+            <button class="btn-item" onclick="importSource()">Import Site Code</button>
+            <button class="btn-item" style="color: #ff4444;" onclick="clearCanvas()">Clear All</button>
+        </div>
     </div>
 
+    <!-- Hidden div for processing imported code positions -->
+    <div id="import-temp"></div>
+
     <script>
-        const viewport = document.getElementById('viewport');
         const canvas = document.getElementById('canvas');
-        let isMobile = false;
+        const temp = document.getElementById('import-temp');
+        let selectedEl = null;
 
-        // Toggle function to switch between Desktop and Mobile manually
-        function toggleMobile() {
-            isMobile = !isMobile;
-            if (isMobile) {
-                viewport.classList.add('mobile-preview');
-                document.getElementById('toggle-view').innerText = '💻';
-            } else {
-                viewport.classList.remove('mobile-preview');
-                document.getElementById('toggle-view').innerText = '📱';
+        function toggleMenu() {
+            const m = document.getElementById('main-menu');
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function createObject(type, x = 100, y = 100, content = "") {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'dropped-element';
+            wrapper.style.left = x + 'px';
+            wrapper.style.top = y + 'px';
+
+            if (type === 'Heading') {
+                wrapper.innerHTML = `<h1 style="margin:0; color:white;">${content || "New Heading"}</h1>`;
+            } else if (type === 'Box') {
+                wrapper.innerHTML = `<div style="width:200px; height:100px; background:#444; border:1px solid #666;"></div>`;
             }
+
+            wrapper.innerHTML += `<div class="resizer"></div>`;
+            canvas.appendChild(wrapper);
+            initDrag(wrapper);
+            return wrapper;
         }
 
-        function togglePanel(id) {
-            const p = document.getElementById(id);
-            p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        function importSource() {
+            const code = prompt("Paste your HTML/CSS code here:");
+            if (!code) return;
+
+            // Load code into hidden area to measure it
+            temp.innerHTML = code;
+            
+            // Wait for browser to calculate styles
+            setTimeout(() => {
+                const elements = temp.querySelectorAll('*');
+                elements.forEach(el => {
+                    // Skip technical tags
+                    if(['SCRIPT', 'STYLE', 'META', 'TITLE'].includes(el.tagName)) return;
+
+                    const rect = el.getBoundingClientRect();
+                    if(rect.width > 2 && rect.height > 2) {
+                        const style = window.getComputedStyle(el);
+                        const imported = createObject('Heading', rect.left, rect.top + window.scrollY, el.innerText);
+                        
+                        // Mirror the styles
+                        const target = imported.querySelector('h1, div');
+                        target.style.width = rect.width + 'px';
+                        target.style.height = rect.height + 'px';
+                        target.style.backgroundColor = style.backgroundColor;
+                        target.style.color = style.color;
+                        target.style.fontSize = style.fontSize;
+                    }
+                });
+                temp.innerHTML = "";
+                toggleMenu();
+            }, 100);
         }
 
-        function addObject(type) {
-            const el = document.createElement('div');
-            el.className = 'dropped-element';
-            el.style.left = '50px';
-            el.style.top = '50px';
-            el.style.width = '200px';
-            el.style.height = '50px';
-            
-            if(type === 'Heading') el.innerHTML = `<h1 style="margin:0;">New Heading</h1>`;
-            else el.innerHTML = `<div style="background:#ddd; width:100%; height:100%;"></div>`;
-            
-            el.innerHTML += `<div class="resizer se"></div>`;
-            
-            canvas.appendChild(el);
-            makeDraggable(el);
-            togglePanel('panel');
-        }
-
-        function makeDraggable(el) {
-            let x = 0, y = 0;
+        function initDrag(el) {
             el.onmousedown = (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.dropped-element').forEach(item => item.classList.remove('selected'));
+                if (e.target.classList.contains('resizer')) return;
+                
+                if (selectedEl) selectedEl.classList.remove('selected');
+                selectedEl = el;
                 el.classList.add('selected');
-                x = e.clientX; y = e.clientY;
-                document.onmousemove = (e) => {
-                    const dx = x - e.clientX; const dy = y - e.clientY;
-                    x = e.clientX; y = e.clientY;
-                    el.style.top = (el.offsetTop - dy) + "px";
-                    el.style.left = (el.offsetLeft - dx) + "px";
+
+                let shiftX = e.clientX - el.getBoundingClientRect().left;
+                let shiftY = e.clientY - el.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    el.style.left = pageX - shiftX + 'px';
+                    el.style.top = pageY - shiftY + 'px';
+                }
+
+                function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.onmouseup = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.onmouseup = null;
                 };
-                document.onmouseup = () => { document.onmousemove = null; };
+            };
+
+            // Resizing logic
+            const resizer = el.querySelector('.resizer');
+            resizer.onmousedown = (e) => {
+                e.stopPropagation();
+                function resize(ev) {
+                    el.style.width = ev.pageX - el.getBoundingClientRect().left + 'px';
+                    el.style.height = ev.pageY - el.getBoundingClientRect().top + 'px';
+                }
+                document.addEventListener('mousemove', resize);
+                document.onmouseup = () => {
+                    document.removeEventListener('mousemove', resize);
+                    document.onmouseup = null;
+                };
             };
         }
 
-        function importPrompt() {
-            const code = prompt("Paste your HTML here:");
-            if(code) {
-                // Simple import logic for demonstration
-                const temp = document.createElement('div');
-                temp.innerHTML = code;
-                canvas.appendChild(temp);
-                togglePanel('panel');
-            }
-        }
+        function clearCanvas() { if(confirm("Delete everything?")) canvas.innerHTML = ""; }
     </script>
 </body>
 </html>
