@@ -5,24 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; height:1000px; background-color:white; background-image:none; background-size:cover; background-position:center; margin:0 auto; }
-        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; }
-        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; }
-        button { cursor: pointer; transition: transform 0.1s; }
+        #site-canvas { position:relative; width:100%; max-width:100%; height:1500px; background-color:white; background-image:url("https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.-XUfMlytJ-NLMZhIpCCo9wHaE7%3Fpid%3DApi&f=1&ipt=eb20f0e6bc9207c3b6894cc2c4a3f44d1d4f4d047bdeb856356fc501050a7b38&ipo=images"); background-size:cover; background-position:center; margin:0 auto; overflow:hidden; }
+        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing: border-box; transition: opacity 0.2s; }
+        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; box-sizing: border-box; }
+        textarea { resize: none; box-sizing: border-box; padding: 10px; }
+        button { cursor: pointer; transition: transform 0.1s; background-size: cover; background-position: center; }
         button:active { transform: scale(0.98); }
-        @media (min-width: 601px) { #el-0 { left:226.676px !important; top:207.238px !important; width:446.516px !important; height:1049.34px !important; z-index: 10; }
-#el-1 { left:246.602px !important; top:342.959px !important; width:412.394px !important; height:257.707px !important; z-index: 10; }
-#el-2 { left:314.434px !important; top:621.606px !important; width:301.055px !important; height:57.4832px !important; z-index: 10; }
-#el-2 > * { font-size:48px !important; }
+        @media (min-width: 601px) { #site-canvas { width: 100%; } #el-0 { left:9.2866%; top:59.5542px; width:91.3711%; height:261.259px; z-index:40 !important; opacity:1; }
+#el-0 > * { font-size:111px !important; }
+#el-1 { left:9.5666%; top:239.991px; width:88.0062%; height:222.776px; z-index:40 !important; opacity:1; }
+#el-1 > * { font-size:59px !important; }
+#el-2 { left:3.8260%; top:602.437px; width:53.3545%; height:171.904px; z-index:30 !important; opacity:1; }
+#el-2 > * { font-size:64px !important; }
  }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:27.3602px !important; top:244.238px !important; width:298.742px !important; height:625.179px !important; z-index: 10; }
-#el-1 { left:30.0944px !important; top:287.637px !important; width:290.265px !important; height:183.168px !important; z-index: 10; }
-#el-2 { left:34.3199px !important; top:488.45px !important; width:301.055px !important; height:57.4832px !important; z-index: 10; }
-#el-2 > * { font-size:48px !important; }
+        @media (max-width: 600px) { #site-canvas { width: 100vw; } #el-0 { left:3.7616%; top:30.1333px; width:99.8456%; height:204.776px; z-index:40 !important; opacity:1; }
+#el-0 > * { font-size:44px !important; }
+#el-1 { left:4.7301%; top:306px; width:90.8232%; height:375.619px; z-index:40 !important; opacity:1; }
+#el-1 > * { font-size:44px !important; }
+#el-2 { left:16.8864%; top:925.451px; width:72.7061%; height:210.717px; z-index:30 !important; opacity:1; }
+#el-2 > * { font-size:64px !important; }
  }
     </style>
 </head>
-<body>
-    <div id="site-canvas"><div id="el-0" class="dropped-element"><div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div></div><div id="el-1" class="dropped-element"><img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.QW8qZljenZpka8FWoUhUVQHaFj%3Fpid%3DApi&amp;f=1&amp;ipt=1f075bc1ba202e4a97c354199581973a33d81c36743d4c2744e587c80b03e518&amp;ipo=images" style="border-radius:12px;width:100%;height:100%;"></div><div id="el-2" class="dropped-element"><p style="font-size: 48px; color: rgb(0, 0, 0);">Lorem Ipsum</p></div></div>
-</body>
+<body><div id="site-canvas"><div id="el-0" class="dropped-element"><h2 style="font-size: 111px; color: rgb(0, 0, 0); background-image: url(&quot;https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.J8Ct1Py9oh-RJ7iG-S2WLAHaNL%3Fpid%3DApi&amp;f=1&amp;ipt=22b63ef528098589eb698b674a8d981d0a33907176334dffe4e7d47fddf91f85&amp;ipo=images&quot;); background-clip: text; -webkit-text-fill-color: transparent; background-size: cover; background-position: center center;">ℂ𝕠𝕝𝕠𝕣 𝕟𝕠𝕨, ℙ𝕒𝕪 𝕝𝕒𝕥𝕖𝕣</h2></div><div id="el-1" class="dropped-element"><p style="font-size: 59px; color: rgb(0, 0, 0); background-image: url(&quot;https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP._yMxangUXdZqyGq7O-cgVAHaEJ%3Fpid%3DApi&amp;f=1&amp;ipt=92d44880045746a318cbdcc566f1cee85f5831705abc569749bb753cbeb30f8c&amp;ipo=images&quot;); background-clip: text; -webkit-text-fill-color: transparent; background-size: cover; background-position: center center;">With our best service, your payment doesnt need worries. Your imagination is all we need</p></div><div id="el-2" class="dropped-element"><button style="background: url(&quot;https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse2.mm.bing.net%2Fth%2Fid%2FOIP.ABfoWemTrdwT-PqYhBSvtQHaJg%3Fr%3D0%26pid%3DApi&amp;f=1&amp;ipt=44b8c8a5b1df0849097d16eac378d4b483ea1f9e39c8ed3f08a4b075a1783d28&amp;ipo=images&quot;) 0% 0% / cover rgba(79, 70, 229, 0.9); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer; font-size: 64px;" onclick="window.location.href='https://example.com'">Visit us</button></div></div></body>
 </html>
