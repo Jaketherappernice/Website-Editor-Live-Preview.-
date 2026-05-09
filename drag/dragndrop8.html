@@ -2,271 +2,141 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Fixed Importer</title>
+    <!-- Fixed viewport to prevent accidental zooming/mobile forcing -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Builder - Desktop Fixed</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --grid: #e5e7eb; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
         
+        /* Reset and Base Styles */
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow: hidden; background: #f3f4f6; 
+        }
+
+        /* The Main Container - Now defaults to Desktop */
         #viewport { 
-            width: 100vw; height: 100vh; margin: 0 auto; background: white; position: relative; 
-            overflow-y: auto; overflow-x: hidden; transition: width 0.3s ease, height 0.3s ease;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            width: 100%; height: 100vh; 
+            margin: 0; background: white; 
+            position: relative; overflow-y: auto; overflow-x: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
             background-size: 25px 25px;
-            scroll-behavior: smooth;
-        }
-        
-        #viewport.mobile { 
-            width: 375px; height: 80vh; margin: 5vh auto; 
-            border: 12px solid #333; border-radius: 30px; 
-            position: relative;
         }
 
-        #canvas {
-            min-height: 100%;
-            position: relative;
-            background-color: white;
-            background-size: cover;
-            background-position: center;
+        /* Mobile Preview Mode - Only triggers when class is added */
+        #viewport.mobile-preview { 
+            width: 375px; height: 667px; 
+            margin: 40px auto; 
+            border: 16px solid #1f2937; border-radius: 36px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* UI Elements */
-        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #canvas { min-height: 100%; position: relative; width: 100%; }
+
+        /* Draggable Elements */
+        .dropped-element { position: absolute; cursor: move; display: flex; align-items: center; justify-content: center; }
+        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; pointer-events: none; }
+        .selected { outline: 2px solid var(--primary); z-index: 100; }
+
+        /* UI Controls */
+        .fab { position: fixed; width: 56px; height: 56px; border-radius: 50%; color: white; border: none; font-size: 20px; z-index: 1001; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
-        #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
-        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
-        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        #toggle-view { bottom: 20px; left: 90px; background: #374151; }
         
-        /* Builder Elements */
-        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
-        .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
-        
-        .selected { outline: 2px solid var(--primary); z-index: 100 !important; }
-        .resizer { width: 14px; height: 14px; background: white; border: 2px solid var(--primary); position: absolute; border-radius: 2px; display: none; z-index: 110; }
-        .selected .resizer { display: block; }
-        .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
+        .popup-panel { position: fixed; bottom: 85px; left: 20px; background: white; border-radius: 8px; padding: 10px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 200px; }
+        .item { padding: 10px; margin: 2px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 14px; text-align: center; }
+        .item:hover { background: #eff6ff; }
 
-        #copy-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 1000; cursor: pointer; }
-        
-        /* Hidden Parser Helper */
-        #import-staging { position: absolute; visibility: hidden; pointer-events: none; top: 0; left: 0; width: 100%; }
-        
-        /* Control Modals */
-        #size-control, #height-control, #opacity-control { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 250px; text-align: center; }
+        /* Resizers */
+        .resizer { width: 10px; height: 10px; background: white; border: 2px solid var(--primary); position: absolute; z-index: 110; display: none; }
+        .selected .resizer { display: block; }
+        .se { bottom: -5px; right: -5px; cursor: nwse-resize; }
     </style>
 </head>
 <body>
 
-    <button id="copy-btn">Copy Full Website</button>
-    
     <div id="viewport">
-        <div id="canvas" style="width:100%; height:1000px;"></div>
+        <div id="canvas"></div>
     </div>
 
-    <!-- This container helps us calculate layouts of imported code before turning them into objects -->
-    <div id="import-staging"></div>
-
-    <button id="add-btn" class="fab">+</button>
-    <button id="settings-btn" class="fab">⚙️</button>
+    <button id="add-btn" class="fab" onclick="togglePanel('panel')">+</button>
+    <button id="toggle-view" class="fab" onclick="toggleMobile()">📱</button>
 
     <div id="panel" class="popup-panel">
-        <div class="item" data-type="Heading">Heading</div>
-        <div class="item" data-type="Paragraph">Paragraph</div>
-        <div class="item" data-type="Button">Button</div>
-        <div class="item" data-type="Image">Image</div>
-        <div class="item" data-type="Textarea">Textarea</div>
-        <div class="item" data-type="Box">Container</div>
+        <div class="item" onclick="addObject('Heading')">Add Heading</div>
+        <div class="item" onclick="addObject('Box')">Add Container</div>
+        <div class="item" onclick="importPrompt()">Import Source</div>
     </div>
-
-    <div id="settings-panel" class="popup-panel">
-        <div class="item" onclick="toggleViewMode()" id="mode-toggle">Switch to Mobile</div>
-        <div class="item" style="background:#4f46e5; color:white;" onclick="importCode()">Import Source Code</div>
-        <div class="item" onclick="triggerCanvasColor()">BG Color</div>
-        <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
-    </div>
-
-    <div id="size-control">
-        <strong>Font Size</strong><br>
-        <input type="range" id="size-slider" min="8" max="200">
-        <input type="number" id="size-num"> px<br><br>
-        <button onclick="document.getElementById('size-control').style.display='none'">Done</button>
-    </div>
-
-    <input type="color" id="colorPicker" style="display:none">
-    <input type="color" id="canvasColorPicker" style="display:none">
 
     <script>
-    const canvas = document.getElementById('canvas');
-    const viewport = document.getElementById('viewport');
-    const staging = document.getElementById('import-staging');
-    
-    let currentMode = 'desktop'; 
-    let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
+        const viewport = document.getElementById('viewport');
+        const canvas = document.getElementById('canvas');
+        let isMobile = false;
 
-    function toggleP(id) {
-        const p = document.getElementById(id);
-        const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
-        if (!isVisible) p.style.display = 'flex';
-    }
-
-    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
-    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
-
-    function saveCurrentState(el) {
-        const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const state = {
-            w: el.style.width, h: el.style.height,
-            l: el.style.left, t: el.style.top,
-            fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
-            op: el.style.opacity || "1"
-        };
-        el.dataset[currentMode] = JSON.stringify(state);
-    }
-
-    function importCode() {
-        const source = prompt("Paste HTML/CSS code here:");
-        if (!source) return;
-
-        if (confirm("Clear current canvas?")) canvas.innerHTML = "";
-
-        // Stage the code to measure it
-        staging.innerHTML = source;
-        
-        // Find the main container or body from the source
-        const allElements = staging.querySelectorAll('*');
-        
-        allElements.forEach((el) => {
-            if (['SCRIPT', 'STYLE', 'META', 'HEAD', 'HTML'].includes(el.tagName)) return;
-            
-            // Only capture elements that actually take up space
-            const rect = el.getBoundingClientRect();
-            if (rect.width < 5 || rect.height < 5) return;
-
-            let type = "Box";
-            if (el.tagName.startsWith('H')) type = "Heading";
-            else if (el.tagName === 'P' || el.tagName === 'SPAN') type = "Paragraph";
-            else if (el.tagName === 'BUTTON' || el.tagName === 'A') type = "Button";
-            else if (el.tagName === 'IMG') type = "Image";
-            else if (el.tagName === 'TEXTAREA') type = "Textarea";
-
-            const newNode = createNode(type, rect.left, rect.top + viewport.scrollTop);
-            newNode.style.width = rect.width + 'px';
-            newNode.style.height = rect.height + 'px';
-
-            const inner = newNode.querySelector('h2, p, button, img, div, textarea');
-            const style = window.getComputedStyle(el);
-
-            // Import Content and Styles
-            if (type === "Image") inner.src = el.src;
-            else if (['Heading', 'Paragraph', 'Button'].includes(type)) {
-                inner.innerText = el.innerText || "Text";
+        // Toggle function to switch between Desktop and Mobile manually
+        function toggleMobile() {
+            isMobile = !isMobile;
+            if (isMobile) {
+                viewport.classList.add('mobile-preview');
+                document.getElementById('toggle-view').innerText = '💻';
+            } else {
+                viewport.classList.remove('mobile-preview');
+                document.getElementById('toggle-view').innerText = '📱';
             }
+        }
 
-            inner.style.backgroundColor = style.backgroundColor;
-            inner.style.color = style.color;
-            inner.style.fontSize = style.fontSize;
-            inner.style.borderRadius = style.borderRadius;
-            inner.style.backgroundImage = style.backgroundImage;
-            inner.style.backgroundSize = style.backgroundSize;
-            inner.style.border = style.border;
+        function togglePanel(id) {
+            const p = document.getElementById(id);
+            p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        }
 
-            saveCurrentState(newNode);
-        });
+        function addObject(type) {
+            const el = document.createElement('div');
+            el.className = 'dropped-element';
+            el.style.left = '50px';
+            el.style.top = '50px';
+            el.style.width = '200px';
+            el.style.height = '50px';
+            
+            if(type === 'Heading') el.innerHTML = `<h1 style="margin:0;">New Heading</h1>`;
+            else el.innerHTML = `<div style="background:#ddd; width:100%; height:100%;"></div>`;
+            
+            el.innerHTML += `<div class="resizer se"></div>`;
+            
+            canvas.appendChild(el);
+            makeDraggable(el);
+            togglePanel('panel');
+        }
 
-        staging.innerHTML = ""; // Clean up
-        toggleP('settings-panel');
-    }
-
-    function createNode(type, x, y) {
-        const el = document.createElement('div');
-        el.className = 'dropped-element';
-        el.dataset.type = type;
-        el.style.left = x + 'px'; el.style.top = y + 'px';
-        
-        const html = {
-            'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
-            'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
-            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
-            'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
-            'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
-            'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
-        };
-
-        el.innerHTML = html[type] + `<div class="resizer nw"></div><div class="resizer ne"></div><div class="resizer sw"></div><div class="resizer se"></div>`;
-        canvas.appendChild(el);
-        setupEl(el);
-        saveCurrentState(el);
-        return el;
-    }
-
-    function setupEl(el) {
-        el.onmousedown = el.ontouchstart = (e) => {
-            if (e.target.classList.contains('resizer')) return;
-            activeEl = el; isMoving = true;
-            document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
-            el.classList.add('selected');
-            const t = e.touches ? e.touches[0] : e;
-            startX = t.clientX - el.offsetLeft; 
-            startY = t.clientY - el.offsetTop;
-        };
-        el.querySelectorAll('.resizer').forEach(r => {
-            r.onmousedown = r.ontouchstart = (e) => {
-                e.preventDefault(); e.stopPropagation();
-                currentResizer = r; activeEl = el;
-                const t = e.touches ? e.touches[0] : e;
-                startX = t.clientX; startY = t.clientY;
-                startW = el.offsetWidth; startH = el.offsetHeight;
-                startL = el.offsetLeft; startT = el.offsetTop;
+        function makeDraggable(el) {
+            let x = 0, y = 0;
+            el.onmousedown = (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.dropped-element').forEach(item => item.classList.remove('selected'));
+                el.classList.add('selected');
+                x = e.clientX; y = e.clientY;
+                document.onmousemove = (e) => {
+                    const dx = x - e.clientX; const dy = y - e.clientY;
+                    x = e.clientX; y = e.clientY;
+                    el.style.top = (el.offsetTop - dy) + "px";
+                    el.style.left = (el.offsetLeft - dx) + "px";
+                };
+                document.onmouseup = () => { document.onmousemove = null; };
             };
-        });
-        el.onclick = (e) => {
-            e.stopPropagation();
-            let clicks = (parseInt(el.dataset.clicks) || 0) + 1;
-            el.dataset.clicks = clicks;
-            if (clicks === 2) edit(el);
-            setTimeout(() => el.dataset.clicks = 0, 500);
-        };
-    }
-
-    window.onmousemove = window.ontouchmove = (e) => {
-        if (!activeEl) return;
-        const t = e.touches ? e.touches[0] : e;
-        if (isMoving) { activeEl.style.left = (t.clientX - startX) + 'px'; activeEl.style.top = (t.clientY - startY) + 'px'; }
-        if (currentResizer) {
-            const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
-            if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-            if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
         }
-        if (isMoving || currentResizer) saveCurrentState(activeEl);
-    };
-    window.onmouseup = window.ontouchend = () => { isMoving = false; currentResizer = null; };
 
-    function edit(el) {
-        const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const act = prompt("1: Content | 2: Size | 3: Color | 4: Delete");
-        if (act === '1') {
-            if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src);
-            else inner.innerText = prompt("Text:", inner.innerText);
-        } else if (act === '2') {
-            document.getElementById('size-control').style.display = 'block';
-        } else if (act === '3') {
-            const cp = document.getElementById('colorPicker'); cp.click();
-            cp.oninput = () => { inner.style.backgroundColor = cp.value; saveCurrentState(el); };
-        } else if (act === '4') {
-            el.remove();
+        function importPrompt() {
+            const code = prompt("Paste your HTML here:");
+            if(code) {
+                // Simple import logic for demonstration
+                const temp = document.createElement('div');
+                temp.innerHTML = code;
+                canvas.appendChild(temp);
+                togglePanel('panel');
+            }
         }
-        saveCurrentState(el);
-    }
-
-    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
-    function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
-
-    document.getElementById('copy-btn').onclick = () => {
-        const html = canvas.innerHTML;
-        navigator.clipboard.writeText(html).then(() => alert("Exported to clipboard!"));
-    };
-    </script> 
+    </script>
 </body>
 </html>
