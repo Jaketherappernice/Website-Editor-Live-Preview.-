@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Responsive Builder - Persistent</title>
+    <title>Pro Responsive Builder - Fixed</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --danger: #ef4444; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -124,33 +124,35 @@
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-    // --- LOCAL STORAGE LOGIC ---
+    // --- UPDATED LOCAL STORAGE LOGIC ---
     function saveProject() {
         const elements = [];
         document.querySelectorAll('.dropped-element').forEach(el => {
             const inner = el.querySelector('h2, p, button, img, div, textarea');
+            if (!inner) return;
+
             elements.push({
                 type: el.dataset.type,
-                desktop: el.dataset.desktop,
-                mobile: el.dataset.mobile,
+                desktop: el.dataset.desktop || "{}",
+                mobile: el.dataset.mobile || "{}",
                 link: el.dataset.link || "",
                 html: inner.innerHTML,
-                style: inner.getAttribute('style'),
+                style: inner.getAttribute('style') || "",
                 currentStyle: {
                     left: el.style.left,
                     top: el.style.top,
                     width: el.style.width,
                     height: el.style.height,
-                    opacity: el.style.opacity
+                    opacity: el.style.opacity || "1"
                 }
             });
         });
 
         const projectData = {
             elements: elements,
-            canvasBg: canvas.style.backgroundColor,
-            canvasImg: canvas.style.backgroundImage,
-            canvasHeight: canvas.style.height
+            canvasBg: canvas.style.backgroundColor || "white",
+            canvasImg: canvas.style.backgroundImage || "none",
+            canvasHeight: canvas.style.height || "1000px"
         };
         localStorage.setItem('saved_web_builder_project', JSON.stringify(projectData));
     }
@@ -158,30 +160,38 @@
     function loadProject() {
         const data = localStorage.getItem('saved_web_builder_project');
         if (!data) return;
-        const project = JSON.parse(data);
         
+        let project;
+        try {
+            project = JSON.parse(data);
+        } catch (e) { return; }
+        
+        canvas.innerHTML = ""; // Prevent doubling on refresh
         canvas.style.backgroundColor = project.canvasBg;
         canvas.style.backgroundImage = project.canvasImg;
         canvas.style.height = project.canvasHeight;
-        heightSlider.value = heightNum.value = parseInt(project.canvasHeight) || 1000;
+        
+        if (heightSlider) heightSlider.value = heightNum.value = parseInt(project.canvasHeight) || 1000;
 
         project.elements.forEach(item => {
-            // Restore basic node
             const el = createNode(item.type, parseInt(item.currentStyle.left), parseInt(item.currentStyle.top), true);
-            
-            // Restore datasets for export functionality
+            if (!el) return;
+
             el.dataset.desktop = item.desktop;
             el.dataset.mobile = item.mobile;
             el.dataset.link = item.link;
-            
-            // Restore visual styles
             el.style.width = item.currentStyle.width;
             el.style.height = item.currentStyle.height;
             el.style.opacity = item.currentStyle.opacity;
             
             const inner = el.querySelector('h2, p, button, img, div, textarea');
-            inner.innerHTML = item.html;
-            inner.setAttribute('style', item.style);
+            if (inner) {
+                inner.innerHTML = item.html;
+                inner.setAttribute('style', item.style);
+            }
+            
+            // Re-sync state so Export button works immediately
+            saveCurrentState(el);
         });
     }
 
@@ -420,7 +430,6 @@
     };
 
     document.getElementById('copy-btn').onclick = () => {
-        // Force a final state save for every element before exporting
         document.querySelectorAll('.dropped-element').forEach(saveCurrentState);
         
         const getZ = (t) => { 
@@ -453,7 +462,6 @@
             const type = el.dataset.type;
             const z = getZ(type);
             
-            // Re-parse to ensure we have the most current data
             const d = JSON.parse(el.dataset.desktop || '{}');
             const m = JSON.parse(el.dataset.mobile || '{}');
             
@@ -467,21 +475,17 @@
 
             elementsHTML += `<div id="${id}" class="dropped-element">${inner.outerHTML}</div>`;
             
-            // Desktop calcs
             const dL = ((parseFloat(d.l || el.style.left) / currentCanvasW) * 100).toFixed(4) + '%';
             const dW = ((parseFloat(d.w || el.style.width) / currentCanvasW) * 100).toFixed(4) + '%';
-            
             dStyles += `#${id} { left:${dL}; top:${d.t || el.style.top}; width:${dW}; height:${d.h || el.style.height}; z-index:${z} !important; opacity:${d.op || el.style.opacity || 1}; }\n`;
             if(d.fs) dStyles += `#${id} > * { font-size:${d.fs} !important; }\n`;
             
-            // Mobile calcs
             const mlRaw = m.l || d.l || el.style.left;
             const mtRaw = m.t || d.t || el.style.top;
             const mwRaw = m.w || d.w || el.style.width;
             const mhRaw = m.h || d.h || el.style.height;
             const mL = ((parseFloat(mlRaw) / mobileW) * 100).toFixed(4) + '%';
             const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
-            
             mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || el.style.opacity || 1}; }\n`;
             if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
         });
@@ -510,7 +514,7 @@
     };
 
     // Load on start
-    window.onload = loadProject;
+    window.addEventListener('DOMContentLoaded', loadProject);
     </script> 
 </body>
 </html>
