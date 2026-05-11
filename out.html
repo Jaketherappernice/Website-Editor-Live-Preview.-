@@ -110,7 +110,7 @@
         </div>
         
         <div id="delete-all-container" class="dropped-element" style="display: none;">
-            <button class="delete-all-btn" onclick="deleteAllProjects()">🗑️ Clear All</button>
+            <button class="delete-all-btn" onclick="deleteAllProjects()">🗑️ Clear Projects</button>
         </div>
         
         <div id="add-project-container" class="dropped-element">
@@ -123,12 +123,16 @@
     </div>
 
     <script>
-        let projects = JSON.parse(localStorage.getItem('projects')) || [];
-        let nextId = parseInt(localStorage.getItem('nextProjectId')) || 1;
+        // ONLY use these specific keys for OUR project - never touch others!
+        const PROJECT_STORAGE_KEY = 'pm_system_projects';
+        const NEXT_ID_STORAGE_KEY = 'pm_system_nextId';
+
+        let projects = JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY)) || [];
+        let nextId = parseInt(localStorage.getItem(NEXT_ID_STORAGE_KEY)) || 1;
 
         function saveData() {
-            localStorage.setItem('projects', JSON.stringify(projects));
-            localStorage.setItem('nextProjectId', nextId);
+            localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects));
+            localStorage.setItem(NEXT_ID_STORAGE_KEY, nextId);
         }
 
         function createProjectElement(project) {
@@ -156,7 +160,6 @@
                 </div>
             `;
             
-            // Fix textarea focus issue by making sure it's interactive
             const textarea = container.querySelector('.project-textarea');
             textarea.style.pointerEvents = 'auto';
             textarea.style.cursor = 'text';
@@ -169,7 +172,6 @@
             const deleteAllBtnContainer = document.getElementById('delete-all-container');
             container.innerHTML = '';
             
-            // Show/hide Delete All button based on projects existing
             if (projects.length === 0) {
                 deleteAllBtnContainer.style.display = 'none';
                 const emptyState = document.createElement('div');
@@ -179,7 +181,6 @@
                 return;
             }
             
-            // Show Delete All button when there are projects
             deleteAllBtnContainer.style.display = 'flex';
             
             projects
@@ -194,7 +195,6 @@
                 });
         }
 
-        // Create a popup input to enter project description before adding
         function openAddProjectInput() {
             const description = prompt('Enter project name/description:', '');
             if (description !== null && description.trim() !== '') {
@@ -242,15 +242,16 @@
             }
         }
 
-        // Delete ALL localStorage data for the site
+        // SAFE DELETE - only removes OUR project's data!
         function deleteAllProjects() {
-            if (confirm('Are you sure you want to delete ALL projects? This cannot be undone!')) {
-                // Clear ALL localStorage
-                localStorage.clear();
+            if (confirm('Are you sure you want to delete ALL PROJECTS for THIS app only? Your other site data will stay safe!')) {
+                // ONLY remove the keys we created - leave everything else alone
+                localStorage.removeItem(PROJECT_STORAGE_KEY);
+                localStorage.removeItem(NEXT_ID_STORAGE_KEY);
                 // Reset variables
                 projects = [];
                 nextId = 1;
-                // Refresh the page display
+                // Refresh display
                 renderProjects();
             }
         }
@@ -261,11 +262,9 @@
             renderProjects();
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             renderProjects();
             
-            // Allow Enter to add new project (opens input prompt)
             document.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && e.ctrlKey) {
                     openAddProjectInput();
@@ -273,7 +272,6 @@
             });
         });
 
-        // Handle window resize
         window.addEventListener('resize', renderProjects);
     </script>
 </body>
