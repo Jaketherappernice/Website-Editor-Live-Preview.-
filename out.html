@@ -3,49 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Management System</title>
     <style>
-        body, html { margin:0; padding:0; width:100%; min-height:100%; overflow-x:hidden; background:#fff; font-family: sans-serif; }
-        #site-canvas { position:relative; width:100%; max-width:1440px; height:1800px; background-color:white; background-image:url("https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.90ivFhe1G5DLP50aYQAwOwHaEJ%3Fpid%3DApi&f=1&ipt=3d0c79ebd1a471afd01aebb220d734fed755e362dda3b947320a252721c62e13&ipo=images"); background-size:cover; background-position:center; margin:0 auto; overflow:hidden; }
-        .dropped-element { position:absolute; display:flex; align-items:center; justify-content:center; box-sizing: border-box; transition: opacity 0.2s; }
-        .dropped-element > * { width:100%; height:100%; object-fit:cover; border-radius:12px; border:none; margin:0; box-sizing: border-box; }
-        textarea { resize: none; box-sizing: border-box; padding: 10px; }
-        button { cursor: pointer; transition: transform 0.1s; background-size: cover; background-position: center; }
-        button:active { transform: scale(0.98); }
-        @media (min-width: 601px) { #site-canvas { width: 100%; } #el-0 { left:4.1406%; top:15px; width:40.3802%; height:157.948px; z-index:40 !important; opacity:1; }
-#el-0 > * { font-size:50px !important; }
-#el-1 { left:18.2813%; top:291px; width:14.8952%; height:65.9937px; z-index:40 !important; opacity:1; }
-#el-1 > * { font-size:41px !important; }
-#el-2 { left:15.3125%; top:216px; width:71.2114%; height:1285.56px; z-index:10 !important; opacity:1; }
-#el-3 { left:21.4063%; top:484px; width:56.5080%; height:89.3343px; z-index:10 !important; opacity:1; }
-#el-4 { left:22.4219%; top:508px; width:14.0625%; height:50px; z-index:40 !important; opacity:1; }
-#el-4 > * { font-size:34px !important; }
-#el-5 { left:56.8750%; top:496px; width:7.6563%; height:72.7709px; z-index:30 !important; opacity:1; }
-#el-5 > * { font-size:59px !important; }
-#el-6 { left:33.2813%; top:298px; width:37.6130%; height:82.099px; z-index:40 !important; opacity:1; }
-#el-6 > * { font-size:14px !important; }
-#el-7 { left:75.6250%; top:307px; width:6.9370%; height:66.1052px; z-index:30 !important; opacity:1; }
-#el-7 > * { font-size:52px !important; }
-#el-8 { left:66.8750%; top:499px; width:7.9163%; height:66.1052px; z-index:30 !important; opacity:1; }
-#el-8 > * { font-size:58px !important; }
- }
-        @media (max-width: 600px) { #site-canvas { width: 100vw; max-width: 100vw; } #el-0 { left:13.5686%; top:78.1052px; width:48.0000%; height:50px; z-index:40 !important; opacity:1; }
-#el-0 > * { font-size:24px !important; }
-#el-1 { left:62.4000%; top:291px; width:50.8424%; height:65.9937px; z-index:40 !important; opacity:1; }
-#el-1 > * { font-size:41px !important; }
-#el-2 { left:52.2667%; top:216px; width:243.0683%; height:1285.56px; z-index:10 !important; opacity:1; }
-#el-3 { left:73.0667%; top:484px; width:192.8805%; height:89.3343px; z-index:10 !important; opacity:1; }
-#el-4 { left:76.5333%; top:508px; width:48.0000%; height:50px; z-index:40 !important; opacity:1; }
-#el-4 > * { font-size:34px !important; }
-#el-5 { left:194.1333%; top:496px; width:26.1333%; height:72.7709px; z-index:30 !important; opacity:1; }
-#el-5 > * { font-size:59px !important; }
-#el-6 { left:113.6000%; top:298px; width:128.3859%; height:82.099px; z-index:40 !important; opacity:1; }
-#el-6 > * { font-size:14px !important; }
-#el-7 { left:258.1333%; top:307px; width:23.6782%; height:66.1052px; z-index:30 !important; opacity:1; }
-#el-7 > * { font-size:52px !important; }
-#el-8 { left:228.2667%; top:499px; width:27.0211%; height:66.1052px; z-index:30 !important; opacity:1; }
-#el-8 > * { font-size:58px !important; }
- }
+        body, html { 
+            margin:0; padding:0; width:100%; min-height:100%; 
+            overflow-x:hidden; background:#fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        #site-canvas { 
+            position:relative; width:100%; max-width:1440px; 
+            min-height:100vh; background-color:white; 
+            background-image:url("https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.90ivFhe1G5DLP50aYQAwOwHaEJ%3Fpid%3DApi&f=1");
+            background-size:cover; background-position:center; 
+            margin:0 auto; overflow:hidden; padding-bottom: 50px;
+        }
+        .dropped-element { 
+            position:absolute; display:flex; align-items:center; justify-content:center; 
+            box-sizing: border-box; transition: all 0.3s ease;
+        }
+        .dropped-element > * { 
+            width:100%; height:100%; object-fit:cover; 
+            border-radius:12px; border:none; margin:0; box-sizing: border-box;
+        }
+        textarea { 
+            resize: none; box-sizing: border-box; padding: 12px; 
+            font-family: inherit; background: rgba(255,255,255,0.9);
+            border: 2px solid #ddd; transition: border-color 0.2s;
+        }
+        textarea:focus {
+            outline: none; border-color: #4f46e5;
+        }
+        button { 
+            cursor: pointer; transition: all 0.2s; 
+            font-weight: 600; font-family: inherit;
+            border: none; border-radius: 12px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        button:active { transform: scale(0.98) translateY(0); }
+        .project-item {
+            background: rgba(255,255,255,0.95) !important;
+            backdrop-filter: blur(10px);
+            border: 2px solid #e5e7eb;
+        }
+        .project-completed {
+            opacity: 0.6;
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            border-color: #059669;
+        }
+        .project-rejected {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            border-color: #dc2626;
+            opacity: 0.8;
+        }
+        .add-btn { background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 24px; }
+        .complete-btn { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; font-size: 24px; }
+        .reject-btn { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            color: white; font-size: 24px; 
+        }
+        .title { font-weight: 700; color: #1f2937; margin: 0; }
+        @media (min-width: 601px) { 
+            #site-canvas { width: 100%; min-height: 100vh; }
+            #title { left:4.1406%; top:20px; width:40.3802%; height:80px; z-index:100 !important; }
+            #title > * { font-size:50px !important; }
+            #projects-label { left:18.2813%; top:120px; width:14.8952%; height:65px; z-index:50 !important; }
+            #projects-label > * { font-size:41px !important; }
+            #add-project-container { left:75.6250%; top:110px; width:8%; height:70px; z-index:50 !important; }
+            .project-container { left:15.3125%; top:200px; width:71.2114%; z-index:10 !important; }
+            .project-item { height: 120px; margin-bottom: 20px; }
+            .project-content { left: 5%; top: 10px; width: 70%; height: 80px; }
+            .project-textarea { font-size: 16px !important; }
+            .project-actions { left: 78%; top: 10px; width: 18%; height: 80px; display: flex; gap: 8px; flex-direction: column; }
+            .project-action-btn { height: 48% !important; font-size: 20px !important; }
+        }
+        @media (max-width: 600px) { 
+            #site-canvas { width: 100vw; max-width: 100vw; }
+            #title { left:10%; top:20px; width:80%; height:60px; z-index:100 !important; }
+            #title > * { font-size:32px !important; }
+            #projects-label { left:5%; top:100px; width:40%; height:50px; z-index:50 !important; }
+            #projects-label > * { font-size:28px !important; }
+            #add-project-container { left:85%; top:95px; width:12%; height:60px; z-index:50 !important; }
+            .project-container { left:5%; top:160px; width:90%; z-index:10 !important; }
+            .project-item { height: 100px; margin-bottom: 15px; }
+            .project-content { left: 5%; top: 10px; width: 65%; height: 80px; }
+            .project-textarea { font-size: 14px !important; }
+            .project-actions { left: 72%; top: 10px; width: 25%; height: 80px; display: flex; gap: 4px; flex-direction: column; }
+            .project-action-btn { height: 48% !important; font-size: 16px !important; }
+        }
     </style>
 </head>
-<body><div id="site-canvas"><div id="el-0" class="dropped-element"><h2 style="font-size: 50px; color: rgb(0, 0, 0); background-image: url(&quot;https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.vqQKZNutKJPoMSw2QyA-5AHaEK%3Fr%3D0%26pid%3DApi&amp;f=1&amp;ipt=9c319f106a73b59946b755f69237c0a5c7e926322bdc2c67e8c54b59d0f66e2e&amp;ipo=images&quot;); background-clip: text; -webkit-text-fill-color: transparent; background-size: cover; background-position: center center;">Project Management System</h2></div><div id="el-1" class="dropped-element"><h2 style="font-size: 41px; color: rgb(0, 0, 0);">Projects:</h2></div><div id="el-2" class="dropped-element"><div style="border: 2px solid rgb(51, 51, 51); background: rgba(0, 0, 0, 0.05); width: 100%; height: 100%; border-radius: 12px;"></div></div><div id="el-3" class="dropped-element"><div style="border: 2px solid rgb(51, 51, 51); background: rgba(0, 0, 0, 0.05); width: 100%; height: 100%; border-radius: 12px;"></div></div><div id="el-4" class="dropped-element"><p style="font-size: 34px; color: rgb(0, 0, 0);">Project #1</p></div><div id="el-5" class="dropped-element"><button style="background: none rgb(0, 255, 0); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer; font-size: 59px;" onclick="window.location.href='https://this button checks the project as fixed or finished'">✅</button></div><div id="el-6" class="dropped-element"><textarea placeholder="Enter text..." style="border: 1px solid rgb(204, 204, 204); border-radius: 12px; padding: 10px; width: 100%; height: 100%; resize: none; font-size: 14px;"></textarea></div><div id="el-7" class="dropped-element"><button style="background: none rgb(57, 189, 81); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer; font-size: 52px;" onclick="window.location.href='https://this button adds the named project'">+</button></div><div id="el-8" class="dropped-element"><button style="background: url(&quot;https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.UYJBV36xHJJKWsR0rFGnAQHaFn%3Fr%3D0%26pid%3DApi&amp;f=1&amp;ipt=6fe6d82ea446bca230abdd1ec3eddd9d18d9d95390e6bfda20b9edd240147d41&amp;ipo=images&quot;) 0% 0% / cover rgb(79, 70, 229); color: white; border: none; border-radius: 12px; width: 100%; height: 100%; cursor: pointer; font-size: 58px;" onclick="window.location.href='https://this button rejects the saved project and adds a color red to the whole project with X'">×</button></div></div></body>
+<body>
+    <div id="site-canvas">
+        <div id="title" class="dropped-element">
+            <h1 class="title" style="font-size: 50px; background-image: url('https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.vqQKZNutKJPoMSw2QyA-5AHaEK%3Fr%3D0%26pid%3DApi&f=1'); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: cover; background-position: center; margin:0;">Project Management</h1>
+        </div>
+        
+        <div id="projects-label" class="dropped-element">
+            <h2 class="title" style="font-size: 41px; color: #1f2937; margin:0;">Projects:</h2>
+        </div>
+        
+        <div id="add-project-container" class="dropped-element">
+            <button class="add-btn" onclick="addProject()">➕</button>
+        </div>
+
+        <div id="projects-container" class="project-container dropped-element" style="top:200px; height: auto; min-height: 120px; flex-direction: column; padding: 20px; gap: 15px; overflow-y: auto; max-height: 70vh;">
+            <!-- Projects will be dynamically added here -->
+        </div>
+    </div>
+
+    <script>
+        let projects = JSON.parse(localStorage.getItem('projects')) || [];
+        let nextId = parseInt(localStorage.getItem('nextProjectId')) || 1;
+
+        function saveData() {
+            localStorage.setItem('projects', JSON.stringify(projects));
+            localStorage.setItem('nextProjectId', nextId);
+        }
+
+        function createProjectElement(project) {
+            const container = document.createElement('div');
+            container.className = `dropped-element project-item ${project.status === 'completed' ? 'project-completed' : project.status === 'rejected' ? 'project-rejected' : ''}`;
+            container.style.position = 'relative';
+            container.style.width = '100%';
+            container.style.height = window.innerWidth > 600 ? '120px' : '100px';
+            container.style.marginBottom = window.innerWidth > 600 ? '20px' : '15px';
+            container.dataset.projectId = project.id;
+            
+            container.innerHTML = `
+                <div class="project-content dropped-element">
+                    <textarea class="project-textarea" placeholder="Enter project description..." 
+                              onchange="updateProject(${project.id}, this.value)"
+                              oninput="updateProject(${project.id}, this.value)"
+                              ${project.status !== 'active' ? 'readonly' : ''}>${project.description || ''}</textarea>
+                </div>
+                <div class="project-actions dropped-element">
+                    <button class="complete-btn project-action-btn" onclick="toggleComplete(${project.id})" ${project.status === 'completed' ? 'disabled' : ''}>
+                        ✅
+                    </button>
+                    <button class="reject-btn project-action-btn" onclick="rejectProject(${project.id})" ${project.status === 'rejected' ? 'disabled' : ''}>
+                        ❌
+                    </button>
+                </div>
+            `;
+            
+            return container;
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projects-container');
+            container.innerHTML = '';
+            
+            if (projects.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.style.cssText = 'width:100%; height:100px; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:18px;';
+                emptyState.textContent = 'No projects yet. Add one to get started! ➕';
+                container.appendChild(emptyState);
+                return;
+            }
+            
+            projects
+                .filter(p => p.status !== 'deleted')
+                .sort((a, b) => {
+                    if (a.status === 'completed' && b.status !== 'completed') return 1;
+                    if (b.status === 'completed' && a.status !== 'completed') return -1;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                })
+                .forEach(project => {
+                    container.appendChild(createProjectElement(project));
+                });
+        }
+
+        function addProject(description = '') {
+            const project = {
+                id: nextId++,
+                description: description,
+                status: 'active',
+                createdAt: new Date().toISOString()
+            };
+            projects.unshift(project);
+            saveData();
+            renderProjects();
+        }
+
+        function updateProject(id, description) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                project.description = description;
+                saveData();
+            }
+        }
+
+        function toggleComplete(id) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                project.status = project.status === 'completed' ? 'active' : 'completed';
+                saveData();
+                renderProjects();
+            }
+        }
+
+        function rejectProject(id) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                project.status = 'rejected';
+                saveData();
+                renderProjects();
+            }
+        }
+
+        function deleteProject(id) {
+            projects = projects.filter(p => p.id !== id);
+            saveData();
+            renderProjects();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderProjects();
+            
+            // Allow Enter to add new project from textarea
+            document.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    addProject();
+                }
+            });
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', renderProjects);
+    </script>
+</body>
 </html>
