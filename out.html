@@ -60,6 +60,12 @@
             background: linear-gradient(135deg, #ef4444, #dc2626); 
             color: white; font-size: 24px; 
         }
+        .delete-all-btn { 
+            background: linear-gradient(135deg, #6b7280, #4b5563); 
+            color: white; 
+            font-size: 16px;
+            padding: 8px 16px;
+        }
         .title { font-weight: 700; color: #1f2937; margin: 0; }
         @media (min-width: 601px) { 
             #site-canvas { width: 100%; min-height: 100vh; }
@@ -68,6 +74,7 @@
             #projects-label { left:18.2813%; top:120px; width:14.8952%; height:65px; z-index:50 !important; }
             #projects-label > * { font-size:41px !important; }
             #add-project-container { left:75.6250%; top:110px; width:8%; height:70px; z-index:50 !important; }
+            #delete-all-container { left:65.6250%; top:110px; width:8%; height:70px; z-index:50 !important; }
             .project-container { left:15.3125%; top:200px; width:71.2114%; z-index:10 !important; }
             .project-item { height: 120px; margin-bottom: 20px; }
             .project-content { left: 5%; top: 10px; width: 70%; height: 80px; }
@@ -82,6 +89,7 @@
             #projects-label { left:5%; top:100px; width:40%; height:50px; z-index:50 !important; }
             #projects-label > * { font-size:28px !important; }
             #add-project-container { left:85%; top:95px; width:12%; height:60px; z-index:50 !important; }
+            #delete-all-container { left:70%; top:95px; width:12%; height:60px; z-index:50 !important; }
             .project-container { left:5%; top:160px; width:90%; z-index:10 !important; }
             .project-item { height: 100px; margin-bottom: 15px; }
             .project-content { left: 5%; top: 10px; width: 65%; height: 80px; }
@@ -99,6 +107,10 @@
         
         <div id="projects-label" class="dropped-element">
             <h2 class="title" style="font-size: 41px; color: #1f2937; margin:0;">Projects:</h2>
+        </div>
+        
+        <div id="delete-all-container" class="dropped-element" style="display: none;">
+            <button class="delete-all-btn" onclick="deleteAllProjects()">🗑️ Clear All</button>
         </div>
         
         <div id="add-project-container" class="dropped-element">
@@ -154,15 +166,21 @@
 
         function renderProjects() {
             const container = document.getElementById('projects-container');
+            const deleteAllBtnContainer = document.getElementById('delete-all-container');
             container.innerHTML = '';
             
+            // Show/hide Delete All button based on projects existing
             if (projects.length === 0) {
+                deleteAllBtnContainer.style.display = 'none';
                 const emptyState = document.createElement('div');
                 emptyState.style.cssText = 'width:100%; height:100px; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:18px;';
                 emptyState.textContent = 'No projects yet. Add one to get started! ➕';
                 container.appendChild(emptyState);
                 return;
             }
+            
+            // Show Delete All button when there are projects
+            deleteAllBtnContainer.style.display = 'flex';
             
             projects
                 .filter(p => p.status !== 'deleted')
@@ -220,6 +238,19 @@
             if (project) {
                 project.status = 'rejected';
                 saveData();
+                renderProjects();
+            }
+        }
+
+        // Delete ALL localStorage data for the site
+        function deleteAllProjects() {
+            if (confirm('Are you sure you want to delete ALL projects? This cannot be undone!')) {
+                // Clear ALL localStorage
+                localStorage.clear();
+                // Reset variables
+                projects = [];
+                nextId = 1;
+                // Refresh the page display
                 renderProjects();
             }
         }
