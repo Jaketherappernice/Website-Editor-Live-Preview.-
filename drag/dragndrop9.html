@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Builder - Project Manager</title>
+    <title>Pro Builder - Fixed & Managed</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --danger: #ef4444; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; transition: background 0.3s; }
@@ -104,14 +104,12 @@
 
     <!-- Project Manager Modal -->
     <div id="project-modal">
-        <h2>Project Manager</h2>
+        <h2>Project Library</h2>
         <div class="save-input-area">
             <input type="text" id="new-save-name" placeholder="Project Name...">
             <button class="mgr-btn" style="background:var(--primary)" onclick="saveCurrentProject()">Save</button>
         </div>
-        <div id="save-list">
-            <!-- Saves populated by JS -->
-        </div>
+        <div id="save-list"></div>
         <br>
         <button class="mgr-btn" style="background:#64748b; width:100%" onclick="closeProjectManager()">Close</button>
     </div>
@@ -150,24 +148,20 @@
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-    // --- PROJECT MANAGER LOGIC ---
+    // --- PROJECT MANAGER ---
     function openProjectManager() {
         document.getElementById('settings-panel').style.display = 'none';
         document.getElementById('project-modal').style.display = 'block';
         renderSaveList();
     }
 
-    function closeProjectManager() {
-        document.getElementById('project-modal').style.display = 'none';
-    }
+    function closeProjectManager() { document.getElementById('project-modal').style.display = 'none'; }
 
-    function getSaves() {
-        return JSON.parse(localStorage.getItem('web_builder_library') || '{}');
-    }
+    function getSaves() { return JSON.parse(localStorage.getItem('web_builder_library') || '{}'); }
 
     function saveCurrentProject() {
         const name = document.getElementById('new-save-name').value.trim();
-        if (!name) return alert("Please enter a project name.");
+        if (!name) return alert("Enter project name.");
 
         const elements = [];
         document.querySelectorAll('.dropped-element').forEach(el => {
@@ -189,9 +183,7 @@
         });
 
         const projectData = {
-            name: name,
-            date: new Date().toLocaleString(),
-            elements: elements,
+            name: name, date: new Date().toLocaleString(), elements: elements,
             canvasBg: canvas.style.backgroundColor || "white",
             canvasImg: canvas.style.backgroundImage || "none",
             canvasHeight: canvas.style.height || "1000px"
@@ -207,20 +199,15 @@
     function renderSaveList() {
         const list = document.getElementById('save-list');
         const library = getSaves();
-        list.innerHTML = Object.keys(library).length ? "" : "<p style='text-align:center;color:#94a3b8;'>No saved projects.</p>";
-        
+        list.innerHTML = Object.keys(library).length ? "" : "<p style='text-align:center;color:#94a3b8;'>Empty.</p>";
         for (let key in library) {
             const item = library[key];
             const div = document.createElement('div');
             div.className = 'save-entry';
             div.innerHTML = `
-                <div class="save-info">
-                    <span class="save-name">${key}</span>
-                    <span class="save-date">${item.date}</span>
-                </div>
+                <div class="save-info"><span class="save-name">${key}</span><span class="save-date">${item.date}</span></div>
                 <button class="mgr-btn btn-load" onclick="loadSpecificSave('${key}')">Load</button>
-                <button class="mgr-btn btn-del" onclick="deleteSpecificSave('${key}')">Del</button>
-            `;
+                <button class="mgr-btn btn-del" onclick="deleteSpecificSave('${key}')">Del</button>`;
             list.appendChild(div);
         }
     }
@@ -229,20 +216,14 @@
         const library = getSaves();
         const project = library[name];
         if (!project) return;
-
         canvas.innerHTML = "";
         canvas.style.backgroundColor = project.canvasBg;
         canvas.style.backgroundImage = project.canvasImg;
         canvas.style.height = project.canvasHeight;
-        if (heightSlider) heightSlider.value = heightNum.value = parseInt(project.canvasHeight) || 1000;
-
         project.elements.forEach(item => {
             const el = createNode(item.type, parseInt(item.currentStyle.left), parseInt(item.currentStyle.top), true);
-            el.dataset.desktop = item.desktop;
-            el.dataset.mobile = item.mobile;
-            el.dataset.link = item.link;
-            el.style.width = item.currentStyle.width;
-            el.style.height = item.currentStyle.height;
+            el.dataset.desktop = item.desktop; el.dataset.mobile = item.mobile; el.dataset.link = item.link;
+            el.style.width = item.currentStyle.width; el.style.height = item.currentStyle.height;
             el.style.opacity = item.currentStyle.opacity;
             const inner = el.querySelector('h2, p, button, img, div, textarea');
             if (inner) { inner.innerHTML = item.html; inner.setAttribute('style', item.style); }
@@ -252,14 +233,14 @@
     }
 
     function deleteSpecificSave(name) {
-        if (!confirm(`Delete project "${name}"?`)) return;
-        const library = getSaves();
-        delete library[name];
-        localStorage.setItem('web_builder_library', JSON.stringify(library));
-        renderSaveList();
+        if (confirm(`Delete "${name}"?`)) {
+            const library = getSaves(); delete library[name];
+            localStorage.setItem('web_builder_library', JSON.stringify(library));
+            renderSaveList();
+        }
     }
 
-    // --- CORE BUILDER LOGIC ---
+    // --- CORE LOGIC ---
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
@@ -271,26 +252,20 @@
     document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
 
     heightSlider.oninput = heightNum.oninput = (e) => {
-        const val = e.target.value;
-        heightSlider.value = heightNum.value = val;
-        canvas.style.height = val + 'px';
+        canvas.style.height = e.target.value + 'px';
+        heightSlider.value = heightNum.value = e.target.value;
     };
 
     function toggleViewMode() {
         currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
         viewport.className = currentMode === 'mobile' ? 'mobile' : '';
         modeToggle.innerText = currentMode === 'mobile' ? 'Switch to Desktop' : 'Switch to Mobile';
-        modeToggle.classList.toggle('toggle-active', currentMode === 'mobile');
-        
         document.querySelectorAll('.dropped-element').forEach(el => {
             const data = JSON.parse(el.dataset[currentMode] || '{}');
             if (data.w) {
-                el.style.width = data.w; el.style.height = data.h;
-                el.style.left = data.l; el.style.top = data.t;
+                el.style.width = data.w; el.style.height = data.h; el.style.left = data.l; el.style.top = data.t;
                 const inner = el.querySelector('h2, p, button, img, div, textarea');
-                if (data.fs && inner && ['Heading', 'Paragraph', 'Textarea', 'Button'].includes(el.dataset.type)) {
-                    inner.style.fontSize = data.fs;
-                }
+                if (data.fs && inner) inner.style.fontSize = data.fs;
                 if (data.op) el.style.opacity = data.op;
             }
         });
@@ -298,21 +273,15 @@
 
     function saveCurrentState(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const state = {
-            w: el.style.width, h: el.style.height,
-            l: el.style.left, t: el.style.top,
+        el.dataset[currentMode] = JSON.stringify({
+            w: el.style.width, h: el.style.height, l: el.style.left, t: el.style.top,
             fs: (inner && inner.style.fontSize) ? inner.style.fontSize : "",
             op: el.style.opacity || "1"
-        };
-        el.dataset[currentMode] = JSON.stringify(state);
+        });
     }
 
     document.querySelectorAll('.item[data-type]').forEach(i => {
-        i.onclick = () => { 
-            const scrollPos = viewport.scrollTop;
-            createNode(i.dataset.type, 50, scrollPos + 50); 
-            toggleP('panel'); 
-        };
+        i.onclick = () => { createNode(i.dataset.type, 50, viewport.scrollTop + 50); toggleP('panel'); };
     });
 
     function createNode(type, x, y, isLoading = false) {
@@ -320,19 +289,15 @@
         el.className = 'dropped-element';
         el.dataset.type = type;
         el.style.left = x + 'px'; el.style.top = y + 'px';
-        
-        if (type === 'Box' || type === 'Image' || type === 'Textarea') {
-            el.style.width = "200px"; el.style.height = "150px";
-        } else {
-            el.style.width = "180px"; el.style.height = "50px";
-        }
+        el.style.width = (type==='Box'||type==='Image'||type==='Textarea') ? "200px" : "180px";
+        el.style.height = (type==='Box'||type==='Image'||type==='Textarea') ? "150px" : "50px";
 
         const html = {
             'Heading': '<h2 style="font-size:24px;color:#000;">Heading</h2>',
             'Paragraph': '<p style="font-size:16px;color:#000;">Text...</p>',
-            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;cursor:pointer;font-size:16px;">Click</button>',
+            'Button': '<button style="background:#4f46e5;color:white;border:none;border-radius:12px;width:100%;height:100%;font-size:16px;">Click</button>',
             'Image': '<img src="https://via.placeholder.com/150" style="border-radius:12px;width:100%;height:100%;">',
-            'Textarea': '<textarea placeholder="Enter text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
+            'Textarea': '<textarea placeholder="Text..." style="border:1px solid #ccc;border-radius:12px;padding:10px;width:100%;height:100%;resize:none;font-size:14px;"></textarea>',
             'Box': '<div style="border:2px solid #333;background:rgba(0,0,0,0.05);width:100%;height:100%;border-radius:12px;"></div>'
         };
 
@@ -350,8 +315,7 @@
             document.querySelectorAll('.dropped-element').forEach(d => d.classList.remove('selected'));
             el.classList.add('selected');
             const t = e.touches ? e.touches[0] : e;
-            startX = t.clientX - el.offsetLeft; 
-            startY = t.clientY - el.offsetTop;
+            startX = t.clientX - el.offsetLeft; startY = t.clientY - el.offsetTop;
         };
         el.querySelectorAll('.resizer').forEach(r => {
             r.onmousedown = r.ontouchstart = (e) => {
@@ -365,10 +329,9 @@
         });
         let clicks = 0;
         el.onclick = (e) => {
-            e.stopPropagation();
-            clicks++;
-            if (clicks === 2) { setTimeout(() => { if(clicks === 2) edit(el); }, 250); }
-            else if (clicks === 3) { if(confirm("Delete?")) { el.remove(); } clicks = 0; }
+            e.stopPropagation(); clicks++;
+            if (clicks === 2) edit(el);
+            else if (clicks === 3) { if(confirm("Delete?")) el.remove(); }
             setTimeout(() => clicks = 0, 500);
         };
     }
@@ -380,7 +343,10 @@
         if (currentResizer) {
             const dx = t.clientX - startX, dy = t.clientY - startY, c = currentResizer.classList;
             if (c.contains('se')) { activeEl.style.width = (startW + dx)+'px'; activeEl.style.height = (startH + dy)+'px'; }
-            if (c.contains('nw')) { activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; }
+            if (c.contains('nw')) { 
+                activeEl.style.width = (startW - dx)+'px'; activeEl.style.left = (startL + dx)+'px'; 
+                activeEl.style.height = (startH - dy)+'px'; activeEl.style.top = (startT + dy)+'px'; 
+            }
         }
         if (isMoving || currentResizer) saveCurrentState(activeEl);
     };
@@ -388,65 +354,77 @@
 
     function edit(el) {
         const inner = el.querySelector('h2, p, button, img, div, textarea');
-        const action = prompt("1: Content/Link | 2: Size | 3: Color | 4: Transparency");
+        const action = prompt("1: Content/Link | 2: Size | 3: Color/Image | 4: Transparency");
         
         if (action === '1') {
             if (el.dataset.type === 'Image') inner.src = prompt("URL:", inner.src) || inner.src;
             else if (el.dataset.type === 'Textarea') inner.placeholder = prompt("Placeholder:", inner.placeholder) || inner.placeholder;
             else if (el.dataset.type === 'Button') {
                 inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-                let link = prompt("Link (e.g. google.com):", el.dataset.link || "");
+                let link = prompt("Link:", el.dataset.link || "");
                 if (link && !link.startsWith('http')) link = 'https://' + link;
                 el.dataset.link = link;
             } else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
-        } else if (action === '2' && ['Heading', 'Paragraph', 'Textarea', 'Button'].includes(el.dataset.type)) {
+        } else if (action === '2') {
             document.getElementById('size-control').style.display = 'block';
-            const s = document.getElementById('size-slider');
-            const n = document.getElementById('size-num');
+            const s = document.getElementById('size-slider'), n = document.getElementById('size-num');
             s.value = n.value = parseInt(inner.style.fontSize) || 16;
-            s.oninput = n.oninput = (e) => { 
-                inner.style.fontSize = e.target.value + 'px'; 
-                s.value = n.value = e.target.value; 
-                saveCurrentState(el); 
-            };
+            s.oninput = n.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; saveCurrentState(el); };
         } else if (action === '3') {
-            let choice = prompt("1: Color Picker | 2: HEX Code | 3: Image URL (Stroke/BG)");
+            let choice = prompt("1: Picker | 2: HEX | 3: Image URL");
             if (choice === '1') {
                 const cp = document.getElementById('colorPicker'); cp.click();
-                cp.oninput = () => { 
-                    if (['Button', 'Box'].includes(el.dataset.type)) { inner.style.backgroundColor = cp.value; inner.style.backgroundImage = 'none'; } 
-                    else { inner.style.color = cp.value; }
+                cp.oninput = () => {
+                    if (['Button', 'Box'].includes(el.dataset.type)) { inner.style.backgroundColor = cp.value; inner.style.backgroundImage='none'; }
+                    else { inner.style.color = cp.value; inner.style.backgroundImage=''; inner.style.webkitTextFillColor=''; }
                     saveCurrentState(el);
                 };
             } else if (choice === '2') {
-                let hex = prompt("Enter HEX:");
+                let hex = prompt("HEX (#ffffff):");
                 if (hex) {
-                    if (['Button', 'Box'].includes(el.dataset.type)) { inner.style.backgroundColor = hex; }
-                    else { inner.style.color = hex; }
+                    if (['Button', 'Box'].includes(el.dataset.type)) { inner.style.backgroundColor = hex; inner.style.backgroundImage='none'; }
+                    else { inner.style.color = hex; inner.style.backgroundImage=''; }
+                    saveCurrentState(el);
+                }
+            } else if (choice === '3') {
+                let url = prompt("Image URL:");
+                if (url) {
+                    if (['Button', 'Box'].includes(el.dataset.type)) {
+                        inner.style.backgroundImage = `url('${url}')`; inner.style.backgroundSize = 'cover';
+                    } else {
+                        inner.style.backgroundImage = `url('${url}')`; inner.style.webkitBackgroundClip = 'text';
+                        inner.style.webkitTextFillColor = 'transparent'; inner.style.backgroundSize = 'cover';
+                    }
                     saveCurrentState(el);
                 }
             }
         } else if (action === '4') {
-            document.getElementById('opacity-control').style.display = 'block';
-            const os = document.getElementById('opacity-slider');
-            os.oninput = (e) => { el.style.opacity = e.target.value / 100; saveCurrentState(el); };
+            if (el.dataset.type === 'Button') {
+                let opacity = prompt("Button BG Opacity (0-1):", "0.5");
+                let cur = window.getComputedStyle(inner).backgroundColor;
+                inner.style.backgroundColor = cur.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
+            } else {
+                document.getElementById('opacity-control').style.display = 'block';
+                const os = document.getElementById('opacity-slider');
+                os.value = (parseFloat(el.style.opacity) || 1) * 100;
+                os.oninput = (e) => { el.style.opacity = e.target.value / 100; saveCurrentState(el); };
+            }
         }
         saveCurrentState(el);
     }
 
-    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => { canvas.style.backgroundColor = cp.value; }; }
+    function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => canvas.style.backgroundColor = cp.value; }
     function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
-    document.getElementById('clear-btn').onclick = () => { if(confirm("Clear Canvas?")) canvas.innerHTML = ""; };
-
+    document.getElementById('clear-btn').onclick = () => { if(confirm("Clear?")) canvas.innerHTML = ""; };
     document.getElementById('copy-btn').onclick = () => {
         let elementsHTML = "";
         document.querySelectorAll('.dropped-element').forEach((el, index) => {
             const inner = el.querySelector('h2, p, button, img, div, textarea').cloneNode(true);
-            elementsHTML += `<div style="position:absolute; left:${el.style.left}; top:${el.style.top}; width:${el.style.width}; height:${el.style.height}">${inner.outerHTML}</div>`;
+            elementsHTML += `<div style="position:absolute; left:${el.style.left}; top:${el.style.top}; width:${el.style.width}; height:${el.style.height}; opacity:${el.style.opacity || 1}">${inner.outerHTML}</div>`;
         });
-        const finalHTML = `<!DOCTYPE html><html><body style="margin:0; overflow-x:hidden;"><div style="position:relative; width:100%; height:${canvas.style.height}; background-color:${canvas.style.backgroundColor}">${elementsHTML}</div></body></html>`;
-        navigator.clipboard.writeText(finalHTML).then(() => alert("Exported!"));
+        const finalHTML = `<!DOCTYPE html><html><body style="margin:0; background:${canvas.style.backgroundColor}; background-image:${canvas.style.backgroundImage}; background-size:cover;"><div style="position:relative; width:100%; height:${canvas.style.height}">${elementsHTML}</div></body></html>`;
+        navigator.clipboard.writeText(finalHTML).then(() => alert("Copied!"));
     };
     </script> 
 </body>
