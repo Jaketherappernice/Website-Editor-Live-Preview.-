@@ -32,20 +32,30 @@
             background-repeat: no-repeat;
         }
 
-        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .fab { position: fixed; width: 60px; height: 60px; border-radius: 50%; color: white; border: none; font-size: 24px; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .fab:active { transform: scale(0.95); }
         #add-btn { bottom: 20px; left: 20px; background: var(--primary); }
         #settings-btn { bottom: 20px; left: 90px; background: #4b5563; }
 
+        #viewport.mobile ~ #add-btn { bottom: calc(5vh + 20px); left: calc(50% - 190px); }
+        #viewport.mobile ~ #settings-btn { bottom: calc(5vh + 20px); left: calc(50% - 120px); }
+
         .header-tools { position: fixed; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 1000; }
-        .header-btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header-btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.2s; }
+        .header-btn:active { transform: scale(0.95); }
         #copy-btn { background: var(--secondary); }
         #clear-btn { background: var(--danger); }
 
-        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
-        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1002; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; left: 20px; }
+        
+        #viewport.mobile ~ #panel,
+        #viewport.mobile ~ #settings-panel { left: calc(50% - 187.5px); bottom: calc(5vh + 95px); }
+
+        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; user-select: none; transition: all 0.1s; }
+        .item:active { background: #e0e7ff; transform: scale(0.98); }
         .toggle-active { background: var(--primary) !important; color: white; }
 
-        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; }
+        .dropped-element { position: absolute; box-sizing: border-box; display: flex; align-items: center; justify-content: center; cursor: move; user-select: none; }
         .dropped-element > *:not(.resizer) { width: 100%; height: 100%; display: block; margin: 0; pointer-events: none; object-fit: cover; }
         
         .dropped-element[data-type="Box"] { z-index: 10 !important; }
@@ -66,10 +76,17 @@
         .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .save-entry:last-child { border-bottom: none; }
         .save-actions { display: flex; gap: 5px; }
-        .btn-s { padding: 4px 8px; border-radius: 4px; border: none; color: white; cursor: pointer; font-size: 12px; }
+        .btn-s { padding: 4px 8px; border-radius: 4px; border: none; color: white; cursor: pointer; font-size: 12px; transition: all 0.1s; user-select: none; }
+        .btn-s:active { transform: scale(0.95); }
         .btn-load { background: var(--secondary); }
         .btn-del { background: var(--danger); }
-        .save-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        .save-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+
+        @media (max-width: 768px) {
+            .header-tools { top: 10px; right: 10px; gap: 8px; }
+            .header-btn { padding: 10px 16px; font-size: 14px; }
+            #size-control, #height-control, #opacity-control, #save-management-panel { width: calc(100vw - 40px); max-width: 280px; }
+        }
     </style>
   </head>
   <body>
@@ -133,55 +150,51 @@
     <div id="save-management-panel">
       <h3>Save & Load</h3>
       <input type="text" id="save-name-input" class="save-input" placeholder="Project Name..." />
-      <button onclick="createNewSave()" style="background:var(--primary);color:white;border:none;padding:10px;width:100%;border-radius:8px;cursor:pointer;font-weight:bold;">
+      <button onclick="createNewSave()" style="background:var(--primary);color:white;border:none;padding:10px;width:100%;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.1s;user-select:none;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
         Save Current Progress
       </button>
       <div class="save-list" id="save-list-container">
         <!-- Saves will appear here -->
       </div>
       <br />
-      <button onclick="document.getElementById('save-management-panel').style.display='none'" style="background:#9ca3af;color:white;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;">
+      <button onclick="document.getElementById('save-management-panel').style.display='none'" style="background:#9ca3af;color:white;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;transition:all 0.1s;user-select:none;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
         Close
       </button>
     </div>
 
     <div id="size-control">
-      <strong>      Font Size
-</strong>
+      <strong>Font Size</strong>
       <br />
       <input type="range" id="size-slider" min="8" max="200" />
       <input type="number" id="size-num" />
       px
       <br />
       <br />
-      <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">
+      <button onclick="document.getElementById('size-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;transition:all 0.1s;user-select:none;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
         Done
       </button>
     </div>
     <div id="opacity-control">
-      <strong>      Opacity
-</strong>
+      <strong>Opacity</strong>
       <br />
       <input type="range" id="opacity-slider" min="0" max="100" value="100" />
-      <span id="opacity-val">      100
-</span>
+      <span id="opacity-val">100</span>
       %
       <br />
       <br />
-      <button onclick="document.getElementById('opacity-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">
+      <button onclick="document.getElementById('opacity-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;transition:all 0.1s;user-select:none;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
         Done
       </button>
     </div>
     <div id="height-control">
-      <strong>      Page Height
-</strong>
+      <strong>Page Height</strong>
       <br />
       <input type="range" id="height-slider" min="500" max="8000" value="1000" />
       <input type="number" id="height-num" value="1000" />
       px
       <br />
       <br />
-      <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;">
+      <button onclick="document.getElementById('height-control').style.display='none'" style="background:var(--primary);color:white;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;transition:all 0.1s;user-select:none;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
         Done
       </button>
     </div>
@@ -193,6 +206,10 @@
     const modeToggle = document.getElementById('mode-toggle');
     const heightSlider = document.getElementById('height-slider');
     const heightNum = document.getElementById('height-num');
+    const addBtn = document.getElementById('add-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    const panel = document.getElementById('panel');
+    const settingsPanel = document.getElementById('settings-panel');
     
     let currentMode = 'desktop'; 
     let activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
@@ -312,7 +329,9 @@
         });
     }
 
-    function open-management-panel').style.display = 'block';
+    function openSaveManagement() {
+        document.getElementById('settings-panel').style.display = 'none';
+        document.getElementById('save-management-panel').style.display = 'block';
         renderSaveList();
     }
 
@@ -326,12 +345,12 @@
     function toggleP(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'flex';
-        document.querySelectorAll('.popup-panel').forEach(panel => panel.style.display = 'none');
+        document.querySelectorAll('.popup-panel').forEach(pan => pan.style.display = 'none');
         p.style.display = isVisible ? 'none' : 'flex';
     }
 
-    document.getElementById('add-btn').onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
-    document.getElementById('settings-btn').onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
+    addBtn.onclick = (e) => { e.stopPropagation(); toggleP('panel'); };
+    settingsBtn.onclick = (e) => { e.stopPropagation(); toggleP('settings-panel'); };
 
     heightSlider.oninput = heightNum.oninput = (e) => {
         const val = e.target.value;
@@ -615,7 +634,10 @@
             const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
             mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || el.style.opacity || 1}; }\n`;
             if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
-        ="en">
+        });
+
+        const finalHTML = `<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
