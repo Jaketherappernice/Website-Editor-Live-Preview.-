@@ -102,7 +102,7 @@
         </div>
         
         <div id="add-project-container" class="dropped-element">
-            <button class="add-btn" onclick="addProject()">➕</button>
+            <button class="add-btn" onclick="openAddProjectInput()">➕</button>
         </div>
 
         <div id="projects-container" class="project-container dropped-element" style="top:200px; height: auto; min-height: 120px; flex-direction: column; padding: 20px; gap: 15px; overflow-y: auto; max-height: 70vh;">
@@ -132,7 +132,6 @@
                 <div class="project-content dropped-element">
                     <textarea class="project-textarea" placeholder="Enter project description..." 
                               onchange="updateProject(${project.id}, this.value)"
-                              oninput="updateProject(${project.id}, this.value)"
                               ${project.status !== 'active' ? 'readonly' : ''}>${project.description || ''}</textarea>
                 </div>
                 <div class="project-actions dropped-element">
@@ -144,6 +143,11 @@
                     </button>
                 </div>
             `;
+            
+            // Fix textarea focus issue by making sure it's interactive
+            const textarea = container.querySelector('.project-textarea');
+            textarea.style.pointerEvents = 'auto';
+            textarea.style.cursor = 'text';
             
             return container;
         }
@@ -170,6 +174,16 @@
                 .forEach(project => {
                     container.appendChild(createProjectElement(project));
                 });
+        }
+
+        // Create a popup input to enter project description before adding
+        function openAddProjectInput() {
+            const description = prompt('Enter project name/description:', '');
+            if (description !== null && description.trim() !== '') {
+                addProject(description.trim());
+            } else if (description !== null && description.trim() === '') {
+                alert('Please enter a project name/description!');
+            }
         }
 
         function addProject(description = '') {
@@ -220,10 +234,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderProjects();
             
-            // Allow Enter to add new project from textarea
+            // Allow Enter to add new project (opens input prompt)
             document.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && e.ctrlKey) {
-                    addProject();
+                    openAddProjectInput();
                 }
             });
         });
