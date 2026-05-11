@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Builder - Triple Click Restored</title>
+    <title>Pro Builder - All Fixed</title>
     <style>
         :root { --primary: #4f46e5; --secondary: #10b981; --danger: #ef4444; --grid: #e5e7eb; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; background: #f3f4f6; touch-action: none; user-select: none; }
@@ -29,7 +29,8 @@
         #clear-btn { background: var(--danger); }
 
         .popup-panel { position: fixed; bottom: 95px; background: white; border-radius: 12px; padding: 15px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 220px; }
-        .item { padding: 10px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .item { padding: 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid #cbd5e1; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .item:active { background: #e2e8f0; }
         
         #project-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 20px; z-index: 3000; width: 320px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 100px rgba(0,0,0,0.5); }
         
@@ -70,14 +71,15 @@
     <div id="settings-panel" class="popup-panel">
         <div class="item" id="mode-toggle" onclick="toggleViewMode()">Switch to Mobile</div>
         <div class="item" onclick="triggerCanvasColor()">BG Color</div>
+        <div class="item" onclick="triggerCanvasImage()">BG Image URL</div>
         <div class="item" onclick="document.getElementById('height-control').style.display='block'">Page Height</div>
         <div class="item" onclick="openProjectManager()" style="background:#e0f2fe; border-color:#0ea5e9; color:#0369a1;">📁 Projects</div>
     </div>
 
     <div id="project-modal">
-        <h2>Projects</h2>
+        <h2 style="margin-top:0">Projects</h2>
         <div style="display:flex; gap:5px; margin-bottom:15px;">
-            <input type="text" id="new-save-name" placeholder="Name..." style="flex:1; padding:8px;">
+            <input type="text" id="new-save-name" placeholder="Name..." style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
             <button onclick="saveCurrentProject()" class="mgr-btn" style="background:var(--primary)">Save</button>
         </div>
         <div id="save-list"></div>
@@ -86,20 +88,21 @@
 
     <div id="size-control">
         <strong>Font Size</strong><br>
-        <input type="range" id="size-slider" min="8" max="200"><br>
-        <button onclick="this.parentElement.style.display='none'" style="margin-top:10px;">Done</button>
+        <input type="range" id="size-slider" min="8" max="200" style="width:100%"><br>
+        <button onclick="this.parentElement.style.display='none'" style="margin-top:10px; padding:5px 15px;">Done</button>
     </div>
 
     <div id="opacity-control">
         <strong>Opacity</strong><br>
-        <input type="range" id="opacity-slider" min="0" max="100" value="100"><br>
-        <button onclick="this.parentElement.style.display='none'" style="margin-top:10px;">Done</button>
+        <input type="range" id="opacity-slider" min="0" max="100" value="100" style="width:100%"><br>
+        <button onclick="this.parentElement.style.display='none'" style="margin-top:10px; padding:5px 15px;">Done</button>
     </div>
 
     <div id="height-control">
-        <strong>Page Height</strong><br>
-        <input type="number" id="height-num" value="1000" style="width:80px;"> px<br>
-        <button onclick="updateHeight()" style="margin-top:10px;">Apply</button>
+        <strong>Page Height</strong><br><br>
+        <input type="number" id="height-num" value="1000" style="width:100px; padding:5px;"> px<br>
+        <button onclick="updateHeight()" style="margin-top:15px; padding:5px 15px; background:var(--primary); color:white; border:none; border-radius:4px;">Apply</button>
+        <button onclick="document.getElementById('height-control').style.display='none'" style="margin-top:15px; padding:5px 15px;">Cancel</button>
     </div>
 
     <input type="color" id="colorPicker" style="display:none">
@@ -108,12 +111,35 @@
     <script>
     const canvas = document.getElementById('canvas');
     const viewport = document.getElementById('viewport');
+    const settingsBtn = document.getElementById('settings-btn');
+    const addBtn = document.getElementById('add-btn');
+    
     let currentMode = 'desktop', activeEl, isMoving, currentResizer, startX, startY, startW, startH, startL, startT;
 
-    // --- TRIPLE CLICK SYSTEM ---
+    // --- BUTTON CONTROLS ---
+    addBtn.onclick = (e) => {
+        e.stopPropagation();
+        document.getElementById('settings-panel').style.display = 'none';
+        const p = document.getElementById('panel');
+        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+    };
+
+    settingsBtn.onclick = (e) => {
+        e.stopPropagation();
+        document.getElementById('panel').style.display = 'none';
+        const s = document.getElementById('settings-panel');
+        s.style.display = s.style.display === 'flex' ? 'none' : 'flex';
+    };
+
+    document.body.onclick = () => {
+        document.getElementById('panel').style.display = 'none';
+        document.getElementById('settings-panel').style.display = 'none';
+    };
+
+    // --- TRIPLE CLICK & SETUP ---
     function setupEl(el) {
-        let clickTimer = null;
         let clickCount = 0;
+        let clickTimer = null;
 
         el.onmousedown = (e) => {
             if (e.target.classList.contains('resizer')) return;
@@ -126,23 +152,15 @@
         el.onclick = (e) => {
             e.stopPropagation();
             clickCount++;
-
             if (clickCount === 1) {
-                clickTimer = setTimeout(() => {
-                    clickCount = 0; 
-                }, 400);
-            } else if (clickCount === 2) {
-                // Double click logic
+                clickTimer = setTimeout(() => { clickCount = 0; }, 400);
             } else if (clickCount === 3) {
                 clearTimeout(clickTimer);
                 clickCount = 0;
-                if (confirm("Delete this element?")) {
-                    el.remove();
-                }
+                if (confirm("Delete this element?")) el.remove();
             }
         };
 
-        // Separate double click for Edit to ensure no conflict with move
         el.ondblclick = (e) => {
             e.stopPropagation();
             edit(el);
@@ -159,7 +177,7 @@
         });
     }
 
-    // --- CORE BUILDER LOGIC ---
+    // --- CORE LOGIC ---
     function createNode(type, x, y) {
         const el = document.createElement('div');
         el.className = 'dropped-element';
@@ -192,22 +210,20 @@
             else inner.innerText = prompt("Text:", inner.innerText) || inner.innerText;
         } else if (action === '2') {
             document.getElementById('size-control').style.display = 'block';
-            const s = document.getElementById('size-slider');
-            s.oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; saveState(el); };
+            document.getElementById('size-slider').oninput = (e) => { inner.style.fontSize = e.target.value + 'px'; saveState(el); };
         } else if (action === '3') {
             let choice = prompt("1: Color Picker | 2: Image URL (BG)");
             if (choice === '1') {
                 const cp = document.getElementById('colorPicker'); cp.click();
                 cp.oninput = () => { 
-                    if (['Button', 'Box'].includes(el.dataset.type)) inner.style.backgroundColor = cp.value;
-                    else inner.style.color = cp.value;
+                    if (['Button', 'Box'].includes(el.dataset.type)) { inner.style.backgroundColor = cp.value; inner.style.backgroundImage='none'; }
+                    else { inner.style.color = cp.value; inner.style.backgroundImage=''; inner.style.webkitTextFillColor=''; }
                     saveState(el);
                 };
             } else if (choice === '2') {
                 let url = prompt("URL:");
                 if (url) {
-                    inner.style.backgroundImage = `url('${url}')`;
-                    inner.style.backgroundSize = 'cover';
+                    inner.style.backgroundImage = `url('${url}')`; inner.style.backgroundSize = 'cover';
                     if (!['Button', 'Box'].includes(el.dataset.type)) {
                         inner.style.webkitBackgroundClip = 'text';
                         inner.style.webkitTextFillColor = 'transparent';
@@ -222,24 +238,20 @@
         saveState(el);
     }
 
-    // --- VIEWPORT & PROJECT MGMT ---
+    function saveState(el) { el.dataset[currentMode] = JSON.stringify({ w: el.style.width, h: el.style.height, l: el.style.left, t: el.style.top }); }
+
     function toggleViewMode() {
         currentMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
         viewport.className = currentMode === 'mobile' ? 'mobile' : '';
         document.querySelectorAll('.dropped-element').forEach(el => {
             const data = JSON.parse(el.dataset[currentMode] || '{}');
-            if (data.w) {
-                el.style.width = data.w; el.style.height = data.h; el.style.left = data.l; el.style.top = data.t;
-            }
+            if (data.w) { el.style.width = data.w; el.style.height = data.h; el.style.left = data.l; el.style.top = data.t; }
         });
     }
 
-    function saveState(el) {
-        el.dataset[currentMode] = JSON.stringify({ w: el.style.width, h: el.style.height, l: el.style.left, t: el.style.top });
-    }
-
-    function updateHeight() { canvas.style.height = document.getElementById('height-num').value + 'px'; }
+    function updateHeight() { canvas.style.height = document.getElementById('height-num').value + 'px'; document.getElementById('height-control').style.display='none'; }
     function triggerCanvasColor() { const cp = document.getElementById('canvasColorPicker'); cp.click(); cp.oninput = () => canvas.style.backgroundColor = cp.value; }
+    function triggerCanvasImage() { const u = prompt("URL:"); if(u) canvas.style.backgroundImage = `url('${u}')`; }
 
     window.onmousemove = (e) => {
         if (!activeEl) return;
@@ -256,36 +268,48 @@
     };
     window.onmouseup = () => { isMoving = false; currentResizer = null; };
 
-    document.getElementById('add-btn').onclick = () => document.getElementById('panel').style.display = 'flex';
     document.querySelectorAll('.item[data-type]').forEach(i => {
-        i.onclick = () => { createNode(i.dataset.type, 50, 50); document.getElementById('panel').style.display = 'none'; };
+        i.onclick = (e) => { e.stopPropagation(); createNode(i.dataset.type, 50, 50); document.getElementById('panel').style.display = 'none'; };
     });
 
-    // Project Logic (Simplified)
+    // --- PROJECTS ---
     function openProjectManager() { document.getElementById('project-modal').style.display = 'block'; renderSaves(); }
     function closeProjectManager() { document.getElementById('project-modal').style.display = 'none'; }
     function saveCurrentProject() {
         const name = document.getElementById('new-save-name').value;
         if (!name) return;
-        const library = JSON.parse(localStorage.getItem('lib') || '{}');
-        library[name] = canvas.innerHTML;
-        localStorage.setItem('lib', JSON.stringify(library));
+        const library = JSON.parse(localStorage.getItem('web_lib') || '{}');
+        library[name] = { html: canvas.innerHTML, bg: canvas.style.backgroundColor, bgi: canvas.style.backgroundImage, h: canvas.style.height };
+        localStorage.setItem('web_lib', JSON.stringify(library));
         renderSaves();
     }
     function renderSaves() {
         const list = document.getElementById('save-list');
-        const lib = JSON.parse(localStorage.getItem('lib') || '{}');
+        const lib = JSON.parse(localStorage.getItem('web_lib') || '{}');
         list.innerHTML = "";
         for (let k in lib) {
-            list.innerHTML += `<div style="padding:5px; border-bottom:1px solid #eee;">${k} <button onclick="loadSave('${k}')">Load</button></div>`;
+            list.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">${k} <span><button onclick="loadSave('${k}')">Load</button> <button onclick="delSave('${k}')">Del</button></span></div>`;
         }
     }
     function loadSave(k) {
-        const lib = JSON.parse(localStorage.getItem('lib') || '{}');
-        canvas.innerHTML = lib[k];
+        const lib = JSON.parse(localStorage.getItem('web_lib') || '{}');
+        const p = lib[k];
+        canvas.innerHTML = p.html; canvas.style.backgroundColor = p.bg; canvas.style.backgroundImage = p.bgi; canvas.style.height = p.h;
         document.querySelectorAll('.dropped-element').forEach(setupEl);
         closeProjectManager();
     }
+    function delSave(k) { if(confirm("Delete?")) { const lib = JSON.parse(localStorage.getItem('web_lib') || '{}'); delete lib[k]; localStorage.setItem('web_lib', JSON.stringify(lib)); renderSaves(); } }
+
+    document.getElementById('clear-btn').onclick = () => { if(confirm("Clear everything?")) canvas.innerHTML = ""; };
+    document.getElementById('copy-btn').onclick = () => {
+        let code = `<!DOCTYPE html><html><body style="margin:0; background:${canvas.style.backgroundColor}; background-image:${canvas.style.backgroundImage}; background-size:cover;"><div style="position:relative; width:100%; height:${canvas.style.height}">`;
+        document.querySelectorAll('.dropped-element').forEach(el => {
+            const inner = el.querySelector('h2, p, button, img, div').cloneNode(true);
+            code += `<div style="position:absolute; left:${el.style.left}; top:${el.style.top}; width:${el.style.width}; height:${el.style.height}; opacity:${el.style.opacity || 1}">${inner.outerHTML}</div>`;
+        });
+        code += `</div></body></html>`;
+        navigator.clipboard.writeText(code).then(() => alert("Code Copied!"));
+    };
     </script>
 </body>
 </html>
