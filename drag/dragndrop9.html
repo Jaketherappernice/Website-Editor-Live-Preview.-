@@ -23,6 +23,7 @@
             width: 375px; height: 80vh; margin: 5vh auto; 
             border: 12px solid #333; border-radius: 30px; 
             position: relative;
+            z-index: 1;
         }
 
         #canvas {
@@ -59,7 +60,7 @@
         .selected .resizer { display: block; }
         .nw { top: -7px; left: -7px; } .ne { top: -7px; right: -7px; } .sw { bottom: -7px; left: -7px; } .se { bottom: -7px; right: -7px; }
 
-        #size-control, #height-control, #opacity-control, #save-management-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 2000; width: 280px; text-align: center; }
+        #size-control, #height-control, #opacity-control, #save-management-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 9999; width: 280px; text-align: center; }
         
         .save-list { max-height: 200px; overflow-y: auto; margin-top: 15px; border: 1px solid #eee; border-radius: 8px; padding: 5px; }
         .save-entry { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
@@ -311,9 +312,7 @@
         });
     }
 
-    function openSaveManagement() {
-        document.getElementById('settings-panel').style.display = 'none';
-        document.getElementById('save-management-panel').style.display = 'block';
+    function open-management-panel').style.display = 'block';
         renderSaveList();
     }
 
@@ -616,10 +615,7 @@
             const mW = ((parseFloat(mwRaw) / mobileW) * 100).toFixed(4) + '%';
             mStyles += `#${id} { left:${mL}; top:${mtRaw}; width:${mW}; height:${mhRaw}; z-index:${z} !important; opacity:${m.op || d.op || el.style.opacity || 1}; }\n`;
             if(m.fs || d.fs) mStyles += `#${id} > * { font-size:${m.fs || d.fs} !important; }\n`;
-        });
-
-        const finalHTML = `<!DOCTYPE html>
-<html lang="en">
+        ="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
