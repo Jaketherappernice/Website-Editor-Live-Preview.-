@@ -188,7 +188,8 @@
         document.querySelectorAll('.dropped-element').forEach(el => {
             const data = JSON.parse(el.dataset[currentMode] || '{}');
             if (data.w) {
-                el.style.width = data.w; el.style.height = data.h; el.style.left = data.l; el.style.top = data.t;
+                el.style.width = data.w; el.style.height = data.h;
+                el.style.left = data.l; el.style.top = data.t;
                 const inner = el.querySelector('h2, p, button, img, div, textarea');
                 if (data.fs && inner) inner.style.fontSize = data.fs;
             }
@@ -243,13 +244,18 @@
         el.onclick = (e) => {
             e.stopPropagation();
             clicks++;
-            if (clicks === 1) {
-                clickTimer = setTimeout(() => {
-                    if (clicks === 1) edit(el);
-                    else if (clicks === 3) { if(confirm("Delete?")) el.remove(); }
-                    clicks = 0;
-                }, 400);
-            }
+            
+            if (clickTimer) clearTimeout(clickTimer);
+            
+            clickTimer = setTimeout(() => {
+                if (clicks === 2) {
+                    edit(el); // Double click to input/edit
+                } else if (clicks === 3) {
+                    if (confirm("Delete?")) el.remove(); // Triple click to delete
+                }
+                clicks = 0;
+                clickTimer = null;
+            }, 350); 
         };
 
         el.querySelectorAll('.resizer').forEach(r => {
