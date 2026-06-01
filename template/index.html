@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Template Hub - Neon Cyber</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Custom Neon Orange Styles */
@@ -77,6 +79,7 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
+    <!-- NAVIGATION BAR -->
     <header class="bg-black border-b border-orange-600/30 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home-view')">
             <i class="fa-solid fa-cubes text-2xl text-orange-500 neon-text"></i>
@@ -88,9 +91,11 @@
         </nav>
     </header>
 
-    <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+    <!-- MAIN VIEWS CONTAINER -->
+    <main class="flex-1 w-full mx-auto flex flex-col">
 
-        <section id="home-view" class="view-section space-y-6">
+        <!-- ================= HOME VIEW ================= -->
+        <section id="home-view" class="view-section p-6 space-y-6 max-w-7xl w-full mx-auto">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-zinc-500"></i>
@@ -107,6 +112,7 @@
                 </div>
             </div>
 
+            <!-- Templates Grid -->
             <div id="home-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="col-span-full text-center py-12 text-zinc-500">
                     <i class="fa-solid fa-circle-notch animate-spin text-3xl text-orange-500 mb-4"></i>
@@ -115,7 +121,8 @@
             </div>
         </section>
 
-        <section id="admin-view" class="view-section hidden space-y-6">
+        <!-- ================= ADMIN VIEW ================= -->
+        <section id="admin-view" class="view-section hidden p-6 space-y-6 max-w-7xl w-full mx-auto">
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-bold tracking-tight text-white uppercase border-l-4 border-orange-500 pl-3">Database Management</h2>
                 <button onclick="openAdminModal()" class="bg-orange-600 hover:bg-orange-500 text-black font-bold px-5 py-2.5 rounded-lg text-sm flex items-center shadow-lg shadow-orange-600/20 transition"><i class="fa-solid fa-plus mr-2"></i>Create New Formula</button>
@@ -142,21 +149,25 @@
                         </tr>
                     </thead>
                     <tbody id="admin-table-body" class="divide-y divide-zinc-900 text-sm">
-                        </tbody>
+                        <!-- Loaded Dynamically -->
+                    </tbody>
                 </table>
             </div>
         </section>
 
-        <section id="editor-view" class="view-section hidden flex flex-col h-[calc(100vh-140px)]">
-            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div class="flex items-center space-x-3">
+        <!-- ================= CANVAS EDITOR VIEW ================= -->
+        <section id="editor-view" class="view-section hidden flex flex-col flex-1 h-[calc(100vh-73px)] w-full">
+            <!-- Full-Width Workspace Header bar -->
+            <div class="bg-zinc-950 border-b border-zinc-900 px-6 py-4 flex items-center justify-between z-10">
+                <div class="flex items-center space-x-4">
                     <button onclick="switchView('home-view')" class="text-zinc-400 hover:text-white p-2 bg-black rounded border border-zinc-800"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h2 id="editor-title" class="font-bold text-white leading-tight">Editing Workspace</h2>
                         <p class="text-xs text-zinc-500">Double click elements to configure content, visuals, and sizes</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
+                <!-- Alignment Toggles and Export Action Buttons Shifted to Top-Right Corner -->
+                <div class="flex items-center space-x-4">
                     <div class="bg-black rounded-lg p-1 border border-zinc-800 flex space-x-1 text-xs">
                         <button onclick="setCanvasMode('desktop')" id="btn-mode-desktop" class="px-3 py-1.5 rounded font-medium bg-orange-600 text-black"><i class="fa-solid fa-desktop mr-1.5"></i>Desktop</button>
                         <button onclick="setCanvasMode('mobile')" id="btn-mode-mobile" class="px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>Mobile View</button>
@@ -165,14 +176,17 @@
                 </div>
             </div>
 
-            <div class="flex-1 flex bg-zinc-950 rounded-xl border border-zinc-900 overflow-auto relative justify-start items-start p-4">
-                <div id="editor-canvas" class="bg-white text-black min-h-[600px] relative transition-all duration-300 shadow-2xl rounded mx-auto" style="width: 1200px; max-width: none; flex-shrink: 0;">
-                    </div>
+            <!-- Absolute Fullscreen Workspace Canvas Base Framework Window Wrapper -->
+            <div class="flex-1 w-full bg-zinc-900 overflow-auto relative p-0 m-0">
+                <div id="editor-canvas" class="bg-white text-black min-h-full relative transition-all duration-300 shadow-2xl mx-auto" style="width: 100%; max-width: none; flex-shrink: 0;">
+                    <!-- Snippets Inject Arena -->
+                </div>
             </div>
         </section>
 
     </main>
 
+    <!-- ADMIN MODAL -->
     <div id="admin-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-zinc-900 border border-zinc-700 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
             <div class="bg-black border-b border-zinc-800 px-6 py-4 flex justify-between items-center">
@@ -201,7 +215,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Raw Base Code Sandbox Layout (HTML Strings)</label>
-                    <textarea id="form-code" required rows="8" placeholder="" class="w-full bg-black border border-zinc-700 rounded-lg p-3 font-mono text-xs focus:outline-none focus:border-orange-500 text-emerald-400"></textarea>
+                    <textarea id="form-code" required rows="8" placeholder="<!-- Structure must have elements styled inline or via Tailwind configured with position:absolute layouts -->" class="w-full bg-black border border-zinc-700 rounded-lg p-3 font-mono text-xs focus:outline-none focus:border-orange-500 text-emerald-400"></textarea>
                 </div>
                 <div class="pt-2 flex justify-end space-x-3">
                     <button type="button" onclick="closeAdminModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-lg text-sm">Cancel</button>
@@ -211,6 +225,7 @@
         </div>
     </div>
 
+    <!-- FIREBASE AND SYSTEM CORE SCRIPTING ENGINE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
@@ -263,15 +278,40 @@
                     localTemplatesCache.push({ id: doc.id, ...doc.data() });
                 });
                 renderHomeGrid(localTemplatesCache);
+                
+                // Read hash flags upon hard refreshes to maintain view matrix layout states securely
+                handleStateRoutingOnLoad();
             } catch (error) {
                 console.error("Critical connection failure to cloud storage node: ", error);
                 document.getElementById('home-grid').innerHTML = `<p class="text-red-500 text-center col-span-full">Failed to synchronize database records.</p>`;
             }
         }
 
+        // Updated router tracking history states safely
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(section => section.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
+            
+            if(viewId !== 'editor-view') {
+                window.location.hash = viewId;
+            }
+        }
+
+        function handleStateRoutingOnLoad() {
+            const currentHash = window.location.hash;
+            if (currentHash.startsWith('#editor-view?id=')) {
+                const templateId = currentHash.split('=')[1];
+                if (templateId) {
+                    startEditingMode(templateId);
+                    return;
+                }
+            }
+            if (currentHash === '#admin-view') {
+                switchView('admin-view');
+                loadAdminTemplates();
+            } else {
+                switchView('home-view');
+            }
         }
 
         // Render Cards to Main Catalog Showcase
@@ -405,14 +445,17 @@
             const target = localTemplatesCache.find(t => t.id === id);
             if (!target) return;
 
+            // Pin state context to prevent unwanted homepage routing upon refreshes
+            window.location.hash = `editor-view?id=${id}`;
+
             document.getElementById('editor-title').innerText = target.name;
             const canvas = document.getElementById('editor-canvas');
             
-            // Render sandbox into working layout frame
+            // Render sandbox into full-screen workspace layout panel frame
             canvas.innerHTML = target.sourceCode;
             
-            // Defaults canvas back to desktop scaling dimensions securely
-            canvas.style.width = '1200px'; 
+            // Render view as a continuous full-width component 
+            canvas.style.width = '100%'; 
             document.getElementById('btn-mode-desktop').className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
             document.getElementById('btn-mode-mobile').className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
             
@@ -613,7 +656,7 @@
                 btnM.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
                 btnD.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
             } else {
-                canvas.style.width = '1200px';
+                canvas.style.width = '100%';
                 btnD.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
                 btnM.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
             }
