@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>ChaosForge · Random Website Generator</title>
+  <title>ChaosForge · Random Website Generator + Copy Code</title>
   <style>
     * {
       margin: 0;
@@ -46,11 +46,17 @@
       margin-bottom: 2rem;
     }
 
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
     .randomize-btn {
       background: radial-gradient(circle at 30% 10%, #f0b87b, #f57c2e);
       border: none;
-      padding: 0.9rem 2.2rem;
-      font-size: 1.4rem;
+      padding: 0.9rem 2rem;
+      font-size: 1.3rem;
       font-weight: 700;
       border-radius: 60px;
       color: #1e1a0c;
@@ -61,6 +67,33 @@
       display: inline-flex;
       align-items: center;
       gap: 0.6rem;
+    }
+
+    .copy-btn {
+      background: radial-gradient(circle at 30% 10%, #2c2e3a, #1e1f2c);
+      border: 1px solid rgba(255,215,150,0.5);
+      padding: 0.9rem 2rem;
+      font-size: 1.3rem;
+      font-weight: 600;
+      border-radius: 60px;
+      color: #fae6cf;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .copy-btn:hover {
+      background: radial-gradient(circle at 30% 10%, #3d3f50, #2a2b38);
+      transform: translateY(-2px);
+      border-color: #ffcd94;
+      color: white;
+    }
+
+    .copy-btn:active {
+      transform: scale(0.97);
     }
 
     .randomize-btn:hover {
@@ -90,7 +123,7 @@
       font-weight: 700;
     }
 
-    /* Live preview panel — here the random website is rendered */
+    /* Live preview panel */
     .website-stage {
       background: #ffffff;
       border-radius: 2rem;
@@ -107,13 +140,34 @@
       transition: background 0.1s;
     }
 
-    /* inner generated website style reset */
-    .generated-site {
-      font-family: inherit;
-      transition: all 0.2s;
+    /* Toast notification */
+    .toast-msg {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      background: #1f2a1ecc;
+      backdrop-filter: blur(16px);
+      color: #d4ffb0;
+      padding: 0.8rem 2rem;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      border: 1px solid #c3ff8f;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      white-space: nowrap;
+      font-family: monospace;
     }
 
-    /* minimal utility for responsive */
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
     @media (max-width: 760px) {
       body {
         padding: 0.8rem;
@@ -121,15 +175,15 @@
       .generator-panel {
         padding: 1rem;
       }
-      .randomize-btn {
-        padding: 0.6rem 1.4rem;
-        font-size: 1.2rem;
+      .randomize-btn, .copy-btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 1rem;
       }
-    }
-
-    /* loading shimmer (optional inline) */
-    .loading-dot {
-      opacity: 0.8;
+      .toast-msg {
+        white-space: nowrap;
+        font-size: 0.8rem;
+        padding: 0.5rem 1rem;
+      }
     }
   </style>
 </head>
@@ -137,7 +191,10 @@
 
 <div class="generator-panel">
   <div class="action-bar">
-    <button class="randomize-btn" id="chaosButton">✨ RANDOMIZE WEBSITE ✨</button>
+    <div class="btn-group">
+      <button class="randomize-btn" id="chaosButton">✨ RANDOMIZE ✨</button>
+      <button class="copy-btn" id="copyCodeBtn">📋 COPY SOURCE CODE</button>
+    </div>
     <div class="stats" id="statsArea">
       🔮 seed: <span id="seedValue">—</span> &nbsp;|&nbsp; 📁 category: <span id="categoryLabel">—</span>
     </div>
@@ -145,11 +202,12 @@
 
   <div class="website-stage" id="websiteStage">
     <div id="liveWebsiteRoot" class="website-frame">
-      <!-- dynamic injected random website template will appear here -->
-      <div style="padding: 3rem; text-align: center; color: #555; background: #faf9fc;">🌀 click button → infinite random layouts</div>
+      <div style="padding: 3rem; text-align: center; color: #555; background: #faf9fc;">🌀 click "RANDOMIZE" → infinite unique templates</div>
     </div>
   </div>
 </div>
+
+<div id="toastMsg" class="toast-msg">✨ Source code copied to clipboard!</div>
 
 <script>
   (function(){
@@ -157,7 +215,7 @@
     //  RANDOMIZATION ENGINE: categories, themes, picsum, layouts
     // --------------------------------------------------------------
     
-    // 1. LIST OF CATEGORIES (landing page, e-commerce, dashboard, portfolio, blog, admin, etc)
+    // 1. LIST OF CATEGORIES (landing page, e-commerce, dashboard, portfolio, blog, etc)
     const CATEGORIES = [
       "LANDING PAGE", "E-COMMERCE", "DASHBOARD", "PORTFOLIO", "BLOG", "SAAS STARTER", 
       "ADMIN PANEL", "SOCIAL APP", "MAGAZINE", "SERVICE SHOWCASE", "MINIMAL MARKETING", "ANALYTICS HUB"
@@ -165,10 +223,9 @@
     
     // 2. Color theme generators (randomized palettes: bg, primary, accent, text)
     function randomColorPalette(seedOffset = 0) {
-      // make shit up but visually pleasant ranges
       const hue = (Math.floor(Math.random() * 360) + seedOffset) % 360;
-      const sat = 55 + Math.floor(Math.random() * 35); // 55-90%
-      const lightBg = 92 + Math.floor(Math.random() * 6); // 92-98% bg
+      const sat = 55 + Math.floor(Math.random() * 35);
+      const lightBg = 92 + Math.floor(Math.random() * 6);
       const primaryHue = (hue + 40 + Math.floor(Math.random() * 60)) % 360;
       const accentHue = (primaryHue + 130 + Math.floor(Math.random() * 80)) % 360;
       
@@ -192,23 +249,16 @@
     }
     
     // 4. core: randomized template fabricator with pseudo calculations + unique patterns
-    // Each click generates a completely different structure based on category + random mixing.
     function generateRandomWebsite(clickCounter) {
-      // ---- CALCULATIONAL SYSTEM: make shit up using clickCounter & random seeds ----
       const epochSeed = Date.now() + Math.random() * 9999;
       const chaosSeed = (clickCounter * 127) ^ Math.floor(epochSeed);
       const r = (max) => Math.floor(Math.random() * max);
-      // deterministic random based on chaosSeed & clickCounter but each click fully random
-      // ---- use shuffled array but still fully chaotic ----
       const categoryIndex = (chaosSeed + r(7)) % CATEGORIES.length;
       const category = CATEGORIES[categoryIndex];
       
-      // get fresh theme (colors)
       const theme = randomColorPalette(chaosSeed);
-      // random layout style: grid, flex, cards, etc.
-      const layoutVariant = r(5); // 0-4 different structural flavors
+      const layoutVariant = r(5);
       
-      // picsum random banner ID and product / image sets
       const bannerId = (chaosSeed + r(300)) % 400 + 1;
       const bannerImg = `https://picsum.photos/id/${bannerId}/1200/400`;
       const productImg1 = `https://picsum.photos/id/${(bannerId + 37) % 400}/400/300`;
@@ -216,17 +266,13 @@
       const productImg3 = `https://picsum.photos/id/${(bannerId + 143) % 400}/400/300`;
       const avatarImg = getAvatarPicsum(bannerId);
       
-      // --- random titles & fake data (calculational random phrases)
       const randNouns = ["Nexus", "Orbit", "Void", "Aether", "Lumina", "Cypher", "Flux", "Nimbus", "Pulse", "Eclipse"];
       const randAdj = ["Radical", "Neo", "Hyper", "Frost", "Ember", "Zenith", "Mythic", "Vivid", "Apex"];
       const brandName = `${randAdj[Math.floor(Math.random() * randAdj.length)]}${randNouns[Math.floor(Math.random() * randNouns.length)]}`;
       const fakePrice = (Math.random() * 450 + 19).toFixed(2);
       const discount = Math.floor(Math.random() * 40) + 5;
       
-      // build dynamic HTML based on category, layoutVariant and visual spices.
-      let innerHtml = "";
-      
-      // Helper: inject global style block + reset
+      // Helper style block using dynamic theme
       const styleBlock = `
         <style>
           .rand-website * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -247,15 +293,12 @@
         </style>
       `;
       
-      // ----- LAYOUT SWITCH: different category + random structure mixing ensures uniqueness per click -----
-      // we mix cards, stats, and category-specific elements
       const metricSystem = `<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
         <span style="background:${theme.primaryColor}20; padding:0.3rem 1rem; border-radius:30px;">⚡ +${Math.floor(Math.random()*95+5)}%</span>
         <span style="background:${theme.accentColor}20; padding:0.3rem 1rem; border-radius:30px;">📊 score ${Math.floor(Math.random()*900+100)}</span>
         <span style="background:#ddd3; padding:0.3rem 1rem; border-radius:30px;">🔄 randomized ${Math.floor(Math.random()*999)}</span>
       </div>`;
       
-      // generic E-commerce block
       const productShowcase = `
         <div class="grid-3">
           <div class="card"><img src="${productImg1}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">Cosmic Edition</h3><p style="color:${theme.textMuted}">$${fakePrice}</p><div class="btn-primary" style="margin-top: 12px; display:inline-block;">Shop now</div></div>
@@ -272,7 +315,6 @@
         </div>
       `;
       
-      // content based on category + layout mixing
       let customSection = "";
       if (category === "DASHBOARD" || layoutVariant === 2) {
         customSection = `<div class="hero-gradient"><h2>📊 Dashboard insights</h2>${dashboardMetrics}<div class="flex-between"><span>🕒 real-time random metrics</span><span class="btn-accent">Export</span></div></div>`;
@@ -281,11 +323,9 @@
       } else if (category === "PORTFOLIO" || layoutVariant === 3) {
         customSection = `<div><div class="flex-between"><h2>⭐ Recent works</h2><span class="btn-accent">See projects</span></div><div class="grid-3"><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+5)}" style="border-radius: 20px; width:100%"><h3>Project Nova</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+17)}" style="border-radius: 20px; width:100%"><h3>Ethereal Identity</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+33)}" style="border-radius: 20px; width:100%"><h3>Flux Design</h3></div></div></div>`;
       } else {
-        // generic landing or blog style
         customSection = `<div class="hero-gradient"><h2>✨ ${brandName} Intelligence</h2><p style="margin: 1rem 0;">Experience next-gen randomness — every click rebuilds reality. Get your custom solution now.</p><div class="flex-between"><span class="btn-primary">Get started →</span><span class="btn-accent">Learn more</span></div></div>`;
       }
       
-      // Hero banner area always fresh
       const hero = `
         <div style="background: url(${bannerImg}) center/cover no-repeat; border-radius: 28px; margin-bottom: 1.6rem; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 1.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
           <div style="background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); padding: 1rem 2rem; border-radius: 60px; color: white; text-align: center;">
@@ -295,7 +335,6 @@
         </div>
       `;
       
-      // Header nav with random links
       const nav = `
         <div class="flex-between" style="margin-bottom: 1rem; border-bottom: 2px solid ${theme.primaryColor}30; padding-bottom: 1rem;">
           <div style="font-weight:800; font-size:1.5rem;">⚡${brandName.slice(0,2)}</div>
@@ -303,10 +342,18 @@
         </div>
       `;
       
-      // Add extra footer chaotic randomness
       const footer = `<div style="margin-top: 3rem; padding: 1.5rem 0; text-align: center; font-size: 0.8rem; border-top: 1px solid ${theme.textMuted}30; color:${theme.textMuted};">🌀 random generator v.chaos | picsum dynamic assets | seed: ${clickCounter}${Math.floor(Math.random()*900)} | 🎨 infinite templates</div>`;
       
-      // assemble the entire website DOM
+      // extra category spice
+      let extraBlock = "";
+      if (category === "BLOG" || layoutVariant === 4) {
+        extraBlock = `<div class="card" style="margin:1.8rem 0;"><div class="flex-between"><h3>📰 Latest articles</h3><span class="btn-accent">Read more</span></div><div><p>• How random APIs fuel creativity</p><p>• Design system breakdown with picsum</p><p>• ${brandName} inside-out</p></div></div>`;
+      } else if (category === "ADMIN PANEL") {
+        extraBlock = `<div class="card"><h3>Admin overview</h3><div style="display:grid; gap: 0.8rem;"><div>🔐 last login: random device</div><div>📋 pending tasks: ${Math.floor(Math.random()*12)}</div><div class="btn-primary" style="width:fit-content;">Manage users</div></div></div>`;
+      } else if (category === "SOCIAL APP") {
+        extraBlock = `<div class="grid-3"><div class="card"><img src="${avatarImg}" style="border-radius: 50%; width: 60px;"><h4>@${randNouns[clickCounter%randNouns.length]}labs</h4><p>post: random vibe ✨</p></div><div class="card"><div>🔥 trending now: #${randAdj[clickCounter%randAdj.length]}</div><div>✨ ${Math.floor(Math.random()*999)} likes</div></div></div>`;
+      }
+      
       const mainStructure = `
         <div class="rand-website">
           ${styleBlock}
@@ -314,52 +361,89 @@
             ${nav}
             ${hero}
             ${customSection}
-            ${category === "BLOG" || layoutVariant === 4 ? `<div class="card" style="margin:1.8rem 0;"><div class="flex-between"><h3>📰 Latest articles</h3><span class="btn-accent">Read more</span></div><div><p>• How random APIs fuel creativity</p><p>• Design system breakdown with picsum</p><p>• ${brandName} inside-out</p></div></div>` : ""}
-            ${category === "ADMIN PANEL" ? `<div class="card"><h3>Admin overview</h3><div style="display:grid; gap: 0.8rem;"><div>🔐 last login: random device</div><div>📋 pending tasks: ${Math.floor(Math.random()*12)}</div><div class="btn-primary" style="width:fit-content;">Manage users</div></div></div>` : ""}
-            ${category === "SOCIAL APP" ? `<div class="grid-3"><div class="card"><img src="${avatarImg}" style="border-radius: 50%; width: 60px;"><h4>@${randNouns[clickCounter%randNouns.length]}labs</h4><p>post: random vibe ✨</p></div><div class="card"><div>🔥 trending now: #${randAdj[clickCounter%randAdj.length]}</div><div>✨ ${Math.floor(Math.random()*999)} likes</div></div></div>` : ""}
+            ${extraBlock}
             ${footer}
           </div>
         </div>
       `;
       
-      return { html: mainStructure, categoryDisplay: category, themeColors: theme };
+      return { html: mainStructure, categoryDisplay: category, themeColors: theme, rawHTML: mainStructure };
     }
     
     // DOM elements
     const btn = document.getElementById('chaosButton');
+    const copyBtn = document.getElementById('copyCodeBtn');
     const liveRoot = document.getElementById('liveWebsiteRoot');
     const seedSpan = document.getElementById('seedValue');
     const categorySpan = document.getElementById('categoryLabel');
+    const toastEl = document.getElementById('toastMsg');
     
     let clickCount = 0;
-    let lastGeneratedHTML = "";
+    let lastRawHTML = "";
+    
+    function showToast(message) {
+      toastEl.textContent = message || "✨ Source code copied to clipboard!";
+      toastEl.classList.add('show');
+      setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, 2100);
+    }
     
     function renderRandomTemplate() {
       clickCount++;
-      // update seed display
-      const clickSeed = clickCount;
-      seedSpan.innerText = clickSeed;
-      
-      // generate full random website (fresh pics, unique colors, layout mods)
-      const { html, categoryDisplay, themeColors } = generateRandomWebsite(clickCount);
-      lastGeneratedHTML = html;
-      
-      // apply to DOM
+      seedSpan.innerText = clickCount;
+      const { html, categoryDisplay, themeColors, rawHTML } = generateRandomWebsite(clickCount);
+      lastRawHTML = rawHTML;
       liveRoot.innerHTML = html;
       categorySpan.innerText = categoryDisplay;
       
-      // bonus small micro interaction: extract and add meta random color to stage border? just fun
       const stageDiv = document.getElementById('websiteStage');
       if (themeColors && themeColors.primaryColor) {
         stageDiv.style.border = `1px solid ${themeColors.primaryColor}60`;
         setTimeout(() => { stageDiv.style.border = "1px solid rgba(255,255,240,0.2)"; }, 300);
       }
-      
-      // optional: console log the chaos stat
-      console.log(`[Generator] Click #${clickCount} | Category: ${categoryDisplay} | unique web layout`);
+      console.log(`[Generator] Click #${clickCount} | Category: ${categoryDisplay} | fresh template`);
     }
     
-    // initial random load on page open (avoid empty)
+    // Copy full generated source code (including the entire HTML/CSS structure of current random website)
+    function copyCurrentSourceCode() {
+      if (!lastRawHTML) {
+        // fallback: get current from DOM
+        const currentPreview = document.getElementById('liveWebsiteRoot').innerHTML;
+        if (currentPreview && currentPreview.length > 20) {
+          const fullDocumentWrapper = `<div style="font-family:system-ui;">${currentPreview}</div>`;
+          copyToClipboard(fullDocumentWrapper);
+          showToast("📋 Current website HTML copied!");
+        } else {
+          showToast("⚠️ Generate a website first!");
+        }
+        return;
+      }
+      // extract clean HTML (the random website markup)
+      const codeToCopy = lastRawHTML;
+      copyToClipboard(codeToCopy);
+      showToast("📋 Source code copied! You can paste it anywhere.");
+    }
+    
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(err => {
+          fallbackCopy(text);
+        });
+      } else {
+        fallbackCopy(text);
+      }
+    }
+    
+    function fallbackCopy(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    
     function firstRender() {
       clickCount = 0;
       renderRandomTemplate();
@@ -367,6 +451,10 @@
     
     btn.addEventListener('click', () => {
       renderRandomTemplate();
+    });
+    
+    copyBtn.addEventListener('click', () => {
+      copyCurrentSourceCode();
     });
     
     firstRender();
