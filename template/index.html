@@ -77,7 +77,7 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <header class="bg-black border-b border-orange-600/30 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+    <header id="main-header" class="bg-black border-b border-orange-600/30 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home-view')">
             <i class="fa-solid fa-cubes text-2xl text-orange-500 neon-text"></i>
             <h1 class="text-xl font-black uppercase tracking-wider text-white">Template <span class="text-orange-500 neon-text">Hub</span></h1>
@@ -142,12 +142,12 @@
                         </tr>
                     </thead>
                     <tbody id="admin-table-body" class="divide-y divide-zinc-900 text-sm">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </section>
 
-        <section id="editor-view" class="view-section hidden flex flex-col flex-1 h-[calc(100vh-73px)] w-full">
+        <section id="editor-view" class="view-section hidden flex flex-col flex-1 h-screen w-full">
             <div class="bg-zinc-950 border-b border-zinc-900 px-6 py-4 flex items-center justify-between z-10">
                 <div class="flex items-center space-x-4">
                     <button onclick="switchView('home-view')" class="text-zinc-400 hover:text-white p-2 bg-black rounded border border-zinc-800"><i class="fa-solid fa-arrow-left"></i></button>
@@ -167,7 +167,7 @@
 
             <div class="flex-1 w-full bg-zinc-900 overflow-auto relative p-0 m-0">
                 <div id="editor-canvas" class="bg-white text-black min-h-full relative transition-all duration-300 shadow-2xl mx-auto" style="width: 100%; max-width: none; flex-shrink: 0;">
-                    </div>
+                </div>
             </div>
         </section>
 
@@ -216,7 +216,6 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Provided System Configuration Parameters
         const firebaseConfig = {
             apiKey: "AIzaSyBfJVcXgioTyyg6ZvJrlZjlmbRCGdGf0Hk",
             authDomain: "evidence-hub-media.firebaseapp.com",
@@ -227,12 +226,10 @@
             measurementId: "G-BZT4GWT9FF"
         };
 
-        // Initialize Firebase Engines
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // Core Global Arrays
         let localTemplatesCache = [];
         let currentlySelectedElement = null;
         let activeDragElement = null;
@@ -240,11 +237,9 @@
         let currentHandleType = '';
         let startX, startY, startWidth, startHeight, startLeft, startTop;
 
-        // Track taps for mobile double-tap fallback
         let lastTapTime = 0;
         let lastTapTarget = null;
 
-        // Make functions globally available across layout blocks
         window.switchView = switchView;
         window.openAdminModal = openAdminModal;
         window.closeAdminModal = closeAdminModal;
@@ -258,7 +253,6 @@
         window.setCanvasMode = setCanvasMode;
         window.exportTemplateProject = exportTemplateProject;
 
-        // Initialization Pipeline
         async function fetchSystemTemplates() {
             try {
                 const querySnapshot = await getDocs(collection(db, "templates"));
@@ -267,8 +261,6 @@
                     localTemplatesCache.push({ id: doc.id, ...doc.data() });
                 });
                 renderHomeGrid(localTemplatesCache);
-                
-                // Read hash flags upon hard refreshes to maintain view matrix layout states securely
                 handleStateRoutingOnLoad();
             } catch (error) {
                 console.error("Critical connection failure to cloud storage node: ", error);
@@ -276,12 +268,16 @@
             }
         }
 
-        // Updated router tracking history states safely
+        // Modified View switcher router with direct layout header visibility logic
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(section => section.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
             
-            if(viewId !== 'editor-view') {
+            const mainHeader = document.getElementById('main-header');
+            if(viewId === 'editor-view') {
+                mainHeader.classList.add('hidden'); // Hide completely for true full screen
+            } else {
+                mainHeader.classList.remove('hidden'); // Reinstate header on catalog dashboard layout
                 window.location.hash = viewId;
             }
         }
@@ -303,7 +299,6 @@
             }
         }
 
-        // Render Cards to Main Catalog Showcase
         function renderHomeGrid(dataset) {
             const grid = document.getElementById('home-grid');
             if (dataset.length === 0) {
@@ -338,7 +333,6 @@
             renderHomeGrid(output);
         }
 
-        // Admin Management Pipeline Layout
         function loadAdminTemplates() {
             const tbody = document.getElementById('admin-table-body');
             if (localTemplatesCache.length === 0) {
@@ -434,16 +428,12 @@
             const target = localTemplatesCache.find(t => t.id === id);
             if (!target) return;
 
-            // Pin state context to prevent unwanted homepage routing upon refreshes
             window.location.hash = `editor-view?id=${id}`;
 
             document.getElementById('editor-title').innerText = target.name;
             const canvas = document.getElementById('editor-canvas');
             
-            // Render sandbox into full-screen workspace layout panel frame
             canvas.innerHTML = target.sourceCode;
-            
-            // Render view as a continuous full-width component 
             canvas.style.width = '100%'; 
             document.getElementById('btn-mode-desktop').className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
             document.getElementById('btn-mode-mobile').className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
@@ -475,14 +465,10 @@
                     if(!el.style.left) el.style.left = `${el.offsetLeft}px`;
                 }
 
-                // Unified Pointer / Touch Drag Mapping Interfaces
                 el.addEventListener('mousedown', initiateDragOrResize);
                 el.addEventListener('touchstart', initiateDragOrResize, { passive: false });
-                
-                // Desktop native double-click fallback selector
                 el.addEventListener('dblclick', processElementConfigurationMenu);
 
-                // Pure Mobile Multi-touch Double-Tap Engine Logic
                 el.addEventListener('touchstart', function(e) {
                     const currentTime = new Date().getTime();
                     const tapLength = currentTime - lastTapTime;
@@ -526,7 +512,6 @@
         function initiateDragOrResize(e) {
             clearSelectionMatrix();
             
-            // Target elements matching criteria safely
             let targetElement = e.target.closest('.editable-element');
             if(!targetElement) return;
 
@@ -542,7 +527,6 @@
                 activeDragElement = currentlySelectedElement;
             }
 
-            // Normalizes events to read Client coordinates regardless of pointer type
             const pointerSource = e.touches ? e.touches[0] : e;
             startX = pointerSource.clientX;
             startY = pointerSource.clientY;
@@ -732,7 +716,6 @@
             temporaryAnchorElement.remove();
         }
 
-        // Run Initial Synchronizer Pipeline
         fetchSystemTemplates();
     </script>
 </body>
