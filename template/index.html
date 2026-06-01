@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>ChaosForge · Random Website Generator + Copy Code</title>
+  <title>ChaosForge · Random Website Generator + COPY FULL PAGE</title>
   <style>
     * {
       margin: 0;
@@ -22,7 +22,6 @@
       justify-content: center;
     }
 
-    /* Main card container */
     .generator-panel {
       max-width: 1400px;
       width: 100%;
@@ -33,10 +32,8 @@
       padding: 1.5rem 2rem 2rem 2rem;
       box-shadow: 0 25px 45px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
-      transition: all 0.2s;
     }
 
-    /* button row + stats */
     .action-bar {
       display: flex;
       flex-wrap: wrap;
@@ -61,22 +58,21 @@
       border-radius: 60px;
       color: #1e1a0c;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      transition: all 0.2s;
       box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-      letter-spacing: -0.2px;
       display: inline-flex;
       align-items: center;
       gap: 0.6rem;
     }
 
     .copy-btn {
-      background: radial-gradient(circle at 30% 10%, #2c2e3a, #1e1f2c);
-      border: 1px solid rgba(255,215,150,0.5);
+      background: radial-gradient(circle at 30% 10%, #1e2a3a, #0f1722);
+      border: 1px solid #60a5fa;
       padding: 0.9rem 2rem;
       font-size: 1.3rem;
       font-weight: 600;
       border-radius: 60px;
-      color: #fae6cf;
+      color: #bbf0ff;
       cursor: pointer;
       transition: all 0.2s;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -86,24 +82,14 @@
     }
 
     .copy-btn:hover {
-      background: radial-gradient(circle at 30% 10%, #3d3f50, #2a2b38);
+      background: radial-gradient(circle at 30% 10%, #2d3e52, #182433);
+      border-color: #93c5fd;
       transform: translateY(-2px);
-      border-color: #ffcd94;
-      color: white;
-    }
-
-    .copy-btn:active {
-      transform: scale(0.97);
     }
 
     .randomize-btn:hover {
       transform: scale(1.02) translateY(-2px);
       filter: brightness(1.05);
-      box-shadow: 0 18px 30px -8px rgba(245, 124, 46, 0.4);
-    }
-
-    .randomize-btn:active {
-      transform: scale(0.98);
     }
 
     .stats {
@@ -123,13 +109,11 @@
       font-weight: 700;
     }
 
-    /* Live preview panel */
     .website-stage {
       background: #ffffff;
       border-radius: 2rem;
       overflow: hidden;
       box-shadow: 0 20px 35px -12px black;
-      transition: all 0.25s ease;
       border: 1px solid rgba(255,255,240,0.2);
       min-height: 540px;
     }
@@ -137,18 +121,16 @@
     .website-frame {
       width: 100%;
       background: white;
-      transition: background 0.1s;
     }
 
-    /* Toast notification */
     .toast-msg {
       position: fixed;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%) scale(0.9);
-      background: #1f2a1ecc;
+      background: #0a2f1fcc;
       backdrop-filter: blur(16px);
-      color: #d4ffb0;
+      color: #b9ffc3;
       padding: 0.8rem 2rem;
       border-radius: 60px;
       font-weight: 600;
@@ -157,8 +139,7 @@
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s, transform 0.2s;
-      border: 1px solid #c3ff8f;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      border: 1px solid #6eff8e;
       white-space: nowrap;
       font-family: monospace;
     }
@@ -169,21 +150,10 @@
     }
 
     @media (max-width: 760px) {
-      body {
-        padding: 0.8rem;
-      }
-      .generator-panel {
-        padding: 1rem;
-      }
-      .randomize-btn, .copy-btn {
-        padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-      }
-      .toast-msg {
-        white-space: nowrap;
-        font-size: 0.8rem;
-        padding: 0.5rem 1rem;
-      }
+      body { padding: 0.8rem; }
+      .generator-panel { padding: 1rem; }
+      .randomize-btn, .copy-btn { padding: 0.6rem 1.2rem; font-size: 1rem; }
+      .toast-msg { white-space: nowrap; font-size: 0.8rem; padding: 0.5rem 1rem; }
     }
   </style>
 </head>
@@ -193,271 +163,173 @@
   <div class="action-bar">
     <div class="btn-group">
       <button class="randomize-btn" id="chaosButton">✨ RANDOMIZE ✨</button>
-      <button class="copy-btn" id="copyCodeBtn">📋 COPY SOURCE CODE</button>
+      <button class="copy-btn" id="copyFullPageBtn">📋 COPY FULL PAGE SOURCE</button>
     </div>
-    <div class="stats" id="statsArea">
+    <div class="stats">
       🔮 seed: <span id="seedValue">—</span> &nbsp;|&nbsp; 📁 category: <span id="categoryLabel">—</span>
     </div>
   </div>
 
-  <div class="website-stage" id="websiteStage">
+  <div class="website-stage">
     <div id="liveWebsiteRoot" class="website-frame">
-      <div style="padding: 3rem; text-align: center; color: #555; background: #faf9fc;">🌀 click "RANDOMIZE" → infinite unique templates</div>
+      <div style="padding: 3rem; text-align: center; color: #555; background: #faf9fc;">🌀 click RANDOMIZE → then COPY</div>
     </div>
   </div>
 </div>
 
-<div id="toastMsg" class="toast-msg">✨ Source code copied to clipboard!</div>
+<div id="toastMsg" class="toast-msg">✅ Full page HTML copied to clipboard!</div>
 
 <script>
   (function(){
-    // --------------------------------------------------------------
-    //  RANDOMIZATION ENGINE: categories, themes, picsum, layouts
-    // --------------------------------------------------------------
+    // ----- RANDOM ENGINE (same chaotic goodness) -----
+    const CATEGORIES = ["LANDING PAGE","E-COMMERCE","DASHBOARD","PORTFOLIO","BLOG","SAAS STARTER","ADMIN PANEL","SOCIAL APP","MAGAZINE","ANALYTICS HUB"];
     
-    // 1. LIST OF CATEGORIES (landing page, e-commerce, dashboard, portfolio, blog, etc)
-    const CATEGORIES = [
-      "LANDING PAGE", "E-COMMERCE", "DASHBOARD", "PORTFOLIO", "BLOG", "SAAS STARTER", 
-      "ADMIN PANEL", "SOCIAL APP", "MAGAZINE", "SERVICE SHOWCASE", "MINIMAL MARKETING", "ANALYTICS HUB"
-    ];
-    
-    // 2. Color theme generators (randomized palettes: bg, primary, accent, text)
     function randomColorPalette(seedOffset = 0) {
       const hue = (Math.floor(Math.random() * 360) + seedOffset) % 360;
       const sat = 55 + Math.floor(Math.random() * 35);
       const lightBg = 92 + Math.floor(Math.random() * 6);
       const primaryHue = (hue + 40 + Math.floor(Math.random() * 60)) % 360;
       const accentHue = (primaryHue + 130 + Math.floor(Math.random() * 80)) % 360;
-      
-      const bgLight = `hsl(${hue}, ${sat}%, ${lightBg}%)`;
-      const primaryColor = `hsl(${primaryHue}, ${Math.min(sat+10,88)}%, 48%)`;
-      const accentColor = `hsl(${accentHue}, 72%, 58%)`;
-      const textDark = `hsl(${hue}, 30%, 18%)`;
-      const textMuted = `hsl(${hue}, 20%, 38%)`;
-      const cardBg = `hsl(${hue}, ${sat-15}%, 98%)`;
-      return { bgLight, primaryColor, accentColor, textDark, textMuted, cardBg, baseHue: hue };
+      return {
+        bgLight: `hsl(${hue}, ${sat}%, ${lightBg}%)`,
+        primaryColor: `hsl(${primaryHue}, ${Math.min(sat+10,88)}%, 48%)`,
+        accentColor: `hsl(${accentHue}, 72%, 58%)`,
+        textDark: `hsl(${hue}, 30%, 18%)`,
+        textMuted: `hsl(${hue}, 20%, 38%)`,
+        cardBg: `hsl(${hue}, ${sat-15}%, 98%)`,
+      };
     }
     
-    // 3. Picsum random images (always fresh unsplash-like random ID)
-    function getRandomPicsumUrl(width = 600, height = 400, seed = null) {
-      const realSeed = seed !== null ? seed : Math.floor(Math.random() * 10000);
-      return `https://picsum.photos/id/${realSeed % 1000}/${width}/${height}?random=${Date.now() + Math.random()}`;
+    function getRandomPicsumUrl(width, height, seed) {
+      const realSeed = seed !== undefined ? seed : Math.floor(Math.random() * 10000);
+      return `https://picsum.photos/id/${realSeed % 1000}/${width}/${height}?rand=${Date.now()+Math.random()}`;
     }
     
-    function getAvatarPicsum(seedVal) {
-      return `https://picsum.photos/id/${(seedVal % 70) + 30}/80/80`;
-    }
-    
-    // 4. core: randomized template fabricator with pseudo calculations + unique patterns
     function generateRandomWebsite(clickCounter) {
-      const epochSeed = Date.now() + Math.random() * 9999;
-      const chaosSeed = (clickCounter * 127) ^ Math.floor(epochSeed);
+      const chaosSeed = (clickCounter * 127) ^ Math.floor(Date.now() * Math.random());
       const r = (max) => Math.floor(Math.random() * max);
-      const categoryIndex = (chaosSeed + r(7)) % CATEGORIES.length;
-      const category = CATEGORIES[categoryIndex];
-      
+      const category = CATEGORIES[(chaosSeed + r(7)) % CATEGORIES.length];
       const theme = randomColorPalette(chaosSeed);
       const layoutVariant = r(5);
-      
       const bannerId = (chaosSeed + r(300)) % 400 + 1;
       const bannerImg = `https://picsum.photos/id/${bannerId}/1200/400`;
       const productImg1 = `https://picsum.photos/id/${(bannerId + 37) % 400}/400/300`;
       const productImg2 = `https://picsum.photos/id/${(bannerId + 88) % 400}/400/300`;
       const productImg3 = `https://picsum.photos/id/${(bannerId + 143) % 400}/400/300`;
-      const avatarImg = getAvatarPicsum(bannerId);
+      const avatarImg = `https://picsum.photos/id/${(bannerId % 70) + 30}/80/80`;
       
-      const randNouns = ["Nexus", "Orbit", "Void", "Aether", "Lumina", "Cypher", "Flux", "Nimbus", "Pulse", "Eclipse"];
-      const randAdj = ["Radical", "Neo", "Hyper", "Frost", "Ember", "Zenith", "Mythic", "Vivid", "Apex"];
-      const brandName = `${randAdj[Math.floor(Math.random() * randAdj.length)]}${randNouns[Math.floor(Math.random() * randNouns.length)]}`;
+      const randNouns = ["Nexus","Orbit","Void","Aether","Lumina","Cypher","Flux","Nimbus"];
+      const randAdj = ["Radical","Neo","Hyper","Frost","Ember","Zenith","Mythic"];
+      const brandName = `${randAdj[Math.floor(Math.random()*randAdj.length)]}${randNouns[Math.floor(Math.random()*randNouns.length)]}`;
       const fakePrice = (Math.random() * 450 + 19).toFixed(2);
       const discount = Math.floor(Math.random() * 40) + 5;
       
-      // Helper style block using dynamic theme
       const styleBlock = `
         <style>
           .rand-website * { margin: 0; padding: 0; box-sizing: border-box; }
-          .rand-website { 
-            font-family: 'Inter', system-ui, 'Segoe UI', sans-serif; 
-            background: ${theme.bgLight}; 
-            color: ${theme.textDark};
-            line-height: 1.4;
-          }
+          .rand-website { font-family: 'Inter', system-ui, sans-serif; background: ${theme.bgLight}; color: ${theme.textDark}; line-height: 1.4; }
           .rand-website .container { max-width: 1280px; margin: 0 auto; padding: 1.2rem 2rem; }
-          .rand-website .btn-primary { background: ${theme.primaryColor}; border: none; color: white; padding: 0.75rem 1.8rem; border-radius: 40px; font-weight: 600; cursor: default; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.1s; }
+          .rand-website .btn-primary { background: ${theme.primaryColor}; border: none; color: white; padding: 0.75rem 1.8rem; border-radius: 40px; font-weight: 600; display: inline-block; cursor: default; }
           .rand-website .btn-accent { background: ${theme.accentColor}; border: none; color: #1f1f2a; padding: 0.7rem 1.5rem; border-radius: 60px; font-weight: 600; cursor: default; }
-          .rand-website .card { background: ${theme.cardBg}; border-radius: 28px; padding: 1.5rem; box-shadow: 0 12px 24px -12px rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.02); transition: all 0.2s; border: 1px solid rgba(0,0,0,0.02);}
+          .rand-website .card { background: ${theme.cardBg}; border-radius: 28px; padding: 1.5rem; box-shadow: 0 12px 24px -12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.02);}
           .rand-website .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.8rem; margin: 2rem 0; }
           .rand-website .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;}
-          .rand-website h1, .rand-website h2, .rand-website h3 { font-weight: 700; letter-spacing: -0.02em; }
+          .rand-website h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
           .rand-website .hero-gradient { background: linear-gradient(135deg, ${theme.primaryColor}10, ${theme.accentColor}15); border-radius: 2rem; padding: 2rem; }
         </style>
       `;
       
-      const metricSystem = `<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-        <span style="background:${theme.primaryColor}20; padding:0.3rem 1rem; border-radius:30px;">⚡ +${Math.floor(Math.random()*95+5)}%</span>
-        <span style="background:${theme.accentColor}20; padding:0.3rem 1rem; border-radius:30px;">📊 score ${Math.floor(Math.random()*900+100)}</span>
-        <span style="background:#ddd3; padding:0.3rem 1rem; border-radius:30px;">🔄 randomized ${Math.floor(Math.random()*999)}</span>
-      </div>`;
-      
-      const productShowcase = `
-        <div class="grid-3">
-          <div class="card"><img src="${productImg1}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">Cosmic Edition</h3><p style="color:${theme.textMuted}">$${fakePrice}</p><div class="btn-primary" style="margin-top: 12px; display:inline-block;">Shop now</div></div>
-          <div class="card"><img src="${productImg2}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">NeoVibe</h3><p style="color:${theme.textMuted}">$${(parseFloat(fakePrice)+47).toFixed(2)}</p><div class="btn-primary" style="margin-top: 12px;">Explore</div></div>
-          <div class="card"><img src="${productImg3}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">Aether Pro</h3><p style="color:${theme.textMuted}">$${(parseFloat(fakePrice)*1.2).toFixed(2)}</p><div class="btn-accent">-${discount}%</div></div>
-        </div>
-      `;
-      
-      const dashboardMetrics = `
-        <div class="grid-3" style="margin-bottom: 1rem;">
-          <div class="card"><h3>📈 Revenue</h3><p style="font-size:2rem; font-weight:800;">$${Math.floor(Math.random()*10000+1200)}</p>${metricSystem}</div>
-          <div class="card"><h3>👥 Active users</h3><p style="font-size:2rem; font-weight:800;">${Math.floor(Math.random()*25000+340)}</p><span>⬆️ +${Math.floor(Math.random()*37)}%</span></div>
-          <div class="card"><h3>⚙️ Conversion</h3><p style="font-size:2rem; font-weight:800;">${(Math.random()*12+2).toFixed(1)}%</p><div style="background:${theme.accentColor}; height:6px; width: 70%; border-radius: 4px;"></div></div>
-        </div>
-      `;
+      const productShowcase = `<div class="grid-3"><div class="card"><img src="${productImg1}" style="width:100%; border-radius: 18px;"><h3>Cosmic Edition</h3><p>$${fakePrice}</p><div class="btn-primary">Shop</div></div><div class="card"><img src="${productImg2}" style="width:100%; border-radius: 18px;"><h3>NeoVibe</h3><p>$${(parseFloat(fakePrice)+47).toFixed(2)}</p><div class="btn-primary">Explore</div></div><div class="card"><img src="${productImg3}" style="width:100%; border-radius: 18px;"><h3>Aether Pro</h3><p>$${(parseFloat(fakePrice)*1.2).toFixed(2)}</p><div class="btn-accent">-${discount}%</div></div></div>`;
+      const dashboardMetrics = `<div class="grid-3"><div class="card"><h3>📈 Revenue</h3><p style="font-size:2rem;">$${Math.floor(Math.random()*10000+1200)}</p></div><div class="card"><h3>👥 Users</h3><p style="font-size:2rem;">${Math.floor(Math.random()*25000+340)}</p></div><div class="card"><h3>⚙️ Conversion</h3><p style="font-size:2rem;">${(Math.random()*12+2).toFixed(1)}%</p></div></div>`;
       
       let customSection = "";
-      if (category === "DASHBOARD" || layoutVariant === 2) {
-        customSection = `<div class="hero-gradient"><h2>📊 Dashboard insights</h2>${dashboardMetrics}<div class="flex-between"><span>🕒 real-time random metrics</span><span class="btn-accent">Export</span></div></div>`;
-      } else if (category === "E-COMMERCE" || layoutVariant === 1) {
-        customSection = `<div><h2>✨ Trending Products</h2>${productShowcase}<div style="text-align:center; margin-top: 1rem;"><span class="btn-primary">View all →</span></div></div>`;
-      } else if (category === "PORTFOLIO" || layoutVariant === 3) {
-        customSection = `<div><div class="flex-between"><h2>⭐ Recent works</h2><span class="btn-accent">See projects</span></div><div class="grid-3"><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+5)}" style="border-radius: 20px; width:100%"><h3>Project Nova</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+17)}" style="border-radius: 20px; width:100%"><h3>Ethereal Identity</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+33)}" style="border-radius: 20px; width:100%"><h3>Flux Design</h3></div></div></div>`;
-      } else {
-        customSection = `<div class="hero-gradient"><h2>✨ ${brandName} Intelligence</h2><p style="margin: 1rem 0;">Experience next-gen randomness — every click rebuilds reality. Get your custom solution now.</p><div class="flex-between"><span class="btn-primary">Get started →</span><span class="btn-accent">Learn more</span></div></div>`;
-      }
+      if (category === "DASHBOARD" || layoutVariant === 2) customSection = `<div class="hero-gradient"><h2>📊 Dashboard</h2>${dashboardMetrics}</div>`;
+      else if (category === "E-COMMERCE" || layoutVariant === 1) customSection = `<div><h2>🔥 Trending</h2>${productShowcase}</div>`;
+      else customSection = `<div class="hero-gradient"><h2>✨ ${brandName}</h2><p>Fresh random design. Every click is unique.</p><div class="flex-between"><span class="btn-primary">Start</span><span class="btn-accent">Learn</span></div></div>`;
       
-      const hero = `
-        <div style="background: url(${bannerImg}) center/cover no-repeat; border-radius: 28px; margin-bottom: 1.6rem; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 1.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
-          <div style="background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); padding: 1rem 2rem; border-radius: 60px; color: white; text-align: center;">
-            <h1 style="font-size: clamp(1.8rem,5vw,2.8rem);">${brandName}</h1>
-            <p style="opacity: 0.9;">${category} · dynamically generated</p>
-          </div>
-        </div>
-      `;
+      const hero = `<div style="background: url(${bannerImg}) center/cover no-repeat; border-radius: 28px; min-height: 220px; display: flex; align-items: center; justify-content: center;"><div style="background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); padding: 1rem 2rem; border-radius: 60px; color: white;"><h1>${brandName}</h1><p>${category}</p></div></div>`;
+      const nav = `<div class="flex-between" style="border-bottom: 2px solid ${theme.primaryColor}30; padding-bottom: 1rem;"><div style="font-weight:800; font-size:1.5rem;">⚡${brandName.slice(0,2)}</div><div style="display:flex; gap:1.2rem;"><span>Explore</span><span>Shop</span><span>Account</span></div></div>`;
+      const footer = `<div style="margin-top: 3rem; padding: 1.5rem 0; text-align: center; border-top: 1px solid ${theme.textMuted}30;">🌀 randomized generator | picsum assets</div>`;
+      let extra = "";
+      if (category === "SOCIAL APP") extra = `<div class="grid-3"><div class="card"><img src="${avatarImg}" style="border-radius: 50%; width:60px;"><h4>@randomuser</h4></div><div class="card">🔥 trending #viral</div></div>`;
       
-      const nav = `
-        <div class="flex-between" style="margin-bottom: 1rem; border-bottom: 2px solid ${theme.primaryColor}30; padding-bottom: 1rem;">
-          <div style="font-weight:800; font-size:1.5rem;">⚡${brandName.slice(0,2)}</div>
-          <div style="display: flex; gap: 1.2rem;"><span>Explore</span><span>Resources</span><span>${category === "DASHBOARD" ? "Stats" : "Shop"}</span><span>Account</span></div>
-        </div>
-      `;
+      const innerHTML = `<div class="rand-website">${styleBlock}<div class="container">${nav}${hero}${customSection}${extra}${footer}</div></div>`;
       
-      const footer = `<div style="margin-top: 3rem; padding: 1.5rem 0; text-align: center; font-size: 0.8rem; border-top: 1px solid ${theme.textMuted}30; color:${theme.textMuted};">🌀 random generator v.chaos | picsum dynamic assets | seed: ${clickCounter}${Math.floor(Math.random()*900)} | 🎨 infinite templates</div>`;
+      // FULL STANDALONE HTML DOCUMENT (what you actually want to copy)
+      const fullDocument = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Generated ${category} · ChaosForge</title>
+  ${styleBlock}
+</head>
+<body style="margin:0; padding:0;">
+  ${innerHTML}
+</body>
+</html>`;
       
-      // extra category spice
-      let extraBlock = "";
-      if (category === "BLOG" || layoutVariant === 4) {
-        extraBlock = `<div class="card" style="margin:1.8rem 0;"><div class="flex-between"><h3>📰 Latest articles</h3><span class="btn-accent">Read more</span></div><div><p>• How random APIs fuel creativity</p><p>• Design system breakdown with picsum</p><p>• ${brandName} inside-out</p></div></div>`;
-      } else if (category === "ADMIN PANEL") {
-        extraBlock = `<div class="card"><h3>Admin overview</h3><div style="display:grid; gap: 0.8rem;"><div>🔐 last login: random device</div><div>📋 pending tasks: ${Math.floor(Math.random()*12)}</div><div class="btn-primary" style="width:fit-content;">Manage users</div></div></div>`;
-      } else if (category === "SOCIAL APP") {
-        extraBlock = `<div class="grid-3"><div class="card"><img src="${avatarImg}" style="border-radius: 50%; width: 60px;"><h4>@${randNouns[clickCounter%randNouns.length]}labs</h4><p>post: random vibe ✨</p></div><div class="card"><div>🔥 trending now: #${randAdj[clickCounter%randAdj.length]}</div><div>✨ ${Math.floor(Math.random()*999)} likes</div></div></div>`;
-      }
-      
-      const mainStructure = `
-        <div class="rand-website">
-          ${styleBlock}
-          <div class="container">
-            ${nav}
-            ${hero}
-            ${customSection}
-            ${extraBlock}
-            ${footer}
-          </div>
-        </div>
-      `;
-      
-      return { html: mainStructure, categoryDisplay: category, themeColors: theme, rawHTML: mainStructure };
+      return { fullHTML: fullDocument, displayHTML: innerHTML, categoryDisplay: category, themeColors: theme };
     }
     
-    // DOM elements
+    // ----- DOM elements -----
     const btn = document.getElementById('chaosButton');
-    const copyBtn = document.getElementById('copyCodeBtn');
+    const copyBtn = document.getElementById('copyFullPageBtn');
     const liveRoot = document.getElementById('liveWebsiteRoot');
     const seedSpan = document.getElementById('seedValue');
     const categorySpan = document.getElementById('categoryLabel');
     const toastEl = document.getElementById('toastMsg');
     
     let clickCount = 0;
-    let lastRawHTML = "";
+    let lastFullHTML = "";
     
-    function showToast(message) {
-      toastEl.textContent = message || "✨ Source code copied to clipboard!";
+    function showToast(msg) {
+      toastEl.textContent = msg || "✅ Full page HTML copied!";
       toastEl.classList.add('show');
-      setTimeout(() => {
-        toastEl.classList.remove('show');
-      }, 2100);
+      setTimeout(() => toastEl.classList.remove('show'), 2000);
     }
     
-    function renderRandomTemplate() {
+    function renderRandom() {
       clickCount++;
       seedSpan.innerText = clickCount;
-      const { html, categoryDisplay, themeColors, rawHTML } = generateRandomWebsite(clickCount);
-      lastRawHTML = rawHTML;
-      liveRoot.innerHTML = html;
+      const { fullHTML, displayHTML, categoryDisplay, themeColors } = generateRandomWebsite(clickCount);
+      lastFullHTML = fullHTML;
+      liveRoot.innerHTML = displayHTML;
       categorySpan.innerText = categoryDisplay;
-      
-      const stageDiv = document.getElementById('websiteStage');
-      if (themeColors && themeColors.primaryColor) {
-        stageDiv.style.border = `1px solid ${themeColors.primaryColor}60`;
-        setTimeout(() => { stageDiv.style.border = "1px solid rgba(255,255,240,0.2)"; }, 300);
+      const stage = document.querySelector('.website-stage');
+      if (themeColors?.primaryColor) {
+        stage.style.border = `1px solid ${themeColors.primaryColor}80`;
+        setTimeout(() => stage.style.border = "1px solid rgba(255,255,240,0.2)", 200);
       }
-      console.log(`[Generator] Click #${clickCount} | Category: ${categoryDisplay} | fresh template`);
     }
     
-    // Copy full generated source code (including the entire HTML/CSS structure of current random website)
-    function copyCurrentSourceCode() {
-      if (!lastRawHTML) {
-        // fallback: get current from DOM
-        const currentPreview = document.getElementById('liveWebsiteRoot').innerHTML;
-        if (currentPreview && currentPreview.length > 20) {
-          const fullDocumentWrapper = `<div style="font-family:system-ui;">${currentPreview}</div>`;
-          copyToClipboard(fullDocumentWrapper);
-          showToast("📋 Current website HTML copied!");
-        } else {
-          showToast("⚠️ Generate a website first!");
-        }
+    function copyFullPage() {
+      if (!lastFullHTML) {
+        showToast("⚠️ Generate a website first!");
         return;
       }
-      // extract clean HTML (the random website markup)
-      const codeToCopy = lastRawHTML;
-      copyToClipboard(codeToCopy);
-      showToast("📋 Source code copied! You can paste it anywhere.");
-    }
-    
-    function copyToClipboard(text) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(err => {
-          fallbackCopy(text);
-        });
+        navigator.clipboard.writeText(lastFullHTML).then(() => showToast("✅ Full page HTML copied!")).catch(() => fallbackCopy(lastFullHTML));
       } else {
-        fallbackCopy(text);
+        fallbackCopy(lastFullHTML);
       }
     }
     
     function fallbackCopy(text) {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
       document.execCommand('copy');
-      document.body.removeChild(textarea);
+      document.body.removeChild(ta);
+      showToast("✅ Copied (fallback)");
     }
     
-    function firstRender() {
-      clickCount = 0;
-      renderRandomTemplate();
-    }
+    btn.addEventListener('click', renderRandom);
+    copyBtn.addEventListener('click', copyFullPage);
     
-    btn.addEventListener('click', () => {
-      renderRandomTemplate();
-    });
-    
-    copyBtn.addEventListener('click', () => {
-      copyCurrentSourceCode();
-    });
-    
-    firstRender();
+    // initial render
+    renderRandom();
   })();
 </script>
 </body>
