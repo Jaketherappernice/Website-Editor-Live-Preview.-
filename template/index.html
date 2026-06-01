@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Hub - Neon Cyber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom Neon Orange Styles */
+        body {
+            background-color: #0d0d0d;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        .neon-border {
+            box-shadow: 0 0 10px #ff6600, inset 0 0 5px #ff6600;
+            border: 1px solid #ff6600;
+        }
+        .neon-text {
+            text-shadow: 0 0 8px #ff6600;
+        }
+        .neon-bg {
+            background-color: #ff6600;
+        }
+        .neon-btn:hover {
+            box-shadow: 0 0 15px #ff6600;
+            background-color: #ff6600;
+            color: #000;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0d0d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff6600;
+            border-radius: 3px;
+        }
+        
+        /* Interactive Editor Canvas Elements */
+        .editable-element {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            transition: outline 0.1s ease;
+        }
+        .editable-element:hover {
+            outline: 2px dashed #ff6600;
+        }
+        .editable-element.selected {
+            outline: 2px solid #ff6600 !important;
+        }
+        
+        /* 4-Dot Resizer Resize Handles */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ff6600;
+            border: 1px solid #ffffff;
+            border-radius: 50%;
+            display: none;
+            z-index: 50;
+        }
+        .editable-element.selected .resize-handle {
+            display: block;
+        }
+        .tl { top: -5px; left: -5px; cursor: nwse-resize; }
+        .tr { top: -5px; right: -5px; cursor: nesw-resize; }
+        .bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+        .br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-black border-b border-orange-600/30 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home-view')">
+            <i class="fa-solid fa-cubes text-2xl text-orange-500 neon-text"></i>
+            <h1 class="text-xl font-black uppercase tracking-wider text-white">Template <span class="text-orange-500 neon-text">Hub</span></h1>
+        </div>
+        <nav class="flex space-x-4">
+            <button onclick="switchView('home-view')" class="px-4 py-2 rounded text-sm font-semibold border border-transparent text-gray-300 hover:text-orange-500 transition"><i class="fa-solid fa-house mr-2"></i>Home</button>
+            <button onclick="switchView('admin-view'); loadAdminTemplates();" class="px-4 py-2 rounded text-sm font-semibold border border-orange-500/50 text-orange-500 hover:bg-orange-500 hover:text-black transition duration-300"><i class="fa-solid fa-user-gear mr-2"></i>Admin Panel</button>
+        </nav>
+    </header>
+
+    <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+
+        <section id="home-view" class="view-section space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-zinc-500"></i>
+                    <input type="text" id="home-search" oninput="filterHomeTemplates()" placeholder="Search template formulas..." class="w-full bg-black border border-zinc-700 rounded-lg pl-12 pr-4 py-3 text-sm focus:outline-none focus:border-orange-500 text-white">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-filter text-zinc-400 text-sm"></i>
+                    <select id="home-filter" onchange="filterHomeTemplates()" class="bg-black border border-zinc-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-orange-500 text-white min-w-[150px]">
+                        <option value="all">All Templates</option>
+                        <option value="landing">Landing Pages</option>
+                        <option value="portfolio">Portfolios</option>
+                        <option value="dashboard">Dashboards</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="home-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="col-span-full text-center py-12 text-zinc-500">
+                    <i class="fa-solid fa-circle-notch animate-spin text-3xl text-orange-500 mb-4"></i>
+                    <p>Syncing template grids from Firestore network...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-view" class="view-section hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold tracking-tight text-white uppercase border-l-4 border-orange-500 pl-3">Database Management</h2>
+                <button onclick="openAdminModal()" class="bg-orange-600 hover:bg-orange-500 text-black font-bold px-5 py-2.5 rounded-lg text-sm flex items-center shadow-lg shadow-orange-600/20 transition"><i class="fa-solid fa-plus mr-2"></i>Create New Formula</button>
+            </div>
+
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                <input type="text" id="admin-search" oninput="filterAdminTemplates()" placeholder="Search template records..." class="flex-1 bg-black border border-zinc-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 text-white">
+                <select id="admin-filter" onchange="filterAdminTemplates()" class="bg-black border border-zinc-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 text-white">
+                    <option value="all">All Subcategories</option>
+                    <option value="landing">Landing Pages</option>
+                    <option value="portfolio">Portfolios</option>
+                    <option value="dashboard">Dashboards</option>
+                </select>
+            </div>
+
+            <div class="bg-black border border-zinc-800 rounded-xl overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-zinc-900 text-zinc-400 uppercase text-xs tracking-wider border-b border-zinc-800">
+                            <th class="p-4">Preview</th>
+                            <th class="p-4">Template Name</th>
+                            <th class="p-4">Category</th>
+                            <th class="p-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body" class="divide-y divide-zinc-900 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="editor-view" class="view-section hidden flex flex-col h-[calc(100vh-140px)]">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div class="flex items-center space-x-3">
+                    <button onclick="switchView('home-view')" class="text-zinc-400 hover:text-white p-2 bg-black rounded border border-zinc-800"><i class="fa-solid fa-arrow-left"></i></button>
+                    <div>
+                        <h2 id="editor-title" class="font-bold text-white leading-tight">Editing Workspace</h2>
+                        <p class="text-xs text-zinc-500">Double click elements to configure content, visuals, and sizes</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="bg-black rounded-lg p-1 border border-zinc-800 flex space-x-1 text-xs">
+                        <button onclick="setCanvasMode('desktop')" id="btn-mode-desktop" class="px-3 py-1.5 rounded font-medium bg-orange-600 text-black"><i class="fa-solid fa-desktop mr-1.5"></i>Desktop</button>
+                        <button onclick="setCanvasMode('mobile')" id="btn-mode-mobile" class="px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>Mobile View</button>
+                    </div>
+                    <button onclick="exportTemplateProject()" class="neon-border bg-black text-orange-500 font-bold px-5 py-2 rounded-lg text-sm transition flex items-center hover:bg-orange-600 hover:text-black"><i class="fa-solid fa-file-export mr-2"></i>Export Blueprint</button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex bg-zinc-950 rounded-xl border border-zinc-900 overflow-hidden relative justify-center items-start p-4 overflow-y-auto">
+                <div id="editor-canvas" class="bg-white text-black w-full min-h-[600px] relative transition-all duration-300 shadow-2xl rounded" style="width: 100%;">
+                    </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="admin-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+            <div class="bg-black border-b border-zinc-800 px-6 py-4 flex justify-between items-center">
+                <h3 id="modal-headline" class="text-md font-bold uppercase text-orange-500 tracking-wide">Add Structural Formula</h3>
+                <button onclick="closeAdminModal()" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="template-form" onsubmit="saveTemplateRecord(event)" class="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+                <input type="hidden" id="form-template-id">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Template Name</label>
+                    <input type="text" id="form-name" required class="w-full bg-black border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500 text-white">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Category Segment</label>
+                        <select id="form-category" class="w-full bg-black border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500 text-white">
+                            <option value="landing">Landing Page</option>
+                            <option value="portfolio">Portfolio Layout</option>
+                            <option value="dashboard">Dashboard Interface</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Thumbnail URL Image</label>
+                        <input type="url" id="form-image" required placeholder="https://images.unsplash.com/..." class="w-full bg-black border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Raw Base Code Sandbox Layout (HTML Strings)</label>
+                    <textarea id="form-code" required rows="8" placeholder="" class="w-full bg-black border border-zinc-700 rounded-lg p-3 font-mono text-xs focus:outline-none focus:border-orange-500 text-emerald-400"></textarea>
+                </div>
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeAdminModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-lg text-sm">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-black font-bold rounded-lg text-sm shadow-lg shadow-orange-600/10">Commit Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Provided System Configuration Parameters
+        const firebaseConfig = {
+            apiKey: "AIzaSyBfJVcXgioTyyg6ZvJrlZjlmbRCGdGf0Hk",
+            authDomain: "evidence-hub-media.firebaseapp.com",
+            projectId: "evidence-hub-media",
+            storageBucket: "evidence-hub-media.firebasestorage.app",
+            messagingSenderId: "140321888915",
+            appId: "1:140321888915:web:d974047e083d757ce20b66",
+            measurementId: "G-BZT4GWT9FF"
+        };
+
+        // Initialize Firebase Engines
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Core Global Arrays
+        let localTemplatesCache = [];
+        let currentlySelectedElement = null;
+        let activeDragElement = null;
+        let isResizing = false;
+        let currentHandleType = '';
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        // Make functions globally available across layout blocks
+        window.switchView = switchView;
+        window.openAdminModal = openAdminModal;
+        window.closeAdminModal = closeAdminModal;
+        window.saveTemplateRecord = saveTemplateRecord;
+        window.editAdminTemplate = editAdminTemplate;
+        window.deleteAdminTemplate = deleteAdminTemplate;
+        window.loadAdminTemplates = loadAdminTemplates;
+        window.filterHomeTemplates = filterHomeTemplates;
+        window.filterAdminTemplates = filterAdminTemplates;
+        window.startEditingMode = startEditingMode;
+        window.setCanvasMode = setCanvasMode;
+        window.exportTemplateProject = exportTemplateProject;
+
+        // Initialization Pipeline
+        async function fetchSystemTemplates() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "templates"));
+                localTemplatesCache = [];
+                querySnapshot.forEach((doc) => {
+                    localTemplatesCache.push({ id: doc.id, ...doc.data() });
+                });
+                renderHomeGrid(localTemplatesCache);
+            } catch (error) {
+                console.error("Critical connection failure to cloud storage node: ", error);
+                document.getElementById('home-grid').innerHTML = `<p class="text-red-500 text-center col-span-full">Failed to synchronize database records.</p>`;
+            }
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(section => section.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        // Render Cards to Main Catalog Showcase
+        function renderHomeGrid(dataset) {
+            const grid = document.getElementById('home-grid');
+            if (dataset.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600">No layout structures found matching parameters.</div>`;
+                return;
+            }
+            grid.innerHTML = dataset.map(item => `
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-orange-500/40 transition duration-300 flex flex-col group">
+                    <div class="h-44 w-full bg-zinc-950 relative overflow-hidden border-b border-zinc-800/60">
+                        <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe'}" alt="Preview" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <span class="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[10px] font-bold text-orange-400 tracking-widest uppercase px-2 py-1 rounded border border-orange-500/20">${item.category}</span>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="font-bold text-white text-lg group-hover:text-orange-500 transition">${item.name}</h3>
+                            <p class="text-xs text-zinc-500 mt-1">Responsive component package</p>
+                        </div>
+                        <button onclick="startEditingMode('${item.id}')" class="w-full bg-zinc-800 text-white hover:bg-orange-600 hover:text-black font-bold text-xs py-3 rounded-lg uppercase tracking-wider transition duration-200"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Start Now</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterHomeTemplates() {
+            const query = document.getElementById('home-search').value.toLowerCase();
+            const category = document.getElementById('home-filter').value;
+            const output = localTemplatesCache.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(query);
+                const matchesCat = category === 'all' || item.category === category;
+                return matchesSearch && matchesCat;
+            });
+            renderHomeGrid(output);
+        }
+
+        // Admin Management Pipeline Layout
+        function loadAdminTemplates() {
+            const tbody = document.getElementById('admin-table-body');
+            if (localTemplatesCache.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-zinc-600">No database items loaded.</td></tr>`;
+                return;
+            }
+            renderAdminTable(localTemplatesCache);
+        }
+
+        function renderAdminTable(dataset) {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = dataset.map(item => `
+                <tr class="hover:bg-zinc-900/40 transition">
+                    <td class="p-4"><img src="${item.imageUrl}" class="w-16 h-10 object-cover rounded border border-zinc-800"></td>
+                    <td class="p-4 font-semibold text-white">${item.name}</td>
+                    <td class="p-4"><span class="text-xs bg-zinc-800 text-zinc-400 px-2 py-1 rounded">${item.category}</span></td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="editAdminTemplate('${item.id}')" class="text-zinc-400 hover:text-orange-500 p-2"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteAdminTemplate('${item.id}')" class="text-zinc-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAdminTemplates() {
+            const query = document.getElementById('admin-search').value.toLowerCase();
+            const category = document.getElementById('admin-filter').value;
+            const output = localTemplatesCache.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(query);
+                const matchesCat = category === 'all' || item.category === category;
+                return matchesSearch && matchesCat;
+            });
+            renderAdminTable(output);
+        }
+
+        function openAdminModal() {
+            document.getElementById('template-form').reset();
+            document.getElementById('form-template-id').value = '';
+            document.getElementById('modal-headline').innerText = "Add Structural Formula";
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+        }
+
+        async function saveTemplateRecord(e) {
+            e.preventDefault();
+            const id = document.getElementById('form-template-id').value;
+            const payload = {
+                name: document.getElementById('form-name').value,
+                category: document.getElementById('form-category').value,
+                imageUrl: document.getElementById('form-image').value,
+                sourceCode: document.getElementById('form-code').value
+            };
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "templates", id), payload);
+                } else {
+                    await addDoc(collection(db, "templates"), payload);
+                }
+                closeAdminModal();
+                await fetchSystemTemplates();
+                loadAdminTemplates();
+            } catch (err) {
+                console.error("Error committing dataset block: ", err);
+            }
+        }
+
+        async function editAdminTemplate(id) {
+            const target = localTemplatesCache.find(t => t.id === id);
+            if (!target) return;
+            document.getElementById('form-template-id').value = target.id;
+            document.getElementById('form-name').value = target.name;
+            document.getElementById('form-category').value = target.category;
+            document.getElementById('form-image').value = target.imageUrl;
+            document.getElementById('form-code').value = target.sourceCode;
+            document.getElementById('modal-headline').innerText = "Modify Blueprint Matrix";
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        async function deleteAdminTemplate(id) {
+            if (confirm("Are you sure you want to delete this template blueprint?")) {
+                await deleteDoc(doc(db, "templates", id));
+                await fetchSystemTemplates();
+                loadAdminTemplates();
+            }
+        }
+
+        // ================= INTERACTIVE ENGINE LAB (DRAG, RESIZE, INTERACTION) =================
+        function startEditingMode(id) {
+            const target = localTemplatesCache.find(t => t.id === id);
+            if (!target) return;
+
+            document.getElementById('editor-title').innerText = target.name;
+            const canvas = document.getElementById('editor-canvas');
+            
+            // Render sandbox into working layout frame
+            canvas.innerHTML = target.sourceCode;
+            setupCanvasElements(canvas);
+            switchView('editor-view');
+        }
+
+        function setupCanvasElements(canvas) {
+            // Find children to bind event processors
+            const elements = canvas.querySelectorAll('*');
+            elements.forEach((el, index) => {
+                // Ignore structural wrapping elements if any exist outside bounds
+                if(el === canvas) return;
+                
+                el.classList.add('editable-element');
+                
+                // Add the 4 corner handles for resizing interaction
+                const handles = ['tl', 'tr', 'bl', 'br'];
+                handles.forEach(h => {
+                    const d = document.createElement('div');
+                    d.className = `resize-handle ${h}`;
+                    el.appendChild(d);
+                });
+
+                // Set initial positioning styles if not absolute to handle mapping bounds properly
+                const computed = window.getComputedStyle(el);
+                if(computed.position !== 'absolute') {
+                    el.style.position = 'absolute';
+                    if(!el.style.top) el.style.top = `${el.offsetTop}px`;
+                    if(!el.style.left) el.style.left = `${el.offsetLeft}px`;
+                }
+
+                // Bind Interactive Events
+                el.addEventListener('mousedown', initiateDragOrResize);
+                el.addEventListener('dblclick', processElementConfigurationMenu);
+            });
+
+            // Global canvas scope interceptors
+            document.removeAttribute('mousemove');
+            document.removeAttribute('mouseup');
+            document.addEventListener('mousemove', globalTrackMovement);
+            document.addEventListener('mouseup', globalCeaseMovement);
+            canvas.addEventListener('click', (e) => {
+                if(e.target === canvas) clearSelectionMatrix();
+            });
+        }
+
+        function clearSelectionMatrix() {
+            if(currentlySelectedElement) {
+                currentlySelectedElement.classList.remove('selected');
+                currentlySelectedElement = null;
+            }
+        }
+
+        function initiateDragOrResize(e) {
+            clearSelectionMatrix();
+            currentlySelectedElement = this;
+            this.classList.add('selected');
+
+            if (e.target.classList.contains('resize-handle')) {
+                isResizing = true;
+                currentHandleType = e.target.classList[1];
+                activeDragElement = this;
+            } else {
+                isResizing = false;
+                activeDragElement = this;
+            }
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = parseInt(document.defaultView.getComputedStyle(activeDragElement).width, 10);
+            startHeight = parseInt(document.defaultView.getComputedStyle(activeDragElement).height, 10);
+            startLeft = parseInt(activeDragElement.style.left, 10) || activeDragElement.offsetLeft;
+            startTop = parseInt(activeDragElement.style.top, 10) || activeDragElement.offsetTop;
+
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function globalTrackMovement(e) {
+            if (!activeDragElement) return;
+
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            if (isResizing) {
+                // 4-Dot Resizer Mechanics Calculations
+                if (currentHandleType === 'br') {
+                    activeDragElement.style.width = `${startWidth + deltaX}px`;
+                    activeDragElement.style.height = `${startHeight + deltaY}px`;
+                } else if (currentHandleType === 'bl') {
+                    activeDragElement.style.width = `${startWidth - deltaX}px`;
+                    activeDragElement.style.left = `${startLeft + deltaX}px`;
+                    activeDragElement.style.height = `${startHeight + deltaY}px`;
+                } else if (currentHandleType === 'tr') {
+                    activeDragElement.style.width = `${startWidth + deltaX}px`;
+                    activeDragElement.style.height = `${startHeight - deltaY}px`;
+                    activeDragElement.style.top = `${startTop + deltaY}px`;
+                } else if (currentHandleType === 'tl') {
+                    activeDragElement.style.width = `${startWidth - deltaX}px`;
+                    activeDragElement.style.left = `${startLeft + deltaX}px`;
+                    activeDragElement.style.height = `${startHeight - deltaY}px`;
+                    activeDragElement.style.top = `${startTop + deltaY}px`;
+                }
+            } else {
+                // Drag Mechanics
+                activeDragElement.style.left = `${startLeft + deltaX}px`;
+                activeDragElement.style.top = `${startTop + deltaY}px`;
+            }
+        }
+
+        function globalCeaseMovement() {
+            activeDragElement = null;
+            isResizing = false;
+        }
+
+        // Inline configuration system based on requested workflow prompt routing configurations
+        function processElementConfigurationMenu(e) {
+            e.stopPropagation();
+            const el = this;
+
+            const selection = prompt(
+                "Select element configuration attribute parameter to change:\n" +
+                "1: Edit text / text content\n" +
+                "2: Edit color / container image styling\n" +
+                "3: Modify typography layout text sizing scale\n" +
+                "4: Modify interaction button redirection actions"
+            );
+
+            if (!selection) return;
+
+            switch(selection.trim()) {
+                case '1':
+                    const originalText = el.innerText;
+                    const newText = prompt("Enter new text value context content payload:", originalText);
+                    if (newText !== null) {
+                        // Maintain safety handles during mutation injections
+                        const structures = el.querySelectorAll('.resize-handle');
+                        el.innerText = newText;
+                        structures.forEach(h => el.appendChild(h));
+                    }
+                    break;
+                case '2':
+                    const option = prompt("Enter 1 to change Text/Background Color, or 2 to change Image URL source structural components:");
+                    if(option === '1') {
+                        const colorValue = prompt("Enter color value format (e.g. #ff6600, red, rgba(0,0,0,0.5)):");
+                        if(colorValue) el.style.backgroundColor = colorValue;
+                    } else if(option === '2') {
+                        const imgUrl = prompt("Enter direct image link target url address configurations:");
+                        if(imgUrl) {
+                            if(el.tagName === 'IMG') {
+                                el.src = imgUrl;
+                            } else {
+                                el.style.backgroundImage = `url('${imgUrl}')`;
+                                el.style.backgroundSize = 'cover';
+                            }
+                        }
+                    }
+                    break;
+                case '3':
+                    const fontSize = prompt("Enter text design dimensions sizing scale rules (e.g., 14px, 2rem, 24px):");
+                    if(fontSize) el.style.fontSize = fontSize;
+                    break;
+                case '4':
+                    const btnText = prompt("Enter updated text display label for button interaction matrices:");
+                    if(btnText !== null) {
+                        const structures = el.querySelectorAll('.resize-handle');
+                        el.innerText = btnText;
+                        structures.forEach(h => el.appendChild(h));
+                    }
+                    const redirectUrl = prompt("Enter landing redirection target URL endpoint domain links:");
+                    if(redirectUrl) el.setAttribute('data-redirect-link', redirectUrl);
+                    break;
+                default:
+                    alert("Invalid choice selection code sequence execution rejected.");
+                    break;
+            }
+        }
+
+        function setCanvasMode(mode) {
+            const canvas = document.getElementById('editor-canvas');
+            const btnD = document.getElementById('btn-mode-desktop');
+            const btnM = document.getElementById('btn-mode-mobile');
+
+            if(mode === 'mobile') {
+                canvas.style.width = '375px';
+                btnM.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
+                btnD.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
+            } else {
+                canvas.style.width = '100%';
+                btnD.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
+                btnM.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
+            }
+        }
+
+        // Export system to compile changes into a production-ready, mobile-responsive document layout
+        function exportTemplateProject() {
+            // Clone working environment canvas to clean output artifact elements safely without mutation loss
+            const workingCanvas = document.getElementById('editor-canvas').cloneNode(true);
+            
+            // Clean control anchors and nodes out of production environment stream
+            workingCanvas.querySelectorAll('.resize-handle').forEach(h => h.remove());
+            workingCanvas.querySelectorAll('.editable-element').forEach(el => {
+                el.classList.remove('editable-element', 'selected');
+                
+                // If button redirect parameters are active, write live event loops inline
+                const redirect = el.getAttribute('data-redirect-link');
+                if(redirect) {
+                    el.setAttribute('onclick', `window.location.href='${redirect}'`);
+                    el.style.cursor = 'pointer';
+                }
+            });
+
+            const cleanInnerHtml = workingCanvas.innerHTML;
+
+            // Generate clean standalone, production-ready source code complete with CSS media targets for seamless mobile viewport auto-adjustments
+            const structuralOutputDocument = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Blueprint Matrix Application</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        body { margin: 0; padding: 0; overflow-x: hidden; position: relative; width: 100%; min-height: 100vh; }
+        .responsive-container { position: relative; width: 100%; min-height: 100vh; overflow: hidden; }
+        
+        /* Auto Responsive Logic Engine configuration parameters for handheld profiles */
+        @media (max-width: 768px) {
+            .responsive-container * {
+                position: relative !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                margin-bottom: 1rem !important;
+                box-sizing: border-box !important;
+                display: block !important;
+            }
+            .responsive-container {
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 16px !important;
+                overflow-y: auto !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white text-black">
+    <div class="responsive-container">
+        ${cleanInnerHtml.trim()}
+    </div>
+</body>
+</html>`;
+
+            // Prompt runtime file downloader setup parameters
+            const dataStringBlob = new Blob([structuralOutputDocument], { type: 'text/html' });
+            const temporaryAnchorElement = document.createElement('a');
+            temporaryAnchorElement.download = 'template-hub-production-blueprint.html';
+            temporaryAnchorElement.href = window.URL.createObjectURL(dataStringBlob);
+            temporaryAnchorElement.click();
+            temporaryAnchorElement.remove();
+        }
+
+        // Run Initial Synchronizer Pipeline
+        fetchSystemTemplates();
+    </script>
+</body>
+</html>
