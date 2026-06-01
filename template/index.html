@@ -165,8 +165,8 @@
                 </div>
             </div>
 
-            <div class="flex-1 flex bg-zinc-950 rounded-xl border border-zinc-900 overflow-hidden relative justify-center items-start p-4 overflow-y-auto">
-                <div id="editor-canvas" class="bg-white text-black w-full min-h-[600px] relative transition-all duration-300 shadow-2xl rounded" style="width: 100%;">
+            <div class="flex-1 flex bg-zinc-950 rounded-xl border border-zinc-900 overflow-auto relative justify-start items-start p-4">
+                <div id="editor-canvas" class="bg-white text-black min-h-[600px] relative transition-all duration-300 shadow-2xl rounded mx-auto" style="width: 1200px; max-width: none; flex-shrink: 0;">
                     </div>
             </div>
         </section>
@@ -240,7 +240,7 @@
         let currentHandleType = '';
         let startX, startY, startWidth, startHeight, startLeft, startTop;
 
-        // Make functions globally available across layout blocks (FIXED: Added window.startEditingMode)
+        // Make functions globally available across layout blocks
         window.switchView = switchView;
         window.openAdminModal = openAdminModal;
         window.closeAdminModal = closeAdminModal;
@@ -410,6 +410,12 @@
             
             // Render sandbox into working layout frame
             canvas.innerHTML = target.sourceCode;
+            
+            // Defaults canvas back to desktop scaling dimensions securely
+            canvas.style.width = '1200px'; 
+            document.getElementById('btn-mode-desktop').className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
+            document.getElementById('btn-mode-mobile').className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
+            
             setupCanvasElements(canvas);
             switchView('editor-view');
         }
@@ -417,15 +423,17 @@
         function setupCanvasElements(canvas) {
             const elements = canvas.querySelectorAll('*');
             elements.forEach((el, index) => {
-                if(el === canvas) return;
+                if(el === canvas || el.classList.contains('resize-handle')) return;
                 
                 el.classList.add('editable-element');
                 
                 const handles = ['tl', 'tr', 'bl', 'br'];
                 handles.forEach(h => {
-                    const d = document.createElement('div');
-                    d.className = `resize-handle ${h}`;
-                    el.appendChild(d);
+                    if (!el.querySelector(`.resize-handle.${h}`)) {
+                        const d = document.createElement('div');
+                        d.className = `resize-handle ${h}`;
+                        el.appendChild(d);
+                    }
                 });
 
                 const computed = window.getComputedStyle(el);
@@ -435,14 +443,22 @@
                     if(!el.style.left) el.style.left = `${el.offsetLeft}px`;
                 }
 
+                // Unified Pointer / Touch Mapping Interfaces
                 el.addEventListener('mousedown', initiateDragOrResize);
+                el.addEventListener('touchstart', initiateDragOrResize, { passive: false });
                 el.addEventListener('dblclick', processElementConfigurationMenu);
             });
 
             document.removeEventListener('mousemove', globalTrackMovement);
             document.removeEventListener('mouseup', globalCeaseMovement);
+            document.removeEventListener('touchmove', globalTrackMovement);
+            document.removeEventListener('touchend', globalCeaseMovement);
+
             document.addEventListener('mousemove', globalTrackMovement);
             document.addEventListener('mouseup', globalCeaseMovement);
+            document.addEventListener('touchmove', globalTrackMovement, { passive: false });
+            document.addEventListener('touchend', globalCeaseMovement);
+            
             canvas.addEventListener('click', (e) => {
                 if(e.target === canvas) clearSelectionMatrix();
             });
@@ -457,34 +473,43 @@
 
         function initiateDragOrResize(e) {
             clearSelectionMatrix();
-            currentlySelectedElement = this;
-            this.classList.add('selected');
+            
+            // Target elements matching criteria safely
+            let targetElement = e.target.closest('.editable-element');
+            if(!targetElement) return;
+
+            currentlySelectedElement = targetElement;
+            currentlySelectedElement.classList.add('selected');
 
             if (e.target.classList.contains('resize-handle')) {
                 isResizing = true;
                 currentHandleType = e.target.classList[1];
-                activeDragElement = this;
+                activeDragElement = currentlySelectedElement;
             } else {
                 isResizing = false;
-                activeDragElement = this;
+                activeDragElement = currentlySelectedElement;
             }
 
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = parseInt(document.defaultView.getComputedStyle(activeDragElement).width, 10);
-            startHeight = parseInt(document.defaultView.getComputedStyle(activeDragElement).height, 10);
+            // Normalizes events to read Client coordinates regardless of pointer type
+            const pointerSource = e.touches ? e.touches[0] : e;
+            startX = pointerSource.clientX;
+            startY = pointerSource.clientY;
+            
+            startWidth = parseInt(document.defaultView.getComputedStyle(activeDragElement).width, 10) || activeDragElement.offsetWidth;
+            startHeight = parseInt(document.defaultView.getComputedStyle(activeDragElement).height, 10) || activeDragElement.offsetHeight;
             startLeft = parseInt(activeDragElement.style.left, 10) || activeDragElement.offsetLeft;
             startTop = parseInt(activeDragElement.style.top, 10) || activeDragElement.offsetTop;
 
             e.stopPropagation();
-            e.preventDefault();
+            if(e.cancelable) e.preventDefault();
         }
 
         function globalTrackMovement(e) {
             if (!activeDragElement) return;
 
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
+            const pointerSource = e.touches ? e.touches[0] : e;
+            const deltaX = pointerSource.clientX - startX;
+            const deltaY = pointerSource.clientY - startY;
 
             if (isResizing) {
                 if (currentHandleType === 'br') {
@@ -508,6 +533,8 @@
                 activeDragElement.style.left = `${startLeft + deltaX}px`;
                 activeDragElement.style.top = `${startTop + deltaY}px`;
             }
+
+            if(e.cancelable) e.preventDefault();
         }
 
         function globalCeaseMovement() {
@@ -586,7 +613,7 @@
                 btnM.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
                 btnD.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
             } else {
-                canvas.style.width = '100%';
+                canvas.style.width = '1200px';
                 btnD.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
                 btnM.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
             }
