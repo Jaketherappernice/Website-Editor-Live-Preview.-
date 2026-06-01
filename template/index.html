@@ -1,448 +1,376 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandbox Matrix - Interactive Canvas Workspace</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Neon Cyber UI Styling rules */
-        body {
-            background-color: #0d0d0d;
-            color: #e5e5e5;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            overflow: hidden;
-        }
-        .neon-border {
-            box-shadow: 0 0 10px #ff6600, inset 0 0 5px #ff6600;
-            border: 1px solid #ff6600;
-        }
-        .neon-text {
-            text-shadow: 0 0 8px #ff6600;
-        }
-        /* Custom Scrollbar Elements */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0d0d0d;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #ff6600;
-            border-radius: 3px;
-        }
-        
-        /* Drag and Drop Canvas Elements Manipulation Class Matrices */
-        .editable-element {
-            position: absolute;
-            cursor: move;
-            user-select: none;
-            transition: outline 0.1s ease;
-        }
-        .editable-element:hover {
-            outline: 2px dashed #ff6600;
-        }
-        .editable-element.selected {
-            outline: 2px solid #ff6600 !important;
-        }
-        
-        /* 4-Dot Resizer Elements Structure */
-        .resize-handle {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: #ff6600;
-            border: 1px solid #ffffff;
-            border-radius: 50%;
-            display: none;
-            z-index: 50;
-        }
-        .editable-element.selected .resize-handle {
-            display: block;
-        }
-        .tl { top: -5px; left: -5px; cursor: nwse-resize; }
-        .tr { top: -5px; right: -5px; cursor: nesw-resize; }
-        .bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
-        .br { bottom: -5px; right: -5px; cursor: nwse-resize; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>ChaosForge · Random Website Generator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #101115 0%, #1a1c22 100%);
+      font-family: system-ui, 'Segoe UI', 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+      padding: 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Main card container */
+    .generator-panel {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      background: rgba(12, 12, 18, 0.65);
+      backdrop-filter: blur(12px);
+      border-radius: 3rem;
+      padding: 1.5rem 2rem 2rem 2rem;
+      box-shadow: 0 25px 45px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.2s;
+    }
+
+    /* button row + stats */
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .randomize-btn {
+      background: radial-gradient(circle at 30% 10%, #f0b87b, #f57c2e);
+      border: none;
+      padding: 0.9rem 2.2rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      border-radius: 60px;
+      color: #1e1a0c;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      letter-spacing: -0.2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .randomize-btn:hover {
+      transform: scale(1.02) translateY(-2px);
+      filter: brightness(1.05);
+      box-shadow: 0 18px 30px -8px rgba(245, 124, 46, 0.4);
+    }
+
+    .randomize-btn:active {
+      transform: scale(0.98);
+    }
+
+    .stats {
+      background: #0c0c12cc;
+      backdrop-filter: blur(4px);
+      padding: 0.5rem 1.4rem;
+      border-radius: 80px;
+      font-family: monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #f5e7d9;
+      border: 1px solid #ffb56b30;
+    }
+
+    .stats span {
+      color: #ffbc6e;
+      font-weight: 700;
+    }
+
+    /* Live preview panel — here the random website is rendered */
+    .website-stage {
+      background: #ffffff;
+      border-radius: 2rem;
+      overflow: hidden;
+      box-shadow: 0 20px 35px -12px black;
+      transition: all 0.25s ease;
+      border: 1px solid rgba(255,255,240,0.2);
+      min-height: 540px;
+    }
+
+    .website-frame {
+      width: 100%;
+      background: white;
+      transition: background 0.1s;
+    }
+
+    /* inner generated website style reset */
+    .generated-site {
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    /* minimal utility for responsive */
+    @media (max-width: 760px) {
+      body {
+        padding: 0.8rem;
+      }
+      .generator-panel {
+        padding: 1rem;
+      }
+      .randomize-btn {
+        padding: 0.6rem 1.4rem;
+        font-size: 1.2rem;
+      }
+    }
+
+    /* loading shimmer (optional inline) */
+    .loading-dot {
+      opacity: 0.8;
+    }
+  </style>
 </head>
-<body class="w-screen h-screen flex flex-col m-0 p-0 select-none">
+<body>
 
-    <div id="setup-view" class="w-full h-full flex flex-col items-center justify-center p-6 z-50 bg-[#0d0d0d]">
-        <div class="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-2xl">
-            <div class="flex items-center space-x-3 border-b border-zinc-800 pb-3">
-                <i class="fa-solid fa-code-matrix text-2xl text-orange-500 neon-text"></i>
-                <h1 class="text-xl font-black uppercase tracking-wider text-white">Sandbox <span class="text-orange-500 neon-text">Compiler</span></h1>
-            </div>
-            
-            <div class="space-y-2">
-                <label class="block text-xs font-bold text-zinc-400 uppercase tracking-widest">Paste Source Code Sandbox Layout (HTML Strings)</label>
-                <textarea id="source-code-input" rows="12" placeholder="<!DOCTYPE html>&#10;<html>&#10;<body>&#10;  <div style='width:200px; height:100px; background:red;'>Drag Me</div>&#10;</body>&#10;</html>" class="w-full bg-black border border-zinc-700 rounded-lg p-3 font-mono text-xs focus:outline-none focus:border-orange-500 text-emerald-400 resize-none"></textarea>
-            </div>
-            
-            <button onclick="compileRawSourceInput()" class="w-full neon-border bg-black text-orange-500 font-bold py-3.5 rounded-lg text-xs uppercase tracking-widest transition duration-200 hover:bg-orange-600 hover:text-black">
-                <i class="fa-solid fa-bolt mr-2"></i>Initialize Workspace
-            </button>
-        </div>
+<div class="generator-panel">
+  <div class="action-bar">
+    <button class="randomize-btn" id="chaosButton">✨ RANDOMIZE WEBSITE ✨</button>
+    <div class="stats" id="statsArea">
+      🔮 seed: <span id="seedValue">—</span> &nbsp;|&nbsp; 📁 category: <span id="categoryLabel">—</span>
     </div>
+  </div>
 
-    <div id="editor-view" class="hidden w-full h-full flex flex-col relative bg-zinc-900">
-        
-        <div class="bg-zinc-950 border-b border-zinc-900 px-6 py-4 flex items-center justify-between z-40">
-            <div class="flex items-center space-x-4">
-                <button onclick="clearWorkspaceSession()" class="text-zinc-400 hover:text-red-500 p-2 bg-black rounded border border-zinc-800 transition">
-                    <i class="fa-solid fa-trash-can-list mr-2"></i>Clear Session
-                </button>
-                <div>
-                    <h2 class="font-bold text-white leading-tight uppercase tracking-wide text-sm">Active Workspace Canvas</h2>
-                    <p class="text-[11px] text-zinc-500">Changes auto-save locally. Double click elements to edit content properties.</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                <div class="bg-black rounded-lg p-1 border border-zinc-800 flex space-x-1 text-xs">
-                    <button onclick="setCanvasMode('desktop')" id="btn-mode-desktop" class="px-3 py-1.5 rounded font-medium bg-orange-600 text-black">
-                        <i class="fa-solid fa-desktop mr-1.5"></i>Desktop
-                    </button>
-                    <button onclick="setCanvasMode('mobile')" id="btn-mode-mobile" class="px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white">
-                        <i class="fa-solid fa-mobile-screen-button mr-1.5"></i>Mobile
-                    </button>
-                </div>
-                <button onclick="exportToClipboard()" class="neon-border bg-black text-orange-500 font-bold px-5 py-2 rounded-lg text-sm transition flex items-center hover:bg-orange-600 hover:text-black">
-                    <i class="fa-solid fa-copy mr-2"></i>Export Clipboard Blueprint
-                </button>
-            </div>
-        </div>
-
-        <div class="flex-1 w-full bg-zinc-900 overflow-auto relative p-0 m-0 z-10">
-            <div id="editor-canvas" class="bg-white text-black min-h-full relative transition-all duration-300 shadow-2xl mx-auto" style="width: 100%; max-width: none; flex-shrink: 0;">
-                </div>
-        </div>
+  <div class="website-stage" id="websiteStage">
+    <div id="liveWebsiteRoot" class="website-frame">
+      <!-- dynamic injected random website template will appear here -->
+      <div style="padding: 3rem; text-align: center; color: #555; background: #faf9fc;">🌀 click button → infinite random layouts</div>
     </div>
+  </div>
+</div>
 
-    <script>
-        // Core Global Engine State Variables
-        let currentlySelectedElement = null;
-        let activeDragElement = null;
-        let isResizing = false;
-        let currentHandleType = '';
-        let startX, startY, startWidth, startHeight, startLeft, startTop;
-
-        // Track taps for mobile touch interactions
-        let lastTapTime = 0;
-        let lastTapTarget = null;
-
-        // Initialization Pipeline: Verifies LocalStorage Matrix Logs on Setup
-        document.addEventListener("DOMContentLoaded", () => {
-            const cachedProgressData = localStorage.getItem("sandbox_autosave_payload");
-            if (cachedProgressData) {
-                document.getElementById("setup-view").classList.add("hidden");
-                document.getElementById("editor-view").classList.remove("hidden");
-                
-                const canvas = document.getElementById("editor-canvas");
-                canvas.innerHTML = cachedProgressData;
-                
-                // Re-bind mouse interaction listeners to active objects inside container matrix
-                setupCanvasElements(canvas);
-            }
-        });
-
-        // Initialize compiler workflow interface
-        function compileRawSourceInput() {
-            const codePayload = document.getElementById("source-code-input").value.trim();
-            if (!codePayload) {
-                alert("Cannot initialize environment with empty layout strings.");
-                return;
-            }
-
-            document.getElementById("setup-view").classList.add("hidden");
-            document.getElementById("editor-view").classList.remove("hidden");
-
-            const canvas = document.getElementById("editor-canvas");
-            
-            // Clean code segments formatting and inject raw source strings straight inside frame window
-            canvas.innerHTML = extractBodyContent(codePayload);
-            
-            setupCanvasElements(canvas);
-            saveCurrentStateProgress();
-        }
-
-        // Extracts content inside body tags safely if a whole html document was pasted
-        function extractBodyContent(htmlString) {
-            const match = htmlString.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-            return match ? match[1] : htmlString;
-        }
-
-        function setupCanvasElements(canvas) {
-            const elements = canvas.querySelectorAll('*');
-            elements.forEach((el) => {
-                if(el === canvas || el.classList.contains('resize-handle')) return;
-                
-                el.classList.add('editable-element');
-                
-                // Mount 4 corner resize handles inside element bounding layouts
-                const handles = ['tl', 'tr', 'bl', 'br'];
-                handles.forEach(h => {
-                    if (!el.querySelector(`.resize-handle.${h}`)) {
-                        const d = document.createElement('div');
-                        d.className = `resize-handle ${h}`;
-                        el.appendChild(d);
-                    }
-                });
-
-                // Enforce absolute layouts to allow free element movement coordination parameters
-                const computed = window.getComputedStyle(el);
-                if(computed.position !== 'absolute' && computed.position !== 'fixed') {
-                    el.style.position = 'absolute';
-                    if(!el.style.top || el.style.top === 'auto') el.style.top = `${el.offsetTop}px`;
-                    if(!el.style.left || el.style.left === 'auto') el.style.left = `${el.offsetLeft}px`;
-                }
-
-                // Drag, Drop and Touch Pointer Normalizers Mapping Interfaces
-                el.addEventListener('mousedown', initiateDragOrResize);
-                el.addEventListener('touchstart', initiateDragOrResize, { passive: false });
-                el.addEventListener('dblclick', processElementConfigurationMenu);
-
-                // Pure Mobile Multi-touch Double-Tap Logic Mapping Setup Configuration
-                el.addEventListener('touchstart', function(e) {
-                    const currentTime = new Date().getTime();
-                    const tapLength = currentTime - lastTapTime;
-                    if (lastTapTarget === this && tapLength < 250 && tapLength > 0) {
-                        e.preventDefault(); 
-                        e.stopPropagation();
-                        processElementConfigurationMenu.call(this, e);
-                    }
-                    lastTapTime = currentTime;
-                    lastTapTarget = this;
-                }, { passive: false });
-            });
-
-            // Global Mouse tracking layout state operations parameters cleanup management loop
-            document.removeEventListener('mousemove', globalTrackMovement);
-            document.removeEventListener('mouseup', globalCeaseMovement);
-            document.removeEventListener('touchmove', globalTrackMovement);
-            document.removeEventListener('touchend', globalCeaseMovement);
-
-            document.addEventListener('mousemove', globalTrackMovement);
-            document.addEventListener('mouseup', globalCeaseMovement);
-            document.addEventListener('touchmove', globalTrackMovement, { passive: false });
-            document.addEventListener('touchend', globalCeaseMovement);
-            
-            canvas.addEventListener('click', (e) => { if(e.target === canvas) clearSelectionMatrix(); });
-            canvas.addEventListener('touchstart', (e) => { if(e.target === canvas) clearSelectionMatrix(); });
-        }
-
-        function clearSelectionMatrix() {
-            if(currentlySelectedElement) {
-                currentlySelectedElement.classList.remove('selected');
-                currentlySelectedElement = null;
-            }
-        }
-
-        function initiateDragOrResize(e) {
-            clearSelectionMatrix();
-            let targetElement = e.target.closest('.editable-element');
-            if(!targetElement) return;
-
-            currentlySelectedElement = targetElement;
-            currentlySelectedElement.classList.add('selected');
-
-            if (e.target.classList.contains('resize-handle')) {
-                isResizing = true;
-                currentHandleType = e.target.classList[1];
-                activeDragElement = currentlySelectedElement;
-            } else {
-                isResizing = false;
-                activeDragElement = currentlySelectedElement;
-            }
-
-            const pointerSource = e.touches ? e.touches[0] : e;
-            startX = pointerSource.clientX;
-            startY = pointerSource.clientY;
-            
-            startWidth = parseInt(document.defaultView.getComputedStyle(activeDragElement).width, 10) || activeDragElement.offsetWidth;
-            startHeight = parseInt(document.defaultView.getComputedStyle(activeDragElement).height, 10) || activeDragElement.offsetHeight;
-            startLeft = parseInt(activeDragElement.style.left, 10) || activeDragElement.offsetLeft;
-            startTop = parseInt(activeDragElement.style.top, 10) || activeDragElement.offsetTop;
-
-            e.stopPropagation();
-            if(e.cancelable && e.type !== 'touchstart') e.preventDefault();
-        }
-
-        function globalTrackMovement(e) {
-            if (!activeDragElement) return;
-
-            const pointerSource = e.touches ? e.touches[0] : e;
-            const deltaX = pointerSource.clientX - startX;
-            const deltaY = pointerSource.clientY - startY;
-
-            if (isResizing) {
-                if (currentHandleType === 'br') {
-                    activeDragElement.style.width = `${startWidth + deltaX}px`;
-                    activeDragElement.style.height = `${startHeight + deltaY}px`;
-                } else if (currentHandleType === 'bl') {
-                    activeDragElement.style.width = `${startWidth - deltaX}px`;
-                    activeDragElement.style.left = `${startLeft + deltaX}px`;
-                    activeDragElement.style.height = `${startHeight + deltaY}px`;
-                } else if (currentHandleType === 'tr') {
-                    activeDragElement.style.width = `${startWidth + deltaX}px`;
-                    activeDragElement.style.height = `${startHeight - deltaY}px`;
-                    activeDragElement.style.top = `${startTop + deltaY}px`;
-                } else if (currentHandleType === 'tl') {
-                    activeDragElement.style.width = `${startWidth - deltaX}px`;
-                    activeDragElement.style.left = `${startLeft + deltaX}px`;
-                    activeDragElement.style.height = `${startHeight - deltaY}px`;
-                    activeDragElement.style.top = `${startTop + deltaY}px`;
-                }
-            } else {
-                activeDragElement.style.left = `${startLeft + deltaX}px`;
-                activeDragElement.style.top = `${startTop + deltaY}px`;
-            }
-
-            if(e.cancelable) e.preventDefault();
-            saveCurrentStateProgress();
-        }
-
-        function globalCeaseMovement() {
-            activeDragElement = null;
-            isResizing = false;
-        }
-
-        function processElementConfigurationMenu(e) {
-            if (e) e.stopPropagation();
-            const el = this;
-
-            const selection = prompt(
-                "Select element configuration attribute parameter to change:\n" +
-                "1: Edit text content\n" +
-                "2: Edit color / background styles\n" +
-                "3: Modify typography font dimensions sizing scale"
-            );
-
-            if (!selection) return;
-
-            switch(selection.trim()) {
-                case '1':
-                    const originalText = el.innerText;
-                    const newText = prompt("Enter text context content string:", originalText);
-                    if (newText !== null) {
-                        const structures = el.querySelectorAll('.resize-handle');
-                        el.innerText = newText;
-                        structures.forEach(h => el.appendChild(h));
-                    }
-                    break;
-                case '2':
-                    const option = prompt("Enter 1 to change text color, or 2 to change Background Color properties:");
-                    if(option === '1') {
-                        const colorValue = prompt("Enter text color (e.g., white, #ff6600, red):");
-                        if(colorValue) el.style.color = colorValue;
-                    } else if(option === '2') {
-                        const bgValue = prompt("Enter background styling rules values (e.g., black, rgba(0,0,0,0.8), #000):");
-                        if(bgValue) el.style.backgroundColor = bgValue;
-                    }
-                    break;
-                case '3':
-                    const fontSize = prompt("Enter text design sizing matrix metrics (e.g., 14px, 1.5rem, 32px):");
-                    if(fontSize) el.style.fontSize = fontSize;
-                    break;
-                default:
-                    alert("Invalid option selected.");
-                    break;
-            }
-            saveCurrentStateProgress();
-        }
-
-        function setCanvasMode(mode) {
-            const canvas = document.getElementById('editor-canvas');
-            const btnD = document.getElementById('btn-mode-desktop');
-            const btnM = document.getElementById('btn-mode-mobile');
-
-            if(mode === 'mobile') {
-                canvas.style.width = '375px';
-                btnM.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
-                btnD.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
-            } else {
-                canvas.style.width = '100%';
-                btnD.className = "px-3 py-1.5 rounded font-medium bg-orange-600 text-black";
-                btnM.className = "px-3 py-1.5 rounded font-medium text-zinc-400 hover:text-white";
-            }
-        }
-
-        // Syncs active runtime canvas markup structures payload cleanly into LocalStorage tracking banks
-        function saveCurrentStateProgress() {
-            const innerCanvasHtml = document.getElementById('editor-canvas').innerHTML;
-            localStorage.setItem("sandbox_autosave_payload", innerCanvasHtml);
-        }
-
-        function clearWorkspaceSession() {
-            if(confirm("Are you sure you want to completely drop this workspace session tracking history?")) {
-                localStorage.removeItem("sandbox_autosave_payload");
-                document.getElementById("source-code-input").value = "";
-                document.getElementById("editor-view").classList.add("hidden");
-                document.getElementById("setup-view").classList.remove("hidden");
-            }
-        }
-
-        // Export utility mapping process pipeline copies structural code variables right straight into clipboard matrices
-        function exportToClipboard() {
-            const workingCanvas = document.getElementById('editor-canvas').cloneNode(true);
-            
-            // Cleanup engine asset wrappers before building compilation output matrix
-            workingCanvas.querySelectorAll('.resize-handle').forEach(h => h.remove());
-            workingCanvas.querySelectorAll('.editable-element').forEach(el => {
-                el.classList.remove('editable-element', 'selected');
-            });
-
-            const cleanInnerHtml = workingCanvas.innerHTML;
-
-            const structuralOutputDocument = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exported Project Matrix</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <style>
-        body { margin: 0; padding: 0; overflow-x: hidden; position: relative; width: 100%; min-height: 100vh; }
-        .responsive-container { position: relative; width: 100%; min-height: 100vh; overflow: hidden; }
-        @media (max-width: 768px) {
-            .responsive-container * {
-                position: relative !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                margin-bottom: 1rem !important;
-                box-sizing: border-box !important;
-                display: block !important;
-            }
-            .responsive-container {
-                display: flex !important;
-                flex-direction: column !important;
-                padding: 16px !important;
-                overflow-y: auto !important;
-            }
-        }
-    </style>
-</head>
-<body class="bg-white text-black">
-    <div class="responsive-container">
-        ${cleanInnerHtml.trim()}
-    </div>
-</body>
-</html>`;
-
-            navigator.clipboard.writeText(structuralOutputDocument)
-                .then(() => {
-                    alert("Cleaned deployment production blueprint code matrix successfully copied directly to your clipboard system.");
-                })
-                .catch(err => {
-                    console.error("Unable to execute automated writing requests straight onto system clipboard storage channels: ", err);
-                    alert("Failure to copy package data context payload automatically.");
-                });
-        }
-    </script>
+<script>
+  (function(){
+    // --------------------------------------------------------------
+    //  RANDOMIZATION ENGINE: categories, themes, picsum, layouts
+    // --------------------------------------------------------------
+    
+    // 1. LIST OF CATEGORIES (landing page, e-commerce, dashboard, portfolio, blog, admin, etc)
+    const CATEGORIES = [
+      "LANDING PAGE", "E-COMMERCE", "DASHBOARD", "PORTFOLIO", "BLOG", "SAAS STARTER", 
+      "ADMIN PANEL", "SOCIAL APP", "MAGAZINE", "SERVICE SHOWCASE", "MINIMAL MARKETING", "ANALYTICS HUB"
+    ];
+    
+    // 2. Color theme generators (randomized palettes: bg, primary, accent, text)
+    function randomColorPalette(seedOffset = 0) {
+      // make shit up but visually pleasant ranges
+      const hue = (Math.floor(Math.random() * 360) + seedOffset) % 360;
+      const sat = 55 + Math.floor(Math.random() * 35); // 55-90%
+      const lightBg = 92 + Math.floor(Math.random() * 6); // 92-98% bg
+      const primaryHue = (hue + 40 + Math.floor(Math.random() * 60)) % 360;
+      const accentHue = (primaryHue + 130 + Math.floor(Math.random() * 80)) % 360;
+      
+      const bgLight = `hsl(${hue}, ${sat}%, ${lightBg}%)`;
+      const primaryColor = `hsl(${primaryHue}, ${Math.min(sat+10,88)}%, 48%)`;
+      const accentColor = `hsl(${accentHue}, 72%, 58%)`;
+      const textDark = `hsl(${hue}, 30%, 18%)`;
+      const textMuted = `hsl(${hue}, 20%, 38%)`;
+      const cardBg = `hsl(${hue}, ${sat-15}%, 98%)`;
+      return { bgLight, primaryColor, accentColor, textDark, textMuted, cardBg, baseHue: hue };
+    }
+    
+    // 3. Picsum random images (always fresh unsplash-like random ID)
+    function getRandomPicsumUrl(width = 600, height = 400, seed = null) {
+      const realSeed = seed !== null ? seed : Math.floor(Math.random() * 10000);
+      return `https://picsum.photos/id/${realSeed % 1000}/${width}/${height}?random=${Date.now() + Math.random()}`;
+    }
+    
+    function getAvatarPicsum(seedVal) {
+      return `https://picsum.photos/id/${(seedVal % 70) + 30}/80/80`;
+    }
+    
+    // 4. core: randomized template fabricator with pseudo calculations + unique patterns
+    // Each click generates a completely different structure based on category + random mixing.
+    function generateRandomWebsite(clickCounter) {
+      // ---- CALCULATIONAL SYSTEM: make shit up using clickCounter & random seeds ----
+      const epochSeed = Date.now() + Math.random() * 9999;
+      const chaosSeed = (clickCounter * 127) ^ Math.floor(epochSeed);
+      const r = (max) => Math.floor(Math.random() * max);
+      // deterministic random based on chaosSeed & clickCounter but each click fully random
+      // ---- use shuffled array but still fully chaotic ----
+      const categoryIndex = (chaosSeed + r(7)) % CATEGORIES.length;
+      const category = CATEGORIES[categoryIndex];
+      
+      // get fresh theme (colors)
+      const theme = randomColorPalette(chaosSeed);
+      // random layout style: grid, flex, cards, etc.
+      const layoutVariant = r(5); // 0-4 different structural flavors
+      
+      // picsum random banner ID and product / image sets
+      const bannerId = (chaosSeed + r(300)) % 400 + 1;
+      const bannerImg = `https://picsum.photos/id/${bannerId}/1200/400`;
+      const productImg1 = `https://picsum.photos/id/${(bannerId + 37) % 400}/400/300`;
+      const productImg2 = `https://picsum.photos/id/${(bannerId + 88) % 400}/400/300`;
+      const productImg3 = `https://picsum.photos/id/${(bannerId + 143) % 400}/400/300`;
+      const avatarImg = getAvatarPicsum(bannerId);
+      
+      // --- random titles & fake data (calculational random phrases)
+      const randNouns = ["Nexus", "Orbit", "Void", "Aether", "Lumina", "Cypher", "Flux", "Nimbus", "Pulse", "Eclipse"];
+      const randAdj = ["Radical", "Neo", "Hyper", "Frost", "Ember", "Zenith", "Mythic", "Vivid", "Apex"];
+      const brandName = `${randAdj[Math.floor(Math.random() * randAdj.length)]}${randNouns[Math.floor(Math.random() * randNouns.length)]}`;
+      const fakePrice = (Math.random() * 450 + 19).toFixed(2);
+      const discount = Math.floor(Math.random() * 40) + 5;
+      
+      // build dynamic HTML based on category, layoutVariant and visual spices.
+      let innerHtml = "";
+      
+      // Helper: inject global style block + reset
+      const styleBlock = `
+        <style>
+          .rand-website * { margin: 0; padding: 0; box-sizing: border-box; }
+          .rand-website { 
+            font-family: 'Inter', system-ui, 'Segoe UI', sans-serif; 
+            background: ${theme.bgLight}; 
+            color: ${theme.textDark};
+            line-height: 1.4;
+          }
+          .rand-website .container { max-width: 1280px; margin: 0 auto; padding: 1.2rem 2rem; }
+          .rand-website .btn-primary { background: ${theme.primaryColor}; border: none; color: white; padding: 0.75rem 1.8rem; border-radius: 40px; font-weight: 600; cursor: default; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.1s; }
+          .rand-website .btn-accent { background: ${theme.accentColor}; border: none; color: #1f1f2a; padding: 0.7rem 1.5rem; border-radius: 60px; font-weight: 600; cursor: default; }
+          .rand-website .card { background: ${theme.cardBg}; border-radius: 28px; padding: 1.5rem; box-shadow: 0 12px 24px -12px rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.02); transition: all 0.2s; border: 1px solid rgba(0,0,0,0.02);}
+          .rand-website .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.8rem; margin: 2rem 0; }
+          .rand-website .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;}
+          .rand-website h1, .rand-website h2, .rand-website h3 { font-weight: 700; letter-spacing: -0.02em; }
+          .rand-website .hero-gradient { background: linear-gradient(135deg, ${theme.primaryColor}10, ${theme.accentColor}15); border-radius: 2rem; padding: 2rem; }
+        </style>
+      `;
+      
+      // ----- LAYOUT SWITCH: different category + random structure mixing ensures uniqueness per click -----
+      // we mix cards, stats, and category-specific elements
+      const metricSystem = `<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <span style="background:${theme.primaryColor}20; padding:0.3rem 1rem; border-radius:30px;">⚡ +${Math.floor(Math.random()*95+5)}%</span>
+        <span style="background:${theme.accentColor}20; padding:0.3rem 1rem; border-radius:30px;">📊 score ${Math.floor(Math.random()*900+100)}</span>
+        <span style="background:#ddd3; padding:0.3rem 1rem; border-radius:30px;">🔄 randomized ${Math.floor(Math.random()*999)}</span>
+      </div>`;
+      
+      // generic E-commerce block
+      const productShowcase = `
+        <div class="grid-3">
+          <div class="card"><img src="${productImg1}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">Cosmic Edition</h3><p style="color:${theme.textMuted}">$${fakePrice}</p><div class="btn-primary" style="margin-top: 12px; display:inline-block;">Shop now</div></div>
+          <div class="card"><img src="${productImg2}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">NeoVibe</h3><p style="color:${theme.textMuted}">$${(parseFloat(fakePrice)+47).toFixed(2)}</p><div class="btn-primary" style="margin-top: 12px;">Explore</div></div>
+          <div class="card"><img src="${productImg3}" style="width:100%; border-radius: 18px; aspect-ratio: 4/3; object-fit: cover;"><h3 style="margin:0.8rem 0 0.2rem">Aether Pro</h3><p style="color:${theme.textMuted}">$${(parseFloat(fakePrice)*1.2).toFixed(2)}</p><div class="btn-accent">-${discount}%</div></div>
+        </div>
+      `;
+      
+      const dashboardMetrics = `
+        <div class="grid-3" style="margin-bottom: 1rem;">
+          <div class="card"><h3>📈 Revenue</h3><p style="font-size:2rem; font-weight:800;">$${Math.floor(Math.random()*10000+1200)}</p>${metricSystem}</div>
+          <div class="card"><h3>👥 Active users</h3><p style="font-size:2rem; font-weight:800;">${Math.floor(Math.random()*25000+340)}</p><span>⬆️ +${Math.floor(Math.random()*37)}%</span></div>
+          <div class="card"><h3>⚙️ Conversion</h3><p style="font-size:2rem; font-weight:800;">${(Math.random()*12+2).toFixed(1)}%</p><div style="background:${theme.accentColor}; height:6px; width: 70%; border-radius: 4px;"></div></div>
+        </div>
+      `;
+      
+      // content based on category + layout mixing
+      let customSection = "";
+      if (category === "DASHBOARD" || layoutVariant === 2) {
+        customSection = `<div class="hero-gradient"><h2>📊 Dashboard insights</h2>${dashboardMetrics}<div class="flex-between"><span>🕒 real-time random metrics</span><span class="btn-accent">Export</span></div></div>`;
+      } else if (category === "E-COMMERCE" || layoutVariant === 1) {
+        customSection = `<div><h2>✨ Trending Products</h2>${productShowcase}<div style="text-align:center; margin-top: 1rem;"><span class="btn-primary">View all →</span></div></div>`;
+      } else if (category === "PORTFOLIO" || layoutVariant === 3) {
+        customSection = `<div><div class="flex-between"><h2>⭐ Recent works</h2><span class="btn-accent">See projects</span></div><div class="grid-3"><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+5)}" style="border-radius: 20px; width:100%"><h3>Project Nova</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+17)}" style="border-radius: 20px; width:100%"><h3>Ethereal Identity</h3></div><div class="card"><img src="${getRandomPicsumUrl(400,250,bannerId+33)}" style="border-radius: 20px; width:100%"><h3>Flux Design</h3></div></div></div>`;
+      } else {
+        // generic landing or blog style
+        customSection = `<div class="hero-gradient"><h2>✨ ${brandName} Intelligence</h2><p style="margin: 1rem 0;">Experience next-gen randomness — every click rebuilds reality. Get your custom solution now.</p><div class="flex-between"><span class="btn-primary">Get started →</span><span class="btn-accent">Learn more</span></div></div>`;
+      }
+      
+      // Hero banner area always fresh
+      const hero = `
+        <div style="background: url(${bannerImg}) center/cover no-repeat; border-radius: 28px; margin-bottom: 1.6rem; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 1.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+          <div style="background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); padding: 1rem 2rem; border-radius: 60px; color: white; text-align: center;">
+            <h1 style="font-size: clamp(1.8rem,5vw,2.8rem);">${brandName}</h1>
+            <p style="opacity: 0.9;">${category} · dynamically generated</p>
+          </div>
+        </div>
+      `;
+      
+      // Header nav with random links
+      const nav = `
+        <div class="flex-between" style="margin-bottom: 1rem; border-bottom: 2px solid ${theme.primaryColor}30; padding-bottom: 1rem;">
+          <div style="font-weight:800; font-size:1.5rem;">⚡${brandName.slice(0,2)}</div>
+          <div style="display: flex; gap: 1.2rem;"><span>Explore</span><span>Resources</span><span>${category === "DASHBOARD" ? "Stats" : "Shop"}</span><span>Account</span></div>
+        </div>
+      `;
+      
+      // Add extra footer chaotic randomness
+      const footer = `<div style="margin-top: 3rem; padding: 1.5rem 0; text-align: center; font-size: 0.8rem; border-top: 1px solid ${theme.textMuted}30; color:${theme.textMuted};">🌀 random generator v.chaos | picsum dynamic assets | seed: ${clickCounter}${Math.floor(Math.random()*900)} | 🎨 infinite templates</div>`;
+      
+      // assemble the entire website DOM
+      const mainStructure = `
+        <div class="rand-website">
+          ${styleBlock}
+          <div class="container">
+            ${nav}
+            ${hero}
+            ${customSection}
+            ${category === "BLOG" || layoutVariant === 4 ? `<div class="card" style="margin:1.8rem 0;"><div class="flex-between"><h3>📰 Latest articles</h3><span class="btn-accent">Read more</span></div><div><p>• How random APIs fuel creativity</p><p>• Design system breakdown with picsum</p><p>• ${brandName} inside-out</p></div></div>` : ""}
+            ${category === "ADMIN PANEL" ? `<div class="card"><h3>Admin overview</h3><div style="display:grid; gap: 0.8rem;"><div>🔐 last login: random device</div><div>📋 pending tasks: ${Math.floor(Math.random()*12)}</div><div class="btn-primary" style="width:fit-content;">Manage users</div></div></div>` : ""}
+            ${category === "SOCIAL APP" ? `<div class="grid-3"><div class="card"><img src="${avatarImg}" style="border-radius: 50%; width: 60px;"><h4>@${randNouns[clickCounter%randNouns.length]}labs</h4><p>post: random vibe ✨</p></div><div class="card"><div>🔥 trending now: #${randAdj[clickCounter%randAdj.length]}</div><div>✨ ${Math.floor(Math.random()*999)} likes</div></div></div>` : ""}
+            ${footer}
+          </div>
+        </div>
+      `;
+      
+      return { html: mainStructure, categoryDisplay: category, themeColors: theme };
+    }
+    
+    // DOM elements
+    const btn = document.getElementById('chaosButton');
+    const liveRoot = document.getElementById('liveWebsiteRoot');
+    const seedSpan = document.getElementById('seedValue');
+    const categorySpan = document.getElementById('categoryLabel');
+    
+    let clickCount = 0;
+    let lastGeneratedHTML = "";
+    
+    function renderRandomTemplate() {
+      clickCount++;
+      // update seed display
+      const clickSeed = clickCount;
+      seedSpan.innerText = clickSeed;
+      
+      // generate full random website (fresh pics, unique colors, layout mods)
+      const { html, categoryDisplay, themeColors } = generateRandomWebsite(clickCount);
+      lastGeneratedHTML = html;
+      
+      // apply to DOM
+      liveRoot.innerHTML = html;
+      categorySpan.innerText = categoryDisplay;
+      
+      // bonus small micro interaction: extract and add meta random color to stage border? just fun
+      const stageDiv = document.getElementById('websiteStage');
+      if (themeColors && themeColors.primaryColor) {
+        stageDiv.style.border = `1px solid ${themeColors.primaryColor}60`;
+        setTimeout(() => { stageDiv.style.border = "1px solid rgba(255,255,240,0.2)"; }, 300);
+      }
+      
+      // optional: console log the chaos stat
+      console.log(`[Generator] Click #${clickCount} | Category: ${categoryDisplay} | unique web layout`);
+    }
+    
+    // initial random load on page open (avoid empty)
+    function firstRender() {
+      clickCount = 0;
+      renderRandomTemplate();
+    }
+    
+    btn.addEventListener('click', () => {
+      renderRandomTemplate();
+    });
+    
+    firstRender();
+  })();
+</script>
 </body>
 </html>
