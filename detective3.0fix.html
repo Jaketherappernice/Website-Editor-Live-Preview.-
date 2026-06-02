@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DETECTIVE OS v3.0</title>
+    <style>
+        :root {
+            --neon-green: #00ff66;
+            --dark-green: #003311;
+            --bg-black: #050b07;
+            --terminal-glow: rgba(0, 255, 102, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon-green);
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: hidden;
+            padding-bottom: 100px;
+        }
+
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 255, 0, 0.06));
+            z-index: 9999;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        header {
+            background: rgba(0, 20, 5, 0.9);
+            border-bottom: 2px solid var(--neon-green);
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 0 15px var(--terminal-glow);
+        }
+
+        /* Search & Utility Bar */
+        .utility-panel {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+        }
+        .search-bar {
+            flex: 1;
+            padding: 8px;
+            background: #001a08;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: inherit;
+            font-size: 0.8rem;
+        }
+        .sys-btn {
+            padding: 6px 10px;
+            background: var(--dark-green);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        #breadcrumbs {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            color: #88ffaa;
+            word-break: break-all;
+        }
+
+        /* 4x4 Mobile Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 15px;
+            width: 100vw;
+        }
+
+        .item {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border: 2px solid var(--neon-green);
+            background: var(--dark-green);
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: inset 0 0 8px var(--terminal-glow);
+            position: relative;
+        }
+
+        .item-label {
+            font-size: 0.62rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Graphic Elements */
+        .item-drawer {
+            width: 80%; height: 50%;
+            border: 2px dashed var(--neon-green);
+            margin: auto; position: relative;
+        }
+        .item-drawer::after {
+            content: ''; position: absolute;
+            top: 30%; left: 30%; width: 40%; height: 20%;
+            background: var(--neon-green);
+        }
+
+        .item-file {
+            width: 60%; height: 60%;
+            border: 2px solid var(--neon-green);
+            border-top-right-radius: 12px; margin: auto; position: relative;
+        }
+        .item-file::before {
+            content: ''; position: absolute; top: 25%; left: 15%; width: 70%; height: 2px; background: var(--neon-green);
+        }
+
+        .item-note {
+            width: 60%; height: 60%;
+            border: 2px solid var(--neon-green);
+            margin: auto; position: relative; background: repeating-linear-gradient(#000 0px, #000 2px, transparent 2px, transparent 6px);
+        }
+
+        .case-tag {
+            position: absolute; top: 2px; left: 2px;
+            font-size: 0.5rem; background: var(--neon-green);
+            color: black; padding: 0 2px; font-weight: bold;
+        }
+
+        .fab-btn {
+            position: fixed; bottom: 25px; right: 25px;
+            width: 60px; height: 60px;
+            background-color: var(--neon-green); color: black;
+            border-radius: 50%; border: none;
+            font-size: 30px; font-weight: bold;
+            box-shadow: 0 0 20px var(--neon-green); z-index: 999;
+        }
+
+        /* Modals */
+        .menu-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+
+        .menu-content {
+            background: var(--bg-black); border: 2px solid var(--neon-green);
+            padding: 20px; width: 88%; max-width: 365px;
+            box-shadow: 0 0 30px var(--neon-green); text-align: center;
+        }
+
+        .menu-content h3 { margin-bottom: 12px; font-size: 0.9rem; }
+        .menu-content button, .menu-content select, .menu-content input, .menu-content textarea {
+            width: 100%; padding: 12px; margin: 6px 0;
+            background: var(--dark-green); border: 1px solid var(--neon-green);
+            color: var(--neon-green); font-family: inherit;
+        }
+        
+        .menu-content button.danger { border-color: #ff3333; color: #ff3333; }
+        .hidden-file-input { display: none; }
+        .info-text { font-size: 0.65rem; color: #88ffaa; text-align: left; margin: 4px 0; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>// DECRYPT_SYSTEM_v3</h2>
+        <div class="utility-panel">
+            <input type="text" id="search-input" class="search-bar" placeholder="SEARCH INTEL CORE..." oninput="renderGrid()">
+            <button class="sys-btn" onclick="exportDatabase()">EXPORT</button>
+            <button class="sys-btn" onclick="triggerImportClick()">IMPORT</button>
+            <input type="file" id="import-file-handler" class="hidden-file-input" accept=".txt" onchange="importDatabase(this)">
+        </div>
+        <div id="breadcrumbs" onclick="navigateHome()">ROOT/</div>
+    </header>
+
+    <div class="grid-container" id="app-grid"></div>
+
+    <button class="fab-btn" onclick="openCreatorMenu()">+</button>
+
+    <div class="menu-overlay" id="creator-modal" onclick="closeModal(this)">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <h3>[INITIALIZE DATA OBJECT]</h3>
+            <select id="create-type" onchange="toggleFormInputs()">
+                <option value="case">CASE 📂</option>
+                <option value="folder">DRAWER FOLDER 📁</option>
+                <option value="file">DATA FILE (LINK/UPLOAD) 📄</option>
+                <option value="note">RAW TEXT NOTE 📝</option>
+            </select>
+            <input type="text" id="create-name" placeholder="ENTER IDENTIFIER/NAME">
+            <button onclick="createNewItem()">INITIALIZE</button>
+            <button onclick="closeModal(document.getElementById('creator-modal'))" style="border: 1px solid #666; color: #666;">ABORT</button>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="edit-modal" onclick="closeModal(this)">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <h3 id="edit-modal-title">[TARGET OBJECT]</h3>
+            
+            <div id="file-payload-section" style="display: none;">
+                <p class="info-text">PASTE URL LINK:</p>
+                <input type="url" id="edit-file-link" placeholder="https://">
+                <p class="info-text">OR UPLOAD DOCUMENT:</p>
+                <input type="file" id="edit-file-upload" onchange="handleFileProcessing(this)">
+                <div id="file-status" class="info-text" style="color:#888;"></div>
+            </div>
+
+            <div id="note-payload-section" style="display: none;">
+                <p class="info-text">SECURE DOSSIER FIELD:</p>
+                <textarea id="edit-note-text" style="height: 160px;" placeholder="Input plain text logs here..."></textarea>
+            </div>
+
+            <button onclick="saveItemEdits()">SAVE CHANGES</button>
+            <button class="danger" onclick="deleteCurrentItem()">DESTROY ENTRY</button>
+            <button onclick="closeModal(document.getElementById('edit-modal'))" style="border: 1px solid #666; color: #666;">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+    // Data Schema Bootloader
+    let db = JSON.parse(localStorage.getItem('detective_db_v3')) || {
+        root: { cases: {}, folders: {}, files: {}, notes: {} }
+    };
+
+    let currentPath = []; 
+    let selectedItemId = null;
+    let selectedItemType = null;
+    let tempBase64Data = ""; 
+    let tempFileName = "";
+
+    function saveDB() {
+        localStorage.setItem('detective_db_v3', JSON.stringify(db));
+        renderGrid();
+    }
+
+    function getCurrentNode() {
+        let node = db.root;
+        for (let segment of currentPath) {
+            if (node.cases && node.cases[segment]) node = node.cases[segment];
+            else if (node.folders && node.folders[segment]) node = node.folders[segment];
+        }
+        return node;
+    }
+
+    function updateBreadcrumbs() {
+        let crumbs = 'ROOT / ';
+        let node = db.root;
+        for (let segment of currentPath) {
+            if (node.cases && node.cases[segment]) {
+                crumbs += `CASE:${node.cases[segment].name} / `;
+                node = node.cases[segment];
+            } else if (node.folders && node.folders[segment]) {
+                crumbs += `DIR:${node.folders[segment].name} / `;
+                node = node.folders[segment];
+            }
+        }
+        document.getElementById('breadcrumbs').innerText = crumbs;
+    }
+
+    function navigateHome() {
+        currentPath = [];
+        document.getElementById('search-input').value = '';
+        updateBreadcrumbs();
+        renderGrid();
+    }
+
+    function toggleFormInputs() {
+        const type = document.getElementById('create-type').value;
+        if (getCurrentNode() === db.root && type !== 'case') {
+            alert("ACCESS DENIED: Only top-level 'CASES' can be created at ROOT level.");
+            document.getElementById('create-type').value = 'case';
+        }
+    }
+
+    function openCreatorMenu() {
+        const typeSelect = document.getElementById('create-type');
+        if (getCurrentNode() === db.root) {
+            typeSelect.value = 'case';
+        } else {
+            typeSelect.value = 'folder';
+            Array.from(typeSelect.options).forEach(opt => opt.disabled = opt.value === 'case');
+        }
+        document.getElementById('create-name').value = '';
+        document.getElementById('creator-modal').style.display = 'flex';
+    }
+
+    function closeModal(modal) {
+        modal.style.display = 'none';
+    }
+
+    function createNewItem() {
+        const type = document.getElementById('create-type').value;
+        const name = document.getElementById('create-name').value.trim() || "UNNAMED_INTEL";
+        const id = 'id_' + Date.now();
+        const current = getCurrentNode();
+
+        if (type === 'case') {
+            db.root.cases[id] = { id, name, cases: {}, folders: {}, files: {}, notes: {} };
+        } else if (type === 'folder') {
+            current.folders[id] = { id, name, folders: {}, files: {}, notes: {} };
+        } else if (type === 'file') {
+            current.files[id] = { id, name, fileLink: "", fileData: "", fileName: "" };
+        } else if (type === 'note') {
+            current.notes[id] = { id, name, text: "" };
+        }
+
+        closeModal(document.getElementById('creator-modal'));
+        saveDB();
+    }
+
+    // Tap Detection Array
+    let lastTap = 0;
+    function handleItemInteraction(id, type) {
+        const now = Date.now();
+        const DOUBLE_PRESS_DELAY = 300;
+        
+        if ((now - lastTap) < DOUBLE_PRESS_DELAY && selectedItemId === id) {
+            openEditDeleteModal(id, type);
+        } else {
+            setTimeout(() => {
+                if (selectedItemId === id && (Date.now() - now) >= DOUBLE_PRESS_DELAY) {
+                    executeSingleClickAction(id, type);
+                }
+            }, DOUBLE_PRESS_DELAY);
+        }
+        selectedItemId = id;
+        selectedItemType = type;
+        lastTap = now;
+    }
+
+    // UPDATED SINGLE CLICK: Handles mobile data imports smoothly without security blockers
+    function executeSingleClickAction(id, type) {
+        const current = getCurrentNode();
+        if (type === 'case' || type === 'folder') {
+            currentPath.push(id);
+            document.getElementById('search-input').value = ''; 
+            updateBreadcrumbs();
+            renderGrid();
+        } else if (type === 'file') {
+            const file = current.files[id] || findGlobalItem(db.root, id, 'files');
+            if (file.fileLink) {
+                window.open(file.fileLink, '_blank');
+            } else if (file.fileData) {
+                try {
+                    // Convert raw base64 string directly into a real binary object file
+                    const parts = file.fileData.split(';base64,');
+                    const contentType = parts[0].split(':')[1];
+                    const raw = window.atob(parts[1]);
+                    const rawLength = raw.length;
+                    const uInt8Array = new Uint8Array(rawLength);
+
+                    for (let i = 0; i < rawLength; ++i) {
+                        uInt8Array[i] = raw.charCodeAt(i);
+                    }
+
+                    const blob = new Blob([uInt8Array], { type: contentType });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    // Directly call open on the temporary safe link
+                    window.open(blobUrl, '_blank');
+                } catch (e) {
+                    alert("CRITICAL SECURITY ERROR: Browser blocked the iframe framework. Double click the file to re-upload or re-verify the asset payload.");
+                }
+            } else {
+                alert("Empty structural asset. Double click item to edit config.");
+            }
+        } else if (type === 'note') {
+            openEditDeleteModal(id, type);
+        }
+    }
+
+    function openEditDeleteModal(id, type) {
+        const current = getCurrentNode();
+        selectedItemId = id;
+        selectedItemType = type;
+        
+        let item;
+        if (type === 'case') item = db.root.cases[id];
+        else if (type === 'folder') item = current.folders[id] || findGlobalItem(db.root, id, 'folders');
+        else if (type === 'file') item = current.files[id] || findGlobalItem(db.root, id, 'files');
+        else if (type === 'note') item = current.notes[id] || findGlobalItem(db.root, id, 'notes');
+
+        if(!item) return;
+
+        document.getElementById('edit-modal-title').innerText = `[MOD: ${item.name}]`;
+        
+        const fileSection = document.getElementById('file-payload-section');
+        const noteSection = document.getElementById('note-payload-section');
+        
+        fileSection.style.display = 'none';
+        noteSection.style.display = 'none';
+
+        if (type === 'file') {
+            fileSection.style.display = 'block';
+            document.getElementById('edit-file-link').value = item.fileLink || "";
+            document.getElementById('edit-file-upload').value = "";
+            document.getElementById('file-status').innerText = item.fileName ? `Stored: ${item.fileName}` : "No file attached.";
+            tempBase64Data = item.fileData || "";
+            tempFileName = item.fileName || "";
+        } else if (type === 'note') {
+            noteSection.style.display = 'block';
+            document.getElementById('edit-note-text').value = item.text || "";
+        }
+
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function handleFileProcessing(input) {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            alert("WARNING: Keep files under 2MB to preserve engine local allocation.");
+            input.value = ""; return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            tempBase64Data = e.target.result;
+            tempFileName = file.name;
+            document.getElementById('file-status').innerText = `Loaded: ${file.name}`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function saveItemEdits() {
+        const current = getCurrentNode();
+        let context = current.files?.[selectedItemId] ? current : findGlobalParentContext(db.root, selectedItemId);
+        if(!context && selectedItemType === 'case') context = db.root;
+
+        if (selectedItemType === 'file') {
+            let f = context.files[selectedItemId];
+            f.fileLink = document.getElementById('edit-file-link').value.trim();
+            f.fileData = tempBase64Data; f.fileName = tempFileName;
+        } else if (selectedItemType === 'note') {
+            context.notes[selectedItemId].text = document.getElementById('edit-note-text').value;
+        }
+        closeModal(document.getElementById('edit-modal'));
+        saveDB();
+    }
+
+    function deleteCurrentItem() {
+        if (!confirm("PURGE INSTANCE SYSTEM RECORD?")) return;
+        let context = getCurrentNode();
+        if(!context.files?.[selectedItemId] && selectedItemType !== 'case') {
+            context = findGlobalParentContext(db.root, selectedItemId);
+        }
+
+        if (selectedItemType === 'case') { delete db.root.cases[selectedItemId]; navigateHome(); }
+        else if (selectedItemType === 'folder') { delete context.folders[selectedItemId]; }
+        else if (selectedItemType === 'file') { delete context.files[selectedItemId]; }
+        else if (selectedItemType === 'note') { delete context.notes[selectedItemId]; }
+        
+        closeModal(document.getElementById('edit-modal'));
+        saveDB();
+    }
+
+    function findGlobalItem(node, id, type) {
+        if (node[type] && node[type][id]) return node[type][id];
+        if (node.cases) {
+            for (let c in node.cases) { let r = findGlobalItem(node.cases[c], id, type); if(r) return r; }
+        }
+        if (node.folders) {
+            for (let f in node.folders) { let r = findGlobalItem(node.folders[f], id, type); if(r) return r; }
+        }
+        return null;
+    }
+
+    function findGlobalParentContext(node, id) {
+        if ((node.folders && node.folders[id]) || (node.files && node.files[id]) || (node.notes && node.notes[id])) return node;
+        if (node.cases) {
+            for (let c in node.cases) { let r = findGlobalParentContext(node.cases[c], id); if(r) return r; }
+        }
+        if (node.folders) {
+            for (let f in node.folders) { let r = findGlobalParentContext(node.folders[f], id); if(r) return r; }
+        }
+        return null;
+    }
+
+    function buildFlattenedSearchResults(node, query, list) {
+        if (node.cases) {
+            Object.keys(node.cases).forEach(k => {
+                if(node.cases[k].name.toLowerCase().includes(query)) list.push({id: k, type: 'case', obj: node.cases[k]});
+                buildFlattenedSearchResults(node.cases[k], query, list);
+            });
+        }
+        if (node.folders) {
+            Object.keys(node.folders).forEach(k => {
+                if(node.folders[k].name.toLowerCase().includes(query)) list.push({id: k, type: 'folder', obj: node.folders[k]});
+                buildFlattenedSearchResults(node.folders[k], query, list);
+            });
+        }
+        if (node.files) {
+            Object.keys(node.files).forEach(k => {
+                if(node.files[k].name.toLowerCase().includes(query)) list.push({id: k, type: 'file', obj: node.files[k]});
+            });
+        }
+        if (node.notes) {
+            Object.keys(node.notes).forEach(k => {
+                if(node.notes[k].name.toLowerCase().includes(query)) list.push({id: k, type: 'note', obj: node.notes[k]});
+            });
+        }
+    }
+
+    function exportDatabase() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+        const dlAnchorElem = document.createElement('a');
+        dlAnchorElem.setAttribute("href", dataStr);
+        dlAnchorElem.setAttribute("download", `DETECTIVE_OS_EXPORT_${Date.now()}.txt`);
+        dlAnchorElem.click();
+    }
+
+    function triggerImportClick() {
+        document.getElementById('import-file-handler').click();
+    }
+
+    function importDatabase(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed.root) {
+                    db = parsed;
+                    saveDB();
+                    alert("CORE DATA RESTORED SUCCESSFULLY.");
+                } else { alert("INVALID CRYPTO FORMAT. Injection aborted."); }
+            } catch(err) { alert("DATA CORRUPTION DETECTED. Failed to parse file."); }
+        };
+        reader.readAsText(file);
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('app-grid');
+        grid.innerHTML = '';
+        const searchCtrl = document.getElementById('search-input').value.trim().toLowerCase();
+        
+        if (searchCtrl.length > 0) {
+            let searchPool = [];
+            buildFlattenedSearchResults(db.root, searchCtrl, searchPool);
+            
+            if(searchPool.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/5; text-align:center; font-size:0.7rem; padding:20px;">NO RECORD FOUND.</div>`;
+                return;
+            }
+
+            searchPool.forEach(item => {
+                let iconHtml = '';
+                if (item.type === 'case' || item.type === 'folder') iconHtml = '<div class="item-drawer"></div>';
+                else if (item.type === 'file') iconHtml = '<div class="item-file"></div>';
+                else iconHtml = '<div class="item-note"></div>';
+
+                grid.innerHTML += `
+                    <div class="item" onclick="handleItemInteraction('${item.id}', '${item.type}')">
+                        <span class="case-tag" style="background:#0066ff; color:#fff;">${item.type.toUpperCase()}</span>
+                        ${iconHtml}
+                        <div class="item-label">${item.obj.name}</div>
+                    </div>`;
+            });
+        } else {
+            const current = getCurrentNode();
+
+            if (current === db.root) {
+                Object.keys(db.root.cases).forEach(id => {
+                    const item = db.root.cases[id];
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'case')">
+                            <span class="case-tag">CASE</span>
+                            <div class="item-drawer"></div>
+                            <div class="item-label">${item.name}</div>
+                        </div>`;
+                });
+            } else {
+                Object.keys(current.folders).forEach(id => {
+                    const item = current.folders[id];
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'folder')">
+                            <div class="item-drawer"></div>
+                            <div class="item-label">${item.name}</div>
+                        </div>`;
+                });
+
+                Object.keys(current.files).forEach(id => {
+                    const item = current.files[id];
+                    const indicator = (item.fileLink || item.fileData) ? "🟢 " : "";
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'file')">
+                            <div class="item-file"></div>
+                            <div class="item-label">${indicator}${item.name}</div>
+                        </div>`;
+                });
+
+                if(current.notes) {
+                    Object.keys(current.notes).forEach(id => {
+                        const item = current.notes[id];
+                        const indicator = item.text ? "📝 " : "⬜ ";
+                        grid.innerHTML += `
+                            <div class="item" onclick="handleItemInteraction('${item.id}', 'note')">
+                                <div class="item-note"></div>
+                                <div class="item-label">${indicator}${item.name}</div>
+                            </div>`;
+                    });
+                }
+            }
+        }
+    }
+
+    renderGrid();
+</script>
+</body>
+</html>
