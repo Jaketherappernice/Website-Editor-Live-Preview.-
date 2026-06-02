@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DETECTIVE OS v1.0</title>
+    <style>
+        :root {
+            --neon-green: #00ff66;
+            --dark-green: #003311;
+            --bg-black: #050b07;
+            --terminal-glow: rgba(0, 255, 102, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon-green);
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        /* Scanline Effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 9999;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        header {
+            background: rgba(0, 20, 5, 0.9);
+            border-bottom: 2px solid var(--neon-green);
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 0 15px var(--terminal-glow);
+        }
+
+        #breadcrumbs {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            color: #88ffaa;
+            word-break: break-all;
+        }
+
+        /* 4x4 Mobile Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 15px;
+            width: 100vw;
+        }
+
+        /* 4x4 Sized Elements */
+        .item {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border: 2px solid var(--neon-green);
+            background: var(--dark-green);
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: inset 0 0 8px var(--terminal-glow);
+            position: relative;
+        }
+
+        .item-label {
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Drawer Graphic */
+        .item-drawer {
+            width: 80%;
+            height: 50%;
+            border: 2px dashed var(--neon-green);
+            margin: auto;
+            position: relative;
+            border-radius: 2px;
+        }
+        .item-drawer::after {
+            content: '';
+            position: absolute;
+            top: 30%; left: 30%; width: 40%; height: 20%;
+            background: var(--neon-green);
+            border-radius: 1px;
+        }
+
+        /* File Graphic */
+        .item-file {
+            width: 60%;
+            height: 60%;
+            border: 2px solid var(--neon-green);
+            border-top-right-radius: 12px;
+            margin: auto;
+            position: relative;
+        }
+        .item-file::before {
+            content: '';
+            position: absolute;
+            top: 20%; left: 15%; width: 70%; height: 2px; background: var(--neon-green);
+        }
+        .item-file::after {
+            content: '';
+            position: absolute;
+            top: 45%; left: 15%; width: 50%; height: 2px; background: var(--neon-green);
+        }
+
+        /* Case Tag Overlay */
+        .case-tag {
+            position: absolute;
+            top: 2px; left: 2px;
+            font-size: 0.5rem;
+            background: var(--neon-green);
+            color: black;
+            padding: 0 2px;
+            font-weight: bold;
+        }
+
+        /* Floating Action Button (FAB) */
+        .fab-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--neon-green);
+            color: black;
+            border-radius: 50%;
+            border: none;
+            font-size: 30px;
+            font-weight: bold;
+            box-shadow: 0 0 20px var(--neon-green);
+            z-index: 999;
+        }
+
+        /* Context Menu / Options Panel */
+        .menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .menu-content {
+            background: var(--bg-black);
+            border: 2px solid var(--neon-green);
+            padding: 20px;
+            width: 85%;
+            max-width: 350px;
+            box-shadow: 0 0 30px var(--neon-green);
+            text-align: center;
+        }
+
+        .menu-content h3 { margin-bottom: 15px; font-size: 1rem; }
+        .menu-content button, .menu-content select, .menu-content input, .menu-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--dark-green);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: inherit;
+        }
+        .menu-content button.danger {
+            border-color: #ff3333;
+            color: #ff3333;
+        }
+
+        /* File Viewer Modal */
+        #file-viewer textarea {
+            height: 200px;
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>// CASE_FILE_OS</h2>
+        <div id="breadcrumbs" onclick="navigateHome()">ROOT/</div>
+    </header>
+
+    <div class="grid-container" id="app-grid"></div>
+
+    <button class="fab-btn" onclick="openCreatorMenu()">+</button>
+
+    <div class="menu-overlay" id="creator-modal" onclick="closeModal(this)">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <h3>[CREATE NEW ENTRY]</h3>
+            <select id="create-type" onchange="toggleFormInputs()">
+                <option value="case">CASE 📂</option>
+                <option value="folder">DRAWER FOLDER 📁</option>
+                <option value="file">DATA FILE 📄</option>
+            </select>
+            <input type="text" id="create-name" placeholder="ENTER IDENTIFIER/NAME">
+            <button onclick="createNewItem()">INITIALIZE</button>
+            <button onclick="closeModal(document.getElementById('creator-modal'))" style="border: 1px solid #666; color: #666;">ABORT</button>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="file-modal" onclick="closeModal(this)">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <h3 id="file-modal-title">[FILE DATA]</h3>
+            <textarea id="file-modal-content" placeholder="Type case log / paste text or links here..."></textarea>
+            <p style="font-size:0.6rem; color:#888; margin: 5px 0;">* Double-click on main grid items to manage/delete them.</p>
+            <button onclick="saveFileData()">SAVE CHANGES</button>
+            <button class="danger" id="delete-btn" onclick="deleteCurrentItem()">DESTROY ENTRY</button>
+            <button onclick="closeModal(document.getElementById('file-modal'))" style="border: 1px solid #666; color: #666;">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // Database Structure Setup
+        let db = JSON.parse(localStorage.getItem('detective_db')) || {
+            root: { cases: {}, folders: {}, files: {} }
+        };
+
+        // Navigation state tracking
+        let currentPath = []; // Track structure layer by IDs
+
+        function saveDB() {
+            localStorage.setItem('detective_db', JSON.stringify(db));
+            renderGrid();
+        }
+
+        // Get current active location in node tree
+        function getCurrentNode() {
+            let node = db.root;
+            for (let segment of currentPath) {
+                if (node.cases && node.cases[segment]) node = node.cases[segment];
+                else if (node.folders && node.folders[segment]) node = node.folders[segment];
+            }
+            return node;
+        }
+
+        function updateBreadcrumbs() {
+            let crumbs = 'ROOT / ';
+            let node = db.root;
+            for (let segment of currentPath) {
+                if (node.cases && node.cases[segment]) {
+                    crumbs += `CASE:${node.cases[segment].name} / `;
+                    node = node.cases[segment];
+                } else if (node.folders && node.folders[segment]) {
+                    crumbs += `DIR:${node.folders[segment].name} / `;
+                    node = node.folders[segment];
+                }
+            }
+            document.getElementById('breadcrumbs').innerText = crumbs;
+        }
+
+        function navigateHome() {
+            currentPath = [];
+            updateBreadcrumbs();
+            renderGrid();
+        }
+
+        function toggleFormInputs() {
+            const type = document.getElementById('create-type').value;
+            const current = getCurrentNode();
+            
+            // Constraints Check
+            if (current === db.root && type !== 'case') {
+                alert("CRITICAL ERROR: Only 'CASES' can be built at ROOT directory tier.");
+                document.getElementById('create-type').value = 'case';
+            }
+        }
+
+        function openCreatorMenu() {
+            const typeSelect = document.getElementById('create-type');
+            const current = getCurrentNode();
+            
+            if (current === db.root) {
+                typeSelect.value = 'case';
+                typeSelect.disabled = false;
+            } else {
+                typeSelect.value = 'folder';
+                // Lock option out of making base cases inside files/folders
+                Array.from(typeSelect.options).forEach(opt => {
+                    opt.disabled = opt.value === 'case';
+                });
+            }
+            
+            document.getElementById('create-name').value = '';
+            document.getElementById('creator-modal').style.display = 'flex';
+        }
+
+        function closeModal(modal) {
+            modal.style.display = 'none';
+        }
+
+        function createNewItem() {
+            const type = document.getElementById('create-type').value;
+            const name = document.getElementById('create-name').value.trim() || "UNNAMED_EVIDENCE";
+            const id = 'id_' + Date.now();
+            const current = getCurrentNode();
+
+            if (type === 'case') {
+                db.root.cases[id] = { id, name, cases: {}, folders: {}, files: {} };
+            } else if (type === 'folder') {
+                current.folders[id] = { id, name, folders: {}, files: {} };
+            } else if (type === 'file') {
+                current.files[id] = { id, name, content: "" };
+            }
+
+            closeModal(document.getElementById('creator-modal'));
+            saveDB();
+        }
+
+        // Mobile Optimized Double-Click System (Differentiating single click vs double tap)
+        let lastTap = 0;
+        let selectedItemId = null;
+        let selectedItemType = null;
+
+        function handleItemInteraction(id, type) {
+            const now = Date.now();
+            const DOUBLE_PRESS_DELAY = 300;
+            
+            if ((now - lastTap) < DOUBLE_PRESS_DELAY && selectedItemId === id) {
+                // Double Click / Double Tap Triggered -> Edit / Delete
+                openEditDeleteModal(id, type);
+            } else {
+                // Single Click Triggered -> Open Navigation/Viewer
+                setTimeout(() => {
+                    if (selectedItemId === id && (Date.now() - now) >= DOUBLE_PRESS_DELAY) {
+                        executeSingleClickAction(id, type);
+                    }
+                }, DOUBLE_PRESS_DELAY);
+            }
+            selectedItemId = id;
+            selectedItemType = type;
+            lastTap = now;
+        }
+
+        function executeSingleClickAction(id, type) {
+            const current = getCurrentNode();
+            if (type === 'case') {
+                currentPath.push(id);
+                updateBreadcrumbs();
+                renderGrid();
+            } else if (type === 'folder') {
+                currentPath.push(id);
+                updateBreadcrumbs();
+                renderGrid();
+            } else if (type === 'file') {
+                // Open File
+                const file = current.files[id];
+                document.getElementById('file-modal-title').innerText = `[VIEWING FILE: ${file.name}]`;
+                document.getElementById('file-modal-content').value = file.content;
+                document.getElementById('file-modal-content').disabled = false;
+                document.getElementById('delete-btn').style.display = "none"; // Hide explicit delete on viewing frame
+                document.getElementById('file-modal').style.display = 'flex';
+            }
+        }
+
+        function openEditDeleteModal(id, type) {
+            const current = getCurrentNode();
+            selectedItemId = id;
+            selectedItemType = type;
+            
+            let item;
+            if (type === 'case') item = db.root.cases[id];
+            else if (type === 'folder') item = current.folders[id];
+            else if (type === 'file') item = current.files[id];
+
+            document.getElementById('file-modal-title').innerText = `[MODIFYING ENTITY: ${item.name}]`;
+            document.getElementById('file-modal-content').value = item.content || `Entity structural object format: ${type.toUpperCase()}`;
+            if (type !== 'file') {
+                document.getElementById('file-modal-content').disabled = true;
+            } else {
+                document.getElementById('file-modal-content').disabled = false;
+            }
+            document.getElementById('delete-btn').style.display = "block";
+            document.getElementById('file-modal').style.display = 'flex';
+        }
+
+        function saveFileData() {
+            const current = getCurrentNode();
+            if (selectedItemType === 'file') {
+                current.files[selectedItemId].content = document.getElementById('file-modal-content').value;
+            }
+            closeModal(document.getElementById('file-modal'));
+            saveDB();
+        }
+
+        function deleteCurrentItem() {
+            if (!confirm("CRITICAL WARNING: Purge this file entry permanently?")) return;
+            
+            const current = getCurrentNode();
+            if (selectedItemType === 'case') {
+                delete db.root.cases[selectedItemId];
+                navigateHome();
+            } else if (selectedItemType === 'folder') {
+                delete current.folders[selectedItemId];
+            } else if (selectedItemType === 'file') {
+                delete current.files[selectedItemId];
+            }
+            
+            closeModal(document.getElementById('file-modal'));
+            saveDB();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('app-grid');
+            grid.innerHTML = '';
+            const current = getCurrentNode();
+
+            // Render Cases (Only valid at ROOT level context)
+            if (current === db.root) {
+                Object.keys(db.root.cases).forEach(id => {
+                    const item = db.root.cases[id];
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'case')">
+                            <span class="case-tag">CASE</span>
+                            <div class="item-drawer"></div>
+                            <div class="item-label">${item.name}</div>
+                        </div>`;
+                });
+            } else {
+                // Render Folders
+                Object.keys(current.folders).forEach(id => {
+                    const item = current.folders[id];
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'folder')">
+                            <div class="item-drawer"></div>
+                            <div class="item-label">${item.name}</div>
+                        </div>`;
+                });
+
+                // Render Files
+                Object.keys(current.files).forEach(id => {
+                    const item = current.files[id];
+                    grid.innerHTML += `
+                        <div class="item" onclick="handleItemInteraction('${item.id}', 'file')">
+                            <div class="item-file"></div>
+                            <div class="item-label">${item.name}</div>
+                        </div>`;
+                });
+            }
+        }
+
+        // Boot-Up
+        renderGrid();
+    </script>
+</body>
+</html>
